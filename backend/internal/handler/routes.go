@@ -8,6 +8,7 @@ type Handlers struct {
 	Catalogos   *CatalogoHandler
 	Auth        *AuthHandler
 	Postulacion *PostulacionHandler
+	Secciones   *SeccionesHandler
 }
 
 // RegisterRoutes declara las rutas bajo el prefijo /api. requireAuth protege las rutas privadas.
@@ -38,4 +39,11 @@ func RegisterRoutes(app *fiber.App, h Handlers, requireAuth fiber.Handler) {
 	post.Post("/", h.Postulacion.Crear)
 	post.Put("/contacto", h.Postulacion.Contacto)
 	post.Put("/familiares", h.Postulacion.Familiares)
+	post.Post("/cargo", h.Secciones.Cargo)
+	post.Put("/formacion", h.Secciones.Formacion)
+	post.Put("/experiencia", h.Secciones.Experiencia)
+	post.Put("/publicaciones", h.Secciones.Publicaciones)
+	post.Put("/capacitaciones", h.Secciones.Capacitaciones)
+	post.Put("/inhabilidades", h.Secciones.Inhabilidades)
+	post.Post("/enviar", h.Secciones.Enviar)
 }

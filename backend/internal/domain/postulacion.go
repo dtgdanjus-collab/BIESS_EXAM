@@ -29,9 +29,81 @@ type Postulacion struct {
 	CreadoEn               time.Time         `json:"creadoEn"`
 	ActualizadoEn          time.Time         `json:"actualizadoEn"`
 
-	DatosPersonales *DatosPersonales `json:"datosPersonales"`
-	Contacto        *Contacto        `json:"contacto"`
-	Familiares      []Familiar       `json:"familiares"`
+	DatosPersonales  *DatosPersonales       `json:"datosPersonales"`
+	Contacto         *Contacto              `json:"contacto"`
+	Familiares       []Familiar             `json:"familiares"`
+	Formacion        []Formacion            `json:"formacion"`
+	Experiencia      []Experiencia          `json:"experiencia"`
+	ExperienciaTotal ExperienciaTotal       `json:"experienciaTotal"`
+	Publicaciones    []Publicacion          `json:"publicaciones"`
+	Capacitaciones   []Capacitacion         `json:"capacitaciones"`
+	Inhabilidades    []RespuestaInhabilidad `json:"inhabilidades"`
+}
+
+// Formacion (1.5): títulos académicos.
+type Formacion struct {
+	ID               int64  `json:"id"`
+	NivelID          int    `json:"nivelId"`
+	Institucion      string `json:"institucion"`
+	Tipo             string `json:"tipo"` // NACIONAL | EXTRANJERA
+	Titulo           string `json:"titulo"`
+	AreaID           int    `json:"areaId"`
+	RegistroSenescyt string `json:"registroSenescyt"`
+	FechaRegistro    Fecha  `json:"fechaRegistro"`
+}
+
+// Experiencia (1.6). Duracion se calcula, no se guarda.
+type Experiencia struct {
+	ID          int64    `json:"id"`
+	Tipo        string   `json:"tipo"` // GENERAL | DIRECCION
+	Cargo       string   `json:"cargo"`
+	Institucion string   `json:"institucion"`
+	FechaInicio Fecha    `json:"fechaInicio"`
+	FechaFin    Fecha    `json:"fechaFin"`
+	AreaID      int      `json:"areaId"`
+	Descripcion string   `json:"descripcion"`
+	Duracion    Duracion `json:"duracion" db:"-"`
+}
+
+type ExperienciaTotal struct {
+	General   Duracion `json:"general"`
+	Direccion Duracion `json:"direccion"`
+	Total     Duracion `json:"total"`
+}
+
+// Publicacion (1.7).
+type Publicacion struct {
+	ID          int64  `json:"id"`
+	Titulo      string `json:"titulo"`
+	Tipo        string `json:"tipo"` // PUBLICACION | INVESTIGACION
+	Medio       string `json:"medio"`
+	Fecha       Fecha  `json:"fecha"`
+	Relacionada bool   `json:"relacionada"`
+}
+
+// Capacitacion (1.8).
+type Capacitacion struct {
+	ID          int64  `json:"id"`
+	Tipo        string `json:"tipo"` // CURSO | SEMINARIO | TALLER
+	Nombre      string `json:"nombre"`
+	Institucion string `json:"institucion"`
+	FechaInicio Fecha  `json:"fechaInicio"`
+	FechaFin    Fecha  `json:"fechaFin"`
+	Horas       int    `json:"horas"`
+}
+
+// RespuestaInhabilidad (1.9). Detalle solo aplica a la pregunta 1.9.7 cuando la respuesta es Sí.
+type RespuestaInhabilidad struct {
+	PreguntaID int              `json:"preguntaId"`
+	Respuesta  bool             `json:"respuesta"`
+	Detalle    *DetalleRemocion `json:"detalle"`
+}
+
+type DetalleRemocion struct {
+	Institucion string `json:"institucion"`
+	Cargo       string `json:"cargo"`
+	FechaFin    Fecha  `json:"fechaFin"`
+	Motivo      string `json:"motivo"`
 }
 
 // DatosPersonales (1.1): copia de solo lectura del Registro Civil.

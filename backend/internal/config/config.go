@@ -52,6 +52,8 @@ type SecurityConfig struct {
 	MaxIntentos int
 	Bloqueo     time.Duration
 	CatalogoTTL time.Duration
+	// DemoFallaEnvio fuerza un error al enviar para demostrar el ROLLBACK (solo para la sustentación).
+	DemoFallaEnvio bool
 }
 
 // Load lee backend/.env y, si no existe, el .env de la raíz del repositorio.
@@ -86,9 +88,10 @@ func Load() (*Config, error) {
 			FrontendURL: strings.TrimRight(getStr("FRONTEND_URL", "http://localhost:5173"), "/"),
 		},
 		Security: SecurityConfig{
-			MaxIntentos: getInt("MAX_INTENTOS", 3, &errs),
-			Bloqueo:     time.Duration(getInt("BLOQUEO_MINUTOS", 10, &errs)) * time.Minute,
-			CatalogoTTL: time.Duration(getInt("CATALOGO_TTL_HORAS", 24, &errs)) * time.Hour,
+			MaxIntentos:    getInt("MAX_INTENTOS", 3, &errs),
+			Bloqueo:        time.Duration(getInt("BLOQUEO_MINUTOS", 10, &errs)) * time.Minute,
+			CatalogoTTL:    time.Duration(getInt("CATALOGO_TTL_HORAS", 24, &errs)) * time.Hour,
+			DemoFallaEnvio: getStr("DEMO_FALLA_ENVIO", "false") == "true",
 		},
 	}
 

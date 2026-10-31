@@ -27,6 +27,31 @@ func NewRegistroCivilRepository(pool *pgxpool.Pool) RegistroCivilRepository {
 	return &pgRegistroCivilRepository{pool: pool}
 }
 
+// HistorialLaboralRepository simula el servicio de Historial Laboral del IESS.
+type HistorialLaboralRepository interface {
+	// TieneCalidad indica si la cédula tiene la calidad activa (AFILIADO, JUBILADO o EMPLEADOR).
+	TieneCalidad(ctx context.Context, cedula, tipo string) (bool, error)
+}
+
+type pgHistorialLaboralRepository struct {
+	pool *pgxpool.Pool
+}
+
+func NewHistorialLaboralRepository(pool *pgxpool.Pool) HistorialLaboralRepository {
+	return &pgHistorialLaboralRepository{pool: pool}
+}
+
+func (r *pgHistorialLaboralRepository) TieneCalidad(ctx context.Context, cedula, tipo string) (bool, error) {
+	var ok bool
+	err := r.pool.QueryRow(ctx, `
+		SELECT EXISTS (SELECT 1 FROM mock_historial_laboral WHERE cedula = $1 AND tipo = $2 AND activo)`,
+		cedula, tipo).Scan(&ok)
+	if err != nil {
+		return false, fmt.Errorf("consultando historial laboral: %w", err)
+	}
+	return ok, nil
+}
+
 func (r *pgRegistroCivilRepository) FindByCedula(ctx context.Context, cedula string) (*domain.Persona, error) {
 	var p domain.Persona
 	err := r.pool.QueryRow(ctx, `
