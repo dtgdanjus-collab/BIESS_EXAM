@@ -6,6 +6,7 @@ import "github.com/gofiber/fiber/v2"
 type Handlers struct {
 	Health    *HealthHandler
 	Catalogos *CatalogoHandler
+	Auth      *AuthHandler
 }
 
 // RegisterRoutes declara las rutas bajo el prefijo /api.
@@ -22,4 +23,8 @@ func RegisterRoutes(app *fiber.App, h Handlers) {
 	cat.Get("/areas", h.Catalogos.Areas)
 	cat.Get("/sectores", h.Catalogos.Sectores)
 	cat.Get("/inhabilidades", h.Catalogos.Inhabilidades)
+
+	auth := api.Group("/auth")
+	auth.Post("/verificar-identidad", h.Auth.VerificarIdentidad)
+	auth.Post("/registro", h.Auth.Registro)
 }

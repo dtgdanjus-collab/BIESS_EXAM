@@ -54,12 +54,18 @@ func run() error {
 
 	// --- Repositories ---
 	catalogoRepo := repository.NewCatalogoRepository(pool)
+	personaRepo := repository.NewRegistroCivilRepository(pool)
+	usuarioRepo := repository.NewUsuarioRepository(pool)
 
 	// --- Caches ---
 	catalogoCache := cache.NewCatalogoCache(rdb, cfg.Security.CatalogoTTL)
+	intentosCache := cache.NewIntentosCache(rdb, cfg.Security.MaxIntentos, cfg.Security.Bloqueo)
+	tokenCache := cache.NewTokenCache(rdb)
 
 	// --- Services ---
 	catalogoSvc := service.NewCatalogoService(catalogoRepo, catalogoCache)
+	authSvc := service.NewAuthService(personaRepo, usuarioRepo, intentosCache, tokenCache,
+		service.AuthConfig{Bloqueo: cfg.Security.Bloqueo})
 
 	// --- Handlers ---
 	handlers := handler.Handlers{
@@ -68,6 +74,7 @@ func run() error {
 			"redis":    platform.RedisPinger{Client: rdb},
 		}),
 		Catalogos: handler.NewCatalogoHandler(catalogoSvc),
+		Auth:      handler.NewAuthHandler(authSvc),
 	}
 
 	// --- HTTP ---
