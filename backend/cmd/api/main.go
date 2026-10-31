@@ -13,10 +13,13 @@ import (
 
 	"github.com/gofiber/fiber/v2"
 
+	"github.com/biess-dev/biess-postulacion/backend/internal/cache"
 	"github.com/biess-dev/biess-postulacion/backend/internal/config"
 	"github.com/biess-dev/biess-postulacion/backend/internal/handler"
 	"github.com/biess-dev/biess-postulacion/backend/internal/middleware"
 	"github.com/biess-dev/biess-postulacion/backend/internal/platform"
+	"github.com/biess-dev/biess-postulacion/backend/internal/repository"
+	"github.com/biess-dev/biess-postulacion/backend/internal/service"
 )
 
 func main() {
@@ -49,7 +52,14 @@ func run() error {
 	defer rdb.Close()
 	log.Println("conectado a Redis")
 
-	// --- Repositories / caches / services: se agregan desde la fase 3 ---
+	// --- Repositories ---
+	catalogoRepo := repository.NewCatalogoRepository(pool)
+
+	// --- Caches ---
+	catalogoCache := cache.NewCatalogoCache(rdb, cfg.Security.CatalogoTTL)
+
+	// --- Services ---
+	catalogoSvc := service.NewCatalogoService(catalogoRepo, catalogoCache)
 
 	// --- Handlers ---
 	handlers := handler.Handlers{
@@ -57,6 +67,7 @@ func run() error {
 			"postgres": pool,
 			"redis":    platform.RedisPinger{Client: rdb},
 		}),
+		Catalogos: handler.NewCatalogoHandler(catalogoSvc),
 	}
 
 	// --- HTTP ---
