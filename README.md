@@ -127,6 +127,19 @@ El contrato completo de la API está en [docs/api.md](docs/api.md) y el guion de
 | Variables de ejemplo | [.env.example](.env.example), [backend/.env.example](backend/.env.example), [frontend/.env.example](frontend/.env.example) |
 | Contrato de la API | [docs/api.md](docs/api.md) |
 
+## Despliegue en Render
+
+[render.yaml](render.yaml) define el sistema completo en el plan gratuito: PostgreSQL (`biess-db`), Key Value/Redis (`biess-redis`), API Go (`biess-api`) y el SPA como sitio estático (`biess-web`).
+
+1. En Render: **New → Blueprint** → elegir este repositorio → **Apply**.
+2. Cargar el esquema y los catálogos en la base de Render con su *External Database URL*:
+   ```bash
+   docker exec -i biess_postgres psql "<EXTERNAL_DATABASE_URL>" < docs/biess_postulacion.sql
+   ```
+3. Si Render asignó URLs distintas de `biess-api.onrender.com` / `biess-web.onrender.com`, actualizar `CORS_ORIGINS` y `FRONTEND_URL` (API) y `VITE_API_URL` (web) y volver a desplegar.
+
+El backend acepta `DATABASE_URL`, `REDIS_URL` y `PORT` (variables de Render) además de las variables locales.
+
 ## Flujo de Git
 
 Ramas `main` (entregas) y `develop` (integración). Cada fase se desarrolló en `feature/fase-XX-nombre` y se fusionó a `develop` con `--no-ff`. Los commits usan prefijos convencionales (`feat`, `fix`, `chore`, `docs`).

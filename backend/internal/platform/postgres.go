@@ -29,7 +29,7 @@ func NewPostgresPool(ctx context.Context, cfg config.DBConfig) (*pgxpool.Pool, e
 	defer cancel()
 	if err := pool.Ping(pingCtx); err != nil {
 		pool.Close()
-		return nil, fmt.Errorf("postgres no responde en %s:%d: %w", cfg.Host, cfg.Port, err)
+		return nil, fmt.Errorf("postgres no responde en %s:%d: %w", poolCfg.ConnConfig.Host, poolCfg.ConnConfig.Port, err)
 	}
 	return pool, nil
 }
