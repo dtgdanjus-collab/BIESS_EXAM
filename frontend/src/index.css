@@ -1,0 +1,39 @@
+@import "tailwindcss";
+
+/* Paleta institucional (verde petróleo) y tokens de la interfaz */
+@theme {
+  --color-brand-50: #eef8f4;
+  --color-brand-100: #d5eee3;
+  --color-brand-200: #aedccb;
+  --color-brand-300: #7cc3ab;
+  --color-brand-400: #4aa488;
+  --color-brand-500: #2a876d;
+  --color-brand-600: #1c6d57;
+  --color-brand-700: #0f5f4a;
+  --color-brand-800: #0c4a3a;
+  --color-brand-900: #093a2e;
+
+  --font-sans: "Segoe UI", system-ui, -apple-system, Roboto, "Helvetica Neue", Arial, sans-serif;
+}
+
+@layer base {
+  html {
+    -webkit-text-size-adjust: 100%;
+  }
+  body {
+    @apply bg-slate-50 text-slate-800 antialiased;
+  }
+  :focus-visible {
+    @apply outline-2 outline-offset-2 outline-brand-500;
+  }
+}
+
+/* Impresión del comprobante: solo se imprime el área marcada */
+@media print {
+  .no-print {
+    display: none !important;
+  }
+  body {
+    background: white;
+  }
+}
