@@ -3,6 +3,7 @@ package repository
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"github.com/jackc/pgx/v5"
@@ -21,6 +22,11 @@ type CatalogoRepository interface {
 	ListAreas(ctx context.Context) ([]domain.Item, error)
 	ListSectores(ctx context.Context) ([]domain.Sector, error)
 	ListInhabilidades(ctx context.Context) ([]domain.PreguntaInhabilidad, error)
+
+	// PaisNombre devuelve ErrNotFound si el país no existe.
+	PaisNombre(ctx context.Context, paisID int) (string, error)
+	// CantonEnProvincia verifica la cascada País → Provincia → Cantón.
+	CantonEnProvincia(ctx context.Context, paisID, provinciaID, cantonID int) (bool, error)
 }
 
 type pgCatalogoRepository struct {
@@ -69,6 +75,30 @@ func (r *pgCatalogoRepository) ListInhabilidades(ctx context.Context) ([]domain.
 		SELECT id, numeral, texto, respuesta_esperada, requiere_detalle, orden
 		FROM preguntas_inhabilidad ORDER BY orden`,
 		pgx.RowToStructByPos[domain.PreguntaInhabilidad])
+}
+
+func (r *pgCatalogoRepository) PaisNombre(ctx context.Context, paisID int) (string, error) {
+	var nombre string
+	err := r.pool.QueryRow(ctx, `SELECT nombre FROM paises WHERE id = $1`, paisID).Scan(&nombre)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return "", ErrNotFound
+	}
+	if err != nil {
+		return "", fmt.Errorf("consultando país: %w", err)
+	}
+	return nombre, nil
+}
+
+func (r *pgCatalogoRepository) CantonEnProvincia(ctx context.Context, paisID, provinciaID, cantonID int) (bool, error) {
+	var ok bool
+	err := r.pool.QueryRow(ctx, `
+		SELECT EXISTS (
+			SELECT 1 FROM cantones c JOIN provincias p ON p.id = c.provincia_id
+			WHERE c.id = $3 AND p.id = $2 AND p.pais_id = $1)`, paisID, provinciaID, cantonID).Scan(&ok)
+	if err != nil {
+		return false, fmt.Errorf("validando ubicación: %w", err)
+	}
+	return ok, nil
 }
 
 func queryItems(ctx context.Context, pool *pgxpool.Pool, sql string, args ...any) ([]domain.Item, error) {

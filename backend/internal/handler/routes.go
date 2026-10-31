@@ -4,9 +4,10 @@ import "github.com/gofiber/fiber/v2"
 
 // Handlers agrupa todos los handlers construidos en main.go.
 type Handlers struct {
-	Health    *HealthHandler
-	Catalogos *CatalogoHandler
-	Auth      *AuthHandler
+	Health      *HealthHandler
+	Catalogos   *CatalogoHandler
+	Auth        *AuthHandler
+	Postulacion *PostulacionHandler
 }
 
 // RegisterRoutes declara las rutas bajo el prefijo /api. requireAuth protege las rutas privadas.
@@ -31,4 +32,10 @@ func RegisterRoutes(app *fiber.App, h Handlers, requireAuth fiber.Handler) {
 	auth.Post("/recuperar", h.Auth.Recuperar)
 	auth.Post("/restablecer", h.Auth.Restablecer)
 	auth.Get("/me", requireAuth, h.Auth.Me)
+
+	post := api.Group("/postulacion", requireAuth)
+	post.Get("/", h.Postulacion.Obtener)
+	post.Post("/", h.Postulacion.Crear)
+	post.Put("/contacto", h.Postulacion.Contacto)
+	post.Put("/familiares", h.Postulacion.Familiares)
 }
