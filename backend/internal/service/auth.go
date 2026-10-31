@@ -19,14 +19,25 @@ import (
 
 // Mensajes literales del requerimiento (EF-11).
 const (
-	MsgInfoIncorrecta  = "La información ingresada es incorrecta"
-	MsgRegistroFallido = "Registro fallido, inténtelo nuevamente en %d minutos"
+	MsgInfoIncorrecta        = "La información ingresada es incorrecta"
+	MsgRegistroFallido       = "Registro fallido, inténtelo nuevamente en %d minutos"
+	MsgCredencialesInvalidas = "Sus credenciales de ingreso son incorrectas"
+	MsgLoginBloqueado        = "Cuenta bloqueada temporalmente por intentos fallidos, inténtelo nuevamente en %d minutos"
 )
 
-const registroTokenTTL = 10 * time.Minute
+const (
+	registroTokenTTL     = 10 * time.Minute
+	recuperacionTokenTTL = 15 * time.Minute
+)
 
 type AuthConfig struct {
-	Bloqueo time.Duration
+	Bloqueo     time.Duration
+	FrontendURL string // base del enlace de recuperación que se "envía" por correo
+}
+
+// TokenEmisor firma los JWT de sesión (implementado por pkg/jwtutil).
+type TokenEmisor interface {
+	Generar(usuarioID int64) (token string, expira time.Time, err error)
 }
 
 // AuthService implementa EF-11: validación de identidad, registro, login y recuperación.
@@ -35,6 +46,7 @@ type AuthService struct {
 	usuarios repository.UsuarioRepository
 	intentos cache.IntentosCache
 	tokens   cache.TokenCache
+	jwt      TokenEmisor
 	cfg      AuthConfig
 }
 
@@ -43,9 +55,10 @@ func NewAuthService(
 	usuarios repository.UsuarioRepository,
 	intentos cache.IntentosCache,
 	tokens cache.TokenCache,
+	jwt TokenEmisor,
 	cfg AuthConfig,
 ) *AuthService {
-	return &AuthService{personas: personas, usuarios: usuarios, intentos: intentos, tokens: tokens, cfg: cfg}
+	return &AuthService{personas: personas, usuarios: usuarios, intentos: intentos, tokens: tokens, jwt: jwt, cfg: cfg}
 }
 
 // IdentidadInput: cédula más fecha de expedición y/o código dactilar.
@@ -74,8 +87,7 @@ func (s *AuthService) VerificarIdentidad(ctx context.Context, in IdentidadInput)
 		return "", err
 	}
 	if persona == nil || !coincideIdentidad(persona, in) {
-		return "", s.fallo(ctx, cache.AmbitoRegistro, in.Cedula, MsgInfoIncorrecta,
-			fmt.Sprintf(MsgRegistroFallido, s.minutosBloqueo()))
+		return "", s.fallo(ctx, cache.AmbitoRegistro, in.Cedula)
 	}
 
 	if err := s.intentos.Limpiar(ctx, cache.AmbitoRegistro, in.Cedula); err != nil {
@@ -163,39 +175,35 @@ func (s *AuthService) verificarBloqueo(ctx context.Context, a cache.Ambito, cedu
 		return err
 	}
 	if ttl > 0 {
-		return errBloqueado(a, ttl, s.minutosBloqueo())
+		return s.errBloqueado(a, ttl)
 	}
 	return nil
 }
 
 // fallo registra el intento fallido y arma el error 401 (con intentos restantes) o 423.
-func (s *AuthService) fallo(ctx context.Context, a cache.Ambito, cedula, msgFallo, msgBloqueo string) error {
+func (s *AuthService) fallo(ctx context.Context, a cache.Ambito, cedula string) error {
 	restantes, bloqueado, err := s.intentos.RegistrarFallo(ctx, a, cedula)
 	if err != nil {
 		return err
 	}
 	if bloqueado {
-		return domain.NewError(domain.ErrBloqueado, msgBloqueo).
-			WithDetail("segundosRestantes", int(s.cfg.Bloqueo.Seconds()))
+		return s.errBloqueado(a, s.cfg.Bloqueo)
 	}
-	kind := domain.ErrIdentidad
 	if a == cache.AmbitoLogin {
-		kind = domain.ErrCredenciales
+		return domain.NewError(domain.ErrCredenciales, MsgCredencialesInvalidas).
+			WithDetail("intentosRestantes", restantes)
 	}
-	return domain.NewError(kind, msgFallo).WithDetail("intentosRestantes", restantes)
+	return domain.NewError(domain.ErrIdentidad, MsgInfoIncorrecta).WithDetail("intentosRestantes", restantes)
 }
 
-func (s *AuthService) minutosBloqueo() int {
-	return int(s.cfg.Bloqueo.Minutes())
-}
-
-func errBloqueado(a cache.Ambito, ttl time.Duration, minutos int) error {
-	seg := int(math.Ceil(ttl.Seconds()))
+func (s *AuthService) errBloqueado(a cache.Ambito, ttl time.Duration) error {
+	minutos := int(s.cfg.Bloqueo.Minutes())
 	msg := fmt.Sprintf(MsgRegistroFallido, minutos)
-	if a == cache.AmbitoLogin {
-		msg = fmt.Sprintf("Cuenta bloqueada temporalmente por intentos fallidos, inténtelo nuevamente en %d minutos", minutos)
+	if a != cache.AmbitoRegistro {
+		msg = fmt.Sprintf(MsgLoginBloqueado, minutos)
 	}
-	return domain.NewError(domain.ErrBloqueado, msg).WithDetail("segundosRestantes", seg)
+	return domain.NewError(domain.ErrBloqueado, msg).
+		WithDetail("segundosRestantes", int(math.Ceil(ttl.Seconds())))
 }
 
 func validarIdentidadInput(in IdentidadInput) error {

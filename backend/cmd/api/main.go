@@ -20,6 +20,7 @@ import (
 	"github.com/biess-dev/biess-postulacion/backend/internal/platform"
 	"github.com/biess-dev/biess-postulacion/backend/internal/repository"
 	"github.com/biess-dev/biess-postulacion/backend/internal/service"
+	"github.com/biess-dev/biess-postulacion/backend/pkg/jwtutil"
 )
 
 func main() {
@@ -64,8 +65,9 @@ func run() error {
 
 	// --- Services ---
 	catalogoSvc := service.NewCatalogoService(catalogoRepo, catalogoCache)
-	authSvc := service.NewAuthService(personaRepo, usuarioRepo, intentosCache, tokenCache,
-		service.AuthConfig{Bloqueo: cfg.Security.Bloqueo})
+	jwtManager := jwtutil.NewManager(cfg.API.JWTSecret, cfg.API.JWTTTL)
+	authSvc := service.NewAuthService(personaRepo, usuarioRepo, intentosCache, tokenCache, jwtManager,
+		service.AuthConfig{Bloqueo: cfg.Security.Bloqueo, FrontendURL: cfg.API.FrontendURL})
 
 	// --- Handlers ---
 	handlers := handler.Handlers{
@@ -85,7 +87,7 @@ func run() error {
 		WriteTimeout: 10 * time.Second,
 	})
 	middleware.RegisterCommon(app, cfg.API.CORSOrigins)
-	handler.RegisterRoutes(app, handlers)
+	handler.RegisterRoutes(app, handlers, middleware.RequireAuth(jwtManager))
 
 	errCh := make(chan error, 1)
 	go func() {
