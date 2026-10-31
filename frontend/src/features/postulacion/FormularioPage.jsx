@@ -6,20 +6,28 @@ import { useAsync } from '../../hooks/useAsync'
 import { EstadoBadge, FormularioContext } from './components'
 import { PostulacionCerrada } from './PostulacionCerrada'
 import { SECCIONES } from './secciones'
+import { CapacitacionSection } from './sections/CapacitacionSection'
 import { CargoSection } from './sections/CargoSection'
 import { ContactoSection } from './sections/ContactoSection'
+import { EnvioSection } from './sections/EnvioSection'
+import { ExperienciaSection } from './sections/ExperienciaSection'
 import { FamiliaresSection } from './sections/FamiliaresSection'
+import { FormacionSection } from './sections/FormacionSection'
+import { InhabilidadesSection } from './sections/InhabilidadesSection'
 import { PersonalSection } from './sections/PersonalSection'
-
-function Proximamente({ titulo }) {
-  return <Card title={titulo}>Esta sección se habilita en la siguiente fase.</Card>
-}
+import { PublicacionesSection } from './sections/PublicacionesSection'
 
 const COMPONENTES = {
   personal: PersonalSection,
   contacto: ContactoSection,
   familiares: FamiliaresSection,
   cargo: CargoSection,
+  formacion: FormacionSection,
+  experiencia: ExperienciaSection,
+  publicaciones: PublicacionesSection,
+  capacitacion: CapacitacionSection,
+  inhabilidades: InhabilidadesSection,
+  envio: EnvioSection,
 }
 
 /** Pantalla inicial cuando el usuario todavía no tiene postulación. */
@@ -79,7 +87,9 @@ export function FormularioPage() {
     }
   }
 
-  const seccionActual = SECCIONES.some((s) => s.id === params.get('seccion')) ? params.get('seccion') : 'personal'
+  // Sin sección en la URL: el comprobante si ya se envió; si no, la primera sección.
+  const porDefecto = postulacion?.estado === 'ENVIADA' ? 'envio' : 'personal'
+  const seccionActual = SECCIONES.some((s) => s.id === params.get('seccion')) ? params.get('seccion') : porDefecto
   const irA = useCallback(
     (id) => {
       setParams({ seccion: id })
@@ -116,7 +126,6 @@ export function FormularioPage() {
 
   const pasos = SECCIONES.map((s) => ({ id: s.id, titulo: s.titulo, completo: s.completa(postulacion) }))
   const completas = pasos.filter((p) => p.completo).length
-  const def = SECCIONES.find((s) => s.id === seccionActual)
   const Componente = COMPONENTES[seccionActual]
 
   return (
@@ -132,8 +141,8 @@ export function FormularioPage() {
       </div>
 
       {postulacion.estado === 'ENVIADA' && (
-        <Alert type="success" className="mb-6">
-          Su postulación fue enviada y ya no admite cambios.
+        <Alert type="success" className="no-print mb-6">
+          Su postulación fue enviada y ya no admite cambios. Puede revisar cada sección en modo de solo lectura.
         </Alert>
       )}
 
@@ -160,7 +169,7 @@ export function FormularioPage() {
 
         <div className="min-w-0">
           {/* key: al cambiar de sección el formulario se monta de nuevo con los datos guardados */}
-          {Componente ? <Componente key={seccionActual} /> : <Proximamente titulo={`${def.numeral} ${def.titulo}`} />}
+          <Componente key={seccionActual} />
         </div>
       </div>
     </FormularioContext>

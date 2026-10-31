@@ -1,6 +1,5 @@
 import { render } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
-
 import { catalogos } from '../../api/catalogos'
 import { AppRouter } from '../../routes/AppRouter'
 import { useAuthStore } from '../../store/authStore'
