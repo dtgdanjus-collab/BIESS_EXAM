@@ -5,6 +5,9 @@ const texto = (max, msg = 'Es obligatorio') =>
 const textoOpcional = (max) => z.string().trim().max(max, `Máximo ${max} caracteres`)
 const seleccion = (msg = 'Seleccione una opción') => z.string().min(1, msg)
 const telefono = z.string().trim().regex(/^\+?\d{7,15}$/, 'Teléfono inválido (7 a 15 dígitos)')
+// Opción de una lista fija. No se usa z.enum porque su fallo aborta las validaciones
+// cruzadas del objeto (p. ej. fecha fin ≥ inicio) y el usuario no vería esos errores.
+const opcion = (valores, msg) => z.string().refine((v) => valores.includes(v), msg)
 const siNo = z.boolean().nullable().refine((v) => v !== null, 'Seleccione Sí o No')
 
 const hoy = () => new Date().toISOString().slice(0, 10)
@@ -49,7 +52,7 @@ export const familiaresSchema = z
       z.object({
         nombresApellidos: texto(200),
         parentescoId: seleccion(),
-        institucion: z.enum(['IESS', 'BIESS'], { message: 'Seleccione IESS o BIESS' }),
+        institucion: opcion(['IESS', 'BIESS'], 'Seleccione IESS o BIESS'),
         area: texto(150),
         cargo: texto(150),
       }),
@@ -59,6 +62,122 @@ export const familiaresSchema = z
     if (v.tieneFamiliares && v.items.length === 0) {
       ctx.addIssue({ code: 'custom', path: ['items'], message: 'Agregue al menos un familiar o seleccione "No"' })
     }
+  })
+
+const rangoFechas = (v, ctx) => {
+  if (v.fechaInicio && v.fechaFin && v.fechaFin < v.fechaInicio) {
+    ctx.addIssue({ code: 'custom', path: ['fechaFin'], message: 'Debe ser posterior o igual a la fecha de inicio' })
+  }
+}
+
+const alMenosUno = (msg) => (items, ctx) => {
+  if (items.length === 0) ctx.addIssue({ code: 'custom', message: msg })
+}
+
+// 1.5
+export const formacionSchema = z.object({
+  items: z
+    .array(
+      z.object({
+        nivelId: seleccion(),
+        institucion: texto(200),
+        tipo: opcion(['NACIONAL', 'EXTRANJERA'], 'Seleccione el tipo de institución'),
+        titulo: texto(200),
+        areaId: seleccion(),
+        registroSenescyt: texto(40),
+        fechaRegistro: fecha(),
+      }),
+    )
+    .superRefine(alMenosUno('Agregue al menos un título')),
+})
+
+// 1.6
+export const experienciaSchema = z.object({
+  items: z
+    .array(
+      z
+        .object({
+          tipo: opcion(['GENERAL', 'DIRECCION'], 'Seleccione el tipo de experiencia'),
+          cargo: texto(150),
+          institucion: texto(200),
+          fechaInicio: fecha(),
+          fechaFin: fecha(),
+          areaId: seleccion(),
+          descripcion: texto(1000),
+        })
+        .superRefine(rangoFechas),
+    )
+    .superRefine(alMenosUno('Agregue al menos una experiencia')),
+})
+
+// 1.7
+export const publicacionesSchema = z
+  .object({
+    tienePublicaciones: siNo,
+    items: z.array(
+      z.object({
+        titulo: texto(300),
+        tipo: opcion(['PUBLICACION', 'INVESTIGACION'], 'Seleccione el tipo'),
+        medio: texto(200),
+        fecha: fecha(),
+        relacionada: siNo,
+      }),
+    ),
+  })
+  .superRefine((v, ctx) => {
+    if (v.tienePublicaciones && v.items.length === 0) {
+      ctx.addIssue({ code: 'custom', path: ['items'], message: 'Agregue al menos una publicación o seleccione "No"' })
+    }
+  })
+
+// 1.8 (opcional: puede guardarse vacía)
+export const capacitacionesSchema = z.object({
+  items: z.array(
+    z
+      .object({
+        tipo: opcion(['CURSO', 'SEMINARIO', 'TALLER'], 'Seleccione el tipo'),
+        nombre: texto(200),
+        institucion: texto(200),
+        fechaInicio: fecha(),
+        fechaFin: fecha(),
+        horas: z.coerce.number({ message: 'Ingrese las horas' }).int('Debe ser un número entero').min(1, 'Debe ser mayor a 0'),
+      })
+      .superRefine(rangoFechas),
+  ),
+})
+
+// 1.9 — se arma con el catálogo de preguntas: todas obligatorias y la 1.9.7 con detalle.
+export const inhabilidadesSchema = (preguntas) =>
+  z.object({
+    respuestas: z.array(
+      z
+        .object({
+          preguntaId: z.number(),
+          respuesta: siNo,
+          detalle: z.object({
+            institucion: z.string().trim(),
+            cargo: z.string().trim(),
+            fechaFin: z.string(),
+            motivo: z.string().trim(),
+          }),
+        })
+        .superRefine((r, ctx) => {
+          const q = preguntas.find((p) => p.id === r.preguntaId)
+          if (!q?.requiereDetalle || r.respuesta === null || r.respuesta === q.respuestaEsperada) return
+          const req = (campo, max, msg = 'Es obligatorio') => {
+            const val = r.detalle[campo]
+            if (!val) ctx.addIssue({ code: 'custom', path: ['detalle', campo], message: msg })
+            else if (max && val.length > max) ctx.addIssue({ code: 'custom', path: ['detalle', campo], message: `Máximo ${max} caracteres` })
+          }
+          req('institucion', 200)
+          req('cargo', 150)
+          req('motivo', 500)
+          req('fechaFin', 0, 'Es obligatoria')
+          if (r.detalle.fechaFin && r.detalle.fechaFin > hoy()) {
+            ctx.addIssue({ code: 'custom', path: ['detalle', 'fechaFin'], message: 'No puede ser una fecha futura' })
+          }
+        }),
+    ),
   })
 
 // 1.4

@@ -1,11 +1,17 @@
+import { lazy, Suspense } from 'react'
 import { Link, Navigate, Route, Routes } from 'react-router-dom'
 import { AppLayout, AuthLayout } from '../components/layout/Layouts'
+import { PageLoader } from '../components/ui'
 import { LoginPage } from '../features/auth/LoginPage'
 import { RecuperarPage } from '../features/auth/RecuperarPage'
 import { RegistroPage } from '../features/auth/RegistroPage'
 import { RestablecerPage } from '../features/auth/RestablecerPage'
-import { FormularioPage } from '../features/postulacion/FormularioPage'
 import { ProtectedRoute, PublicOnlyRoute } from './ProtectedRoute'
+
+// El formulario (la parte más pesada) se descarga solo cuando hay sesión.
+const FormularioPage = lazy(() =>
+  import('../features/postulacion/FormularioPage').then((m) => ({ default: m.FormularioPage })),
+)
 
 function NoEncontrada() {
   return (
@@ -35,7 +41,14 @@ export function AppRouter() {
 
       <Route element={<ProtectedRoute />}>
         <Route element={<AppLayout />}>
-          <Route path="/formulario" element={<FormularioPage />} />
+          <Route
+            path="/formulario"
+            element={
+              <Suspense fallback={<PageLoader />}>
+                <FormularioPage />
+              </Suspense>
+            }
+          />
         </Route>
       </Route>
 

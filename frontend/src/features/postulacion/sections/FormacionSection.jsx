@@ -1,0 +1,74 @@
+import { zodResolver } from '@hookform/resolvers/zod'
+import { useFieldArray, useForm } from 'react-hook-form'
+import { postulacionApi } from '../../../api/postulacion'
+import { Alert, Input } from '../../../components/ui'
+import { useCatalogo } from '../../../hooks/useCatalogo'
+import { hoyIso } from '../../../utils/fechas'
+import { AgregarItem, CampoSelect, ItemLista, Seccion, useFormulario, useGuardarSeccion } from '../components'
+import { formacionSchema } from '../schemas'
+
+const vacio = { nivelId: '', institucion: '', tipo: '', titulo: '', areaId: '', registroSenescyt: '', fechaRegistro: '' }
+const TIPOS = [{ id: 'NACIONAL', nombre: 'Nacional' }, { id: 'EXTRANJERA', nombre: 'Extranjera' }]
+
+// 1.5 — Títulos académicos registrados en la SENESCYT.
+export function FormacionSection() {
+  const { postulacion } = useFormulario()
+  const niveles = useCatalogo('niveles')
+  const areas = useCatalogo('areas')
+  const peticion = useGuardarSeccion()
+
+  const { register, control, handleSubmit, setError, formState: { errors } } = useForm({
+    resolver: zodResolver(formacionSchema),
+    defaultValues: {
+      items: postulacion.formacion.length
+        ? postulacion.formacion.map((f) => ({ ...f, nivelId: String(f.nivelId), areaId: String(f.areaId) }))
+        : [vacio],
+    },
+  })
+  const { fields, append, remove } = useFieldArray({ control, name: 'items' })
+
+  const onSubmit = handleSubmit((v) =>
+    peticion.guardar(
+      () =>
+        postulacionApi.formacion(
+          v.items.map(({ id, ...f }) => ({ ...f, nivelId: Number(f.nivelId), areaId: Number(f.areaId) })),
+        ),
+      setError,
+    ),
+  )
+
+  return (
+    <Seccion
+      id="formacion"
+      numeral="1.5"
+      titulo="Formación académica"
+      descripcion="Registre sus títulos de tercer y cuarto nivel."
+      peticion={peticion}
+      onSubmit={onSubmit}
+    >
+      {errors.items?.root && <Alert type="error">{errors.items.root.message}</Alert>}
+      {fields.map((f, i) => {
+        const e = errors.items?.[i] ?? {}
+        return (
+          <ItemLista key={f.id} titulo={`Título ${i + 1}`} onEliminar={fields.length > 1 ? () => remove(i) : null}>
+            <CampoSelect control={control} name={`items.${i}.nivelId`} label="Nivel de instrucción" required options={niveles.data} loading={niveles.loading} />
+            <CampoSelect control={control} name={`items.${i}.tipo`} label="Tipo de institución" required options={TIPOS} />
+            <Input label="Institución educativa" required className="sm:col-span-2" error={e.institucion?.message} {...register(`items.${i}.institucion`)} />
+            <Input label="Título obtenido" required className="sm:col-span-2" error={e.titulo?.message} {...register(`items.${i}.titulo`)} />
+            <CampoSelect control={control} name={`items.${i}.areaId`} label="Área de estudio" required options={areas.data} loading={areas.loading} />
+            <Input label="N.º de registro SENESCYT" required error={e.registroSenescyt?.message} {...register(`items.${i}.registroSenescyt`)} />
+            <Input
+              label="Fecha de registro"
+              type="date"
+              max={hoyIso()}
+              required
+              error={e.fechaRegistro?.message}
+              {...register(`items.${i}.fechaRegistro`)}
+            />
+          </ItemLista>
+        )
+      })}
+      <AgregarItem onClick={() => append(vacio)}>Agregar título</AgregarItem>
+    </Seccion>
+  )
+}

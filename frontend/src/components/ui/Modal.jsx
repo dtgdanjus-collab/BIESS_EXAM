@@ -7,8 +7,9 @@ export function Modal({ open, onClose, title, children, footer }) {
   useEffect(() => {
     const d = ref.current
     if (!d) return
-    if (open && !d.open) d.showModal?.()
-    if (!open && d.open) d.close?.()
+    // Respaldo con el atributo "open" donde showModal no existe (jsdom, navegadores antiguos).
+    if (open && !d.open) d.showModal ? d.showModal() : d.setAttribute('open', '')
+    if (!open && d.open) d.close ? d.close() : d.removeAttribute('open')
   }, [open])
 
   return (
