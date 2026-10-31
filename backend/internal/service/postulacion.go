@@ -19,23 +19,36 @@ const (
 		"para integrar el Directorio del BIESS se requiere ser de nacionalidad ecuatoriana"
 )
 
+type PostulacionConfig struct {
+	// SimularFallaEnvio fuerza un error real de PostgreSQL al registrar el historial del
+	// envío, para demostrar en la sustentación que la transacción hace ROLLBACK.
+	SimularFallaEnvio bool
+}
+
 // PostulacionService implementa EF-12 (formulario de postulación).
 type PostulacionService struct {
 	tx        repository.TxManager
 	repo      repository.PostulacionRepository
+	detalle   repository.DetalleRepository
 	usuarios  repository.UsuarioRepository
 	personas  repository.RegistroCivilRepository
+	historial repository.HistorialLaboralRepository
 	catalogos repository.CatalogoRepository
+	cfg       PostulacionConfig
 }
 
 func NewPostulacionService(
 	tx repository.TxManager,
 	repo repository.PostulacionRepository,
+	detalle repository.DetalleRepository,
 	usuarios repository.UsuarioRepository,
 	personas repository.RegistroCivilRepository,
+	historial repository.HistorialLaboralRepository,
 	catalogos repository.CatalogoRepository,
+	cfg PostulacionConfig,
 ) *PostulacionService {
-	return &PostulacionService{tx: tx, repo: repo, usuarios: usuarios, personas: personas, catalogos: catalogos}
+	return &PostulacionService{tx: tx, repo: repo, detalle: detalle, usuarios: usuarios,
+		personas: personas, historial: historial, catalogos: catalogos, cfg: cfg}
 }
 
 // Obtener devuelve la postulación completa del usuario (404 si aún no la crea).
@@ -64,6 +77,22 @@ func (s *PostulacionService) cargarDetalle(ctx context.Context, p *domain.Postul
 	if p.Familiares, err = s.repo.ListFamiliares(ctx, p.ID); err != nil {
 		return err
 	}
+	if p.Formacion, err = s.detalle.ListFormacion(ctx, p.ID); err != nil {
+		return err
+	}
+	if p.Experiencia, err = s.detalle.ListExperiencia(ctx, p.ID); err != nil {
+		return err
+	}
+	if p.Publicaciones, err = s.detalle.ListPublicaciones(ctx, p.ID); err != nil {
+		return err
+	}
+	if p.Capacitaciones, err = s.detalle.ListCapacitaciones(ctx, p.ID); err != nil {
+		return err
+	}
+	if p.Inhabilidades, err = s.detalle.ListInhabilidades(ctx, p.ID); err != nil {
+		return err
+	}
+	calcularExperiencia(p)
 	return nil
 }
 

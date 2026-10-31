@@ -27,6 +27,8 @@ type CatalogoRepository interface {
 	PaisNombre(ctx context.Context, paisID int) (string, error)
 	// CantonEnProvincia verifica la cascada País → Provincia → Cantón.
 	CantonEnProvincia(ctx context.Context, paisID, provinciaID, cantonID int) (bool, error)
+	// FindSector devuelve ErrNotFound si el código no existe.
+	FindSector(ctx context.Context, codigo string) (*domain.Sector, error)
 }
 
 type pgCatalogoRepository struct {
@@ -99,6 +101,24 @@ func (r *pgCatalogoRepository) CantonEnProvincia(ctx context.Context, paisID, pr
 		return false, fmt.Errorf("validando ubicación: %w", err)
 	}
 	return ok, nil
+}
+
+func (r *pgCatalogoRepository) FindSector(ctx context.Context, codigo string) (*domain.Sector, error) {
+	rows, err := r.pool.Query(ctx, `
+		SELECT codigo, cargo, tipo_requerido, etiqueta_cumple, etiqueta_no_cumple,
+		       mensaje_rechazo, pregunta_respaldo
+		FROM sectores WHERE codigo = $1`, codigo)
+	if err != nil {
+		return nil, fmt.Errorf("consultando sector: %w", err)
+	}
+	s, err := pgx.CollectExactlyOneRow(rows, pgx.RowToStructByPos[domain.Sector])
+	if errors.Is(err, pgx.ErrNoRows) {
+		return nil, ErrNotFound
+	}
+	if err != nil {
+		return nil, fmt.Errorf("leyendo sector: %w", err)
+	}
+	return &s, nil
 }
 
 func queryItems(ctx context.Context, pool *pgxpool.Pool, sql string, args ...any) ([]domain.Item, error) {

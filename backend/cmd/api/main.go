@@ -57,6 +57,8 @@ func run() error {
 	store := repository.NewStore(pool) // TxManager: BEGIN / COMMIT / ROLLBACK
 	catalogoRepo := repository.NewCatalogoRepository(pool)
 	postulacionRepo := repository.NewPostulacionRepository(pool)
+	detalleRepo := repository.NewDetalleRepository(pool)
+	historialRepo := repository.NewHistorialLaboralRepository(pool)
 	personaRepo := repository.NewRegistroCivilRepository(pool)
 	usuarioRepo := repository.NewUsuarioRepository(pool)
 
@@ -70,7 +72,9 @@ func run() error {
 	jwtManager := jwtutil.NewManager(cfg.API.JWTSecret, cfg.API.JWTTTL)
 	authSvc := service.NewAuthService(personaRepo, usuarioRepo, intentosCache, tokenCache, jwtManager,
 		service.AuthConfig{Bloqueo: cfg.Security.Bloqueo, FrontendURL: cfg.API.FrontendURL})
-	postulacionSvc := service.NewPostulacionService(store, postulacionRepo, usuarioRepo, personaRepo, catalogoRepo)
+	postulacionSvc := service.NewPostulacionService(store, postulacionRepo, detalleRepo, usuarioRepo,
+		personaRepo, historialRepo, catalogoRepo,
+		service.PostulacionConfig{SimularFallaEnvio: cfg.Security.DemoFallaEnvio})
 
 	// --- Handlers ---
 	handlers := handler.Handlers{
@@ -81,6 +85,7 @@ func run() error {
 		Catalogos:   handler.NewCatalogoHandler(catalogoSvc),
 		Auth:        handler.NewAuthHandler(authSvc),
 		Postulacion: handler.NewPostulacionHandler(postulacionSvc),
+		Secciones:   handler.NewSeccionesHandler(postulacionSvc),
 	}
 
 	// --- HTTP ---
