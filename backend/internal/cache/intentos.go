@@ -12,8 +12,9 @@ import (
 type Ambito string
 
 const (
-	AmbitoRegistro Ambito = "registro"
-	AmbitoLogin    Ambito = "login"
+	AmbitoRegistro  Ambito = "registro"
+	AmbitoLogin     Ambito = "login"
+	AmbitoRecuperar Ambito = "recuperar"
 )
 
 // IntentosCache implementa el rate limiting de EF-11: N fallos → bloqueo temporal.

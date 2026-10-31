@@ -45,6 +45,7 @@ type APIConfig struct {
 	JWTSecret   string
 	JWTTTL      time.Duration
 	CORSOrigins string
+	FrontendURL string
 }
 
 type SecurityConfig struct {
@@ -82,6 +83,7 @@ func Load() (*Config, error) {
 			JWTSecret:   getStr("JWT_SECRET", ""),
 			JWTTTL:      time.Duration(getInt("JWT_TTL_HOURS", 2, &errs)) * time.Hour,
 			CORSOrigins: getStr("CORS_ORIGINS", "http://localhost:5173"),
+			FrontendURL: strings.TrimRight(getStr("FRONTEND_URL", "http://localhost:5173"), "/"),
 		},
 		Security: SecurityConfig{
 			MaxIntentos: getInt("MAX_INTENTOS", 3, &errs),

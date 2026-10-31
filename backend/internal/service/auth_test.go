@@ -29,10 +29,41 @@ func (f *fakeUsuarios) ExistsByCedula(_ context.Context, c string) (bool, error)
 	return ok, nil
 }
 
+func (f *fakeUsuarios) FindByCedula(_ context.Context, c string) (*domain.Usuario, error) {
+	if u, ok := f.porCedula[c]; ok {
+		return u, nil
+	}
+	return nil, repository.ErrNotFound
+}
+
+func (f *fakeUsuarios) FindByID(_ context.Context, id int64) (*domain.Usuario, error) {
+	for _, u := range f.porCedula {
+		if u.ID == id {
+			return u, nil
+		}
+	}
+	return nil, repository.ErrNotFound
+}
+
 func (f *fakeUsuarios) Create(_ context.Context, u *domain.Usuario) error {
 	u.ID = int64(len(f.porCedula) + 1)
 	f.porCedula[u.Cedula] = u
 	return nil
+}
+
+func (f *fakeUsuarios) UpdatePassword(_ context.Context, c, hash string) error {
+	u, ok := f.porCedula[c]
+	if !ok {
+		return repository.ErrNotFound
+	}
+	u.PasswordHash = hash
+	return nil
+}
+
+type fakeJWT struct{}
+
+func (fakeJWT) Generar(id int64) (string, time.Time, error) {
+	return "jwt-de-prueba", time.Now().Add(time.Hour), nil
 }
 
 type fakeIntentos struct {
@@ -93,7 +124,53 @@ func nuevoAuthService() *AuthService {
 		&fakeUsuarios{porCedula: map[string]*domain.Usuario{}},
 		&fakeIntentos{max: 3, fallos: map[string]int{}, bloqueos: map[string]bool{}},
 		fakeTokens{},
-		AuthConfig{Bloqueo: 10 * time.Minute})
+		fakeJWT{},
+		AuthConfig{Bloqueo: 10 * time.Minute, FrontendURL: "http://localhost:5173"})
+}
+
+func TestLogin_BloqueoSeparadoDelRegistroYRecuperacion(t *testing.T) {
+	svc := nuevoAuthService()
+	ctx := context.Background()
+	token, _ := svc.VerificarIdentidad(ctx, IdentidadInput{Cedula: "0106789019", CodigoDactilar: "E7777V8888"})
+	if _, err := svc.Registrar(ctx, RegistroInput{RegistroToken: token, Email: "d@correo.com", Password: "Biess2026"}); err != nil {
+		t.Fatal(err)
+	}
+
+	for i := 0; i < 2; i++ {
+		_, err := svc.Login(ctx, "0106789019", "incorrecta1")
+		var de *domain.Error
+		if !errors.As(err, &de) || de.Message != MsgCredencialesInvalidas {
+			t.Fatalf("login fallido %d: %v", i+1, err)
+		}
+	}
+	if _, err := svc.Login(ctx, "0106789019", "incorrecta1"); !errors.Is(err, domain.ErrBloqueado) {
+		t.Fatalf("tercer fallo: se esperaba ErrBloqueado, se obtuvo %v", err)
+	}
+	// El bloqueo del login no afecta a la recuperación (claves separadas).
+	if _, err := svc.Recuperar(ctx, IdentidadInput{Cedula: "0106789019", FechaExpedicion: "2023-01-17"}); err != nil {
+		t.Fatalf("recuperar: %v", err)
+	}
+}
+
+func TestLogin_Exitoso(t *testing.T) {
+	svc := nuevoAuthService()
+	ctx := context.Background()
+	token, _ := svc.VerificarIdentidad(ctx, IdentidadInput{Cedula: "0106789019", CodigoDactilar: "E7777V8888"})
+	_, _ = svc.Registrar(ctx, RegistroInput{RegistroToken: token, Email: "d@correo.com", Password: "Biess2026"})
+
+	s, err := svc.Login(ctx, "0106789019", "Biess2026")
+	if err != nil || s.Token == "" || s.Usuario.Cedula != "0106789019" {
+		t.Fatalf("login: %+v, %v", s, err)
+	}
+	if _, err := svc.Login(ctx, "0102345675", "Biess2026"); !errors.Is(err, domain.ErrCredenciales) {
+		t.Fatalf("cédula sin cuenta: se esperaba ErrCredenciales, se obtuvo %v", err)
+	}
+}
+
+func TestEnmascararEmail(t *testing.T) {
+	if got := enmascararEmail("maria@correo.com"); got != "ma***@correo.com" {
+		t.Errorf("enmascararEmail = %q", got)
+	}
 }
 
 func TestVerificarIdentidad_BloqueoTrasTresFallos(t *testing.T) {

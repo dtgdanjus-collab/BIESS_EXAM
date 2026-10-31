@@ -9,8 +9,8 @@ type Handlers struct {
 	Auth      *AuthHandler
 }
 
-// RegisterRoutes declara las rutas bajo el prefijo /api.
-func RegisterRoutes(app *fiber.App, h Handlers) {
+// RegisterRoutes declara las rutas bajo el prefijo /api. requireAuth protege las rutas privadas.
+func RegisterRoutes(app *fiber.App, h Handlers, requireAuth fiber.Handler) {
 	api := app.Group("/api")
 	api.Get("/health", h.Health.Check)
 
@@ -27,4 +27,8 @@ func RegisterRoutes(app *fiber.App, h Handlers) {
 	auth := api.Group("/auth")
 	auth.Post("/verificar-identidad", h.Auth.VerificarIdentidad)
 	auth.Post("/registro", h.Auth.Registro)
+	auth.Post("/login", h.Auth.Login)
+	auth.Post("/recuperar", h.Auth.Recuperar)
+	auth.Post("/restablecer", h.Auth.Restablecer)
+	auth.Get("/me", requireAuth, h.Auth.Me)
 }
