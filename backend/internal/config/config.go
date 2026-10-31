@@ -20,6 +20,7 @@ type Config struct {
 }
 
 type DBConfig struct {
+	URL      string // DATABASE_URL (Render y otros PaaS); si existe, tiene prioridad
 	Host     string
 	Port     int
 	User     string
@@ -30,11 +31,15 @@ type DBConfig struct {
 
 // DSN arma la cadena de conexión en formato URL que entiende pgx.
 func (d DBConfig) DSN() string {
+	if d.URL != "" {
+		return d.URL
+	}
 	return fmt.Sprintf("postgres://%s:%s@%s:%d/%s?sslmode=%s",
 		d.User, d.Password, d.Host, d.Port, d.Name, d.SSLMode)
 }
 
 type RedisConfig struct {
+	URL      string // REDIS_URL (redis://… o rediss://…); si existe, tiene prioridad
 	Addr     string
 	Password string
 	DB       int
@@ -68,6 +73,7 @@ func Load() (*Config, error) {
 	var errs []error
 	cfg := &Config{
 		DB: DBConfig{
+			URL:      getStr("DATABASE_URL", ""),
 			Host:     getStr("DB_HOST", "localhost"),
 			Port:     getInt("DB_PORT", 5432, &errs),
 			User:     getStr("DB_USER", "biess"),
@@ -76,12 +82,14 @@ func Load() (*Config, error) {
 			SSLMode:  getStr("DB_SSLMODE", "disable"),
 		},
 		Redis: RedisConfig{
+			URL:      getStr("REDIS_URL", ""),
 			Addr:     getStr("REDIS_ADDR", "localhost:6379"),
 			Password: getStr("REDIS_PASSWORD", ""),
 			DB:       getInt("REDIS_DB", 0, &errs),
 		},
 		API: APIConfig{
-			Port:        getInt("API_PORT", 8080, &errs),
+			// PORT lo asigna Render; API_PORT es el de desarrollo local.
+			Port:        getInt("API_PORT", getInt("PORT", 8080, &errs), &errs),
 			JWTSecret:   getStr("JWT_SECRET", ""),
 			JWTTTL:      time.Duration(getInt("JWT_TTL_HOURS", 2, &errs)) * time.Hour,
 			CORSOrigins: getStr("CORS_ORIGINS", "http://localhost:5173"),
