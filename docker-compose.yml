@@ -1,0 +1,40 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: biess_postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${DB_USER:-biess}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-biess_secret}
+      POSTGRES_DB: ${DB_NAME:-biess_postulacion}
+      TZ: America/Guayaquil
+    ports:
+      - "${DB_PORT:-5432}:5432"
+    volumes:
+      - pg_data:/var/lib/postgresql/data
+      # Los scripts se ejecutan en orden alfabético solo la primera vez (volumen vacío)
+      - ./db:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-biess} -d ${DB_NAME:-biess_postulacion}"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    container_name: biess_redis
+    restart: unless-stopped
+    command: ["redis-server", "--appendonly", "yes"]
+    ports:
+      - "${REDIS_PORT:-6379}:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+volumes:
+  pg_data:
+  redis_data:
