@@ -128,7 +128,8 @@ func (h *AuthHandler) Restablecer(c *fiber.Ctx) error {
 // parseBody decodifica el JSON del cuerpo y responde 400 si está mal formado.
 func parseBody(c *fiber.Ctx, dst any) error {
 	if err := c.BodyParser(dst); err != nil {
-		return domain.NewError(domain.ErrValidacion, "El cuerpo de la petición no es un JSON válido")
+		return domain.NewError(domain.ErrValidacion, "El cuerpo de la petición no es un JSON válido").
+			WithDetail("causa", err.Error())
 	}
 	return nil
 }

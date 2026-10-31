@@ -54,7 +54,9 @@ func run() error {
 	log.Println("conectado a Redis")
 
 	// --- Repositories ---
+	store := repository.NewStore(pool) // TxManager: BEGIN / COMMIT / ROLLBACK
 	catalogoRepo := repository.NewCatalogoRepository(pool)
+	postulacionRepo := repository.NewPostulacionRepository(pool)
 	personaRepo := repository.NewRegistroCivilRepository(pool)
 	usuarioRepo := repository.NewUsuarioRepository(pool)
 
@@ -68,6 +70,7 @@ func run() error {
 	jwtManager := jwtutil.NewManager(cfg.API.JWTSecret, cfg.API.JWTTTL)
 	authSvc := service.NewAuthService(personaRepo, usuarioRepo, intentosCache, tokenCache, jwtManager,
 		service.AuthConfig{Bloqueo: cfg.Security.Bloqueo, FrontendURL: cfg.API.FrontendURL})
+	postulacionSvc := service.NewPostulacionService(store, postulacionRepo, usuarioRepo, personaRepo, catalogoRepo)
 
 	// --- Handlers ---
 	handlers := handler.Handlers{
@@ -75,8 +78,9 @@ func run() error {
 			"postgres": pool,
 			"redis":    platform.RedisPinger{Client: rdb},
 		}),
-		Catalogos: handler.NewCatalogoHandler(catalogoSvc),
-		Auth:      handler.NewAuthHandler(authSvc),
+		Catalogos:   handler.NewCatalogoHandler(catalogoSvc),
+		Auth:        handler.NewAuthHandler(authSvc),
+		Postulacion: handler.NewPostulacionHandler(postulacionSvc),
 	}
 
 	// --- HTTP ---
