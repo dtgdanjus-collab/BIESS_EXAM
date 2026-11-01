@@ -64,10 +64,13 @@ Para recrear la base desde cero: `docker compose down -v && docker compose up -d
 | `MAX_INTENTOS` · `BLOQUEO_MINUTOS` | `3` · `10` | Bloqueo por intentos fallidos (EF-11) |
 | `CATALOGO_TTL_HORAS` | `24` | TTL de la caché de catálogos |
 | `DEMO_FALLA_ENVIO` | `false` | Solo para la sustentación: fuerza el ROLLBACK del envío |
+| `REGISTRO_CIVIL_AUTOGENERAR` | `true` | Da de alta con datos ficticios (una vez) las cédulas válidas que no están en el Registro Civil simulado |
 
 ## Datos de prueba
 
-No hay usuarios precargados: cada persona se **registra** en `/registro` con su cédula y **uno** de los dos datos de identidad. Los datos son ficticios; las cédulas son válidas por módulo 10.
+No hay usuarios precargados: cada persona se **registra** en `/registro` con su cédula y **uno** de los dos datos de identidad. Los datos son ficticios; las cédulas son válidas por módulo 10. En el registro, el panel **Demo · Personas de prueba** las llena con un clic.
+
+**Cualquier otra cédula válida también funciona** (`REGISTRO_CIVIL_AUTOGENERAR=true`): la primera vez que se valida, el Registro Civil simulado la da de alta **una sola vez** con datos ficticios fijos para esa cédula (siempre ecuatoriana y afiliada) y con la fecha de expedición o el código dactilar ingresados. Desde ese momento se comporta como un registro normal: si los datos no coinciden cuenta como intento fallido y aplica el bloqueo. Con `REGISTRO_CIVIL_AUTOGENERAR=false` solo existen las 6 personas de la tabla.
 
 | Caso | Cédula | Fecha de expedición | Código dactilar | Escenario |
 |---|---|---|---|---|

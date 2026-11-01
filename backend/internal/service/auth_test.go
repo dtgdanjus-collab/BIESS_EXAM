@@ -22,6 +22,15 @@ func (f fakePersonas) FindByCedula(_ context.Context, c string) (*domain.Persona
 	return nil, repository.ErrNotFound
 }
 
+// CrearSimulada imita el ON CONFLICT DO NOTHING: si ya existe, se conserva la guardada.
+func (f fakePersonas) CrearSimulada(_ context.Context, p domain.Persona, _ []string) (*domain.Persona, error) {
+	if existente, ok := f[p.Cedula]; ok {
+		return existente, nil
+	}
+	f[p.Cedula] = &p
+	return &p, nil
+}
+
 type fakeUsuarios struct{ porCedula map[string]*domain.Usuario }
 
 func (f *fakeUsuarios) ExistsByCedula(_ context.Context, c string) (bool, error) {
@@ -221,5 +230,44 @@ func TestRegistro_CaminoFelizYTokenDeUnSoloUso(t *testing.T) {
 	}
 	if _, err := svc.VerificarIdentidad(ctx, IdentidadInput{Cedula: "0106789019", CodigoDactilar: "E7777V8888"}); !errors.Is(err, domain.ErrConflicto) {
 		t.Fatalf("cédula ya registrada: se esperaba ErrConflicto, se obtuvo %v", err)
+	}
+}
+
+func TestVerificarIdentidad_RegistroCivilAutogenerado(t *testing.T) {
+	svc := nuevoAuthService()
+	svc.cfg.AutoRegistroCivil = true
+	ctx := context.Background()
+	nueva := IdentidadInput{Cedula: "0928017326", FechaExpedicion: "2024-07-29"}
+
+	// Primera vez: se da de alta con datos ficticios y la fecha ingresada.
+	if _, err := svc.VerificarIdentidad(ctx, nueva); err != nil {
+		t.Fatalf("primera validación: %v", err)
+	}
+	p, _ := svc.personas.FindByCedula(ctx, "0928017326")
+	if p == nil || p.Nacionalidad != "ECUATORIANA" || p.FechaExpedicion.Format(time.DateOnly) != "2024-07-29" {
+		t.Fatalf("persona simulada incorrecta: %+v", p)
+	}
+	nombre := p.Nombres
+
+	// Después ya existe: otra fecha es un intento fallido y no crea otra persona.
+	_, err := svc.VerificarIdentidad(ctx, IdentidadInput{Cedula: "0928017326", FechaExpedicion: "2020-01-01"})
+	if !errors.Is(err, domain.ErrIdentidad) {
+		t.Fatalf("fecha distinta: se esperaba ErrIdentidad, se obtuvo %v", err)
+	}
+	if q, _ := svc.personas.FindByCedula(ctx, "0928017326"); q.Nombres != nombre {
+		t.Fatal("se generó una segunda persona para la misma cédula")
+	}
+
+	// La misma fecha vuelve a coincidir.
+	if _, err := svc.VerificarIdentidad(ctx, nueva); err != nil {
+		t.Fatalf("misma fecha: %v", err)
+	}
+}
+
+func TestVerificarIdentidad_SinAutogenerarEsEstricto(t *testing.T) {
+	svc := nuevoAuthService() // AutoRegistroCivil = false
+	_, err := svc.VerificarIdentidad(context.Background(), IdentidadInput{Cedula: "0928017326", FechaExpedicion: "2024-07-29"})
+	if !errors.Is(err, domain.ErrIdentidad) {
+		t.Fatalf("se esperaba ErrIdentidad, se obtuvo %v", err)
 	}
 }

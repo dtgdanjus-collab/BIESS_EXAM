@@ -71,7 +71,8 @@ func run() error {
 	catalogoSvc := service.NewCatalogoService(catalogoRepo, catalogoCache)
 	jwtManager := jwtutil.NewManager(cfg.API.JWTSecret, cfg.API.JWTTTL)
 	authSvc := service.NewAuthService(personaRepo, usuarioRepo, intentosCache, tokenCache, jwtManager,
-		service.AuthConfig{Bloqueo: cfg.Security.Bloqueo, FrontendURL: cfg.API.FrontendURL})
+		service.AuthConfig{Bloqueo: cfg.Security.Bloqueo, FrontendURL: cfg.API.FrontendURL,
+			AutoRegistroCivil: cfg.API.AutoRegistroCivil})
 	postulacionSvc := service.NewPostulacionService(store, postulacionRepo, detalleRepo, usuarioRepo,
 		personaRepo, historialRepo, catalogoRepo,
 		service.PostulacionConfig{SimularFallaEnvio: cfg.Security.DemoFallaEnvio})

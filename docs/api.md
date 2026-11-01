@@ -36,7 +36,7 @@ Todas las respuestas de error tienen la misma forma:
 | GET | `/catalogos/niveles` | — | `[{id, nombre, orden}]` |
 | GET | `/catalogos/sectores` | — | `[{codigo, cargo, tipoRequerido, etiquetaCumple, etiquetaNoCumple, mensajeRechazo, preguntaRespaldo}]` |
 | GET | `/catalogos/inhabilidades` | — | `[{id, numeral, texto, respuestaEsperada, requiereDetalle, orden}]` |
-| POST | `/auth/verificar-identidad` | `{cedula, fechaExpedicion?, codigoDactilar?}` (al menos uno) | `{registroToken}` (válido 10 min) |
+| POST | `/auth/verificar-identidad` | `{cedula, fechaExpedicion?, codigoDactilar?}` (al menos uno) | `{registroToken}` (válido 10 min). Con `REGISTRO_CIVIL_AUTOGENERAR=true`, una cédula válida desconocida se da de alta una vez con datos ficticios |
 | POST | `/auth/registro` | `{registroToken, email, password}` | 201 `{id, cedula, email, creadoEn}` |
 | POST | `/auth/login` | `{cedula, password}` | `{token, expiraEn, usuario:{id, cedula, email, nombres, apellidos}}` |
 | POST | `/auth/recuperar` | `{cedula, fechaExpedicion? \| codigoDactilar?}` | `{message, email}` (correo enmascarado; el enlace se imprime en el log) |
