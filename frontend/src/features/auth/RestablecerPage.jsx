@@ -5,7 +5,7 @@ import { restablecer } from '../../api/auth'
 import { Alert, Button, ErrorAlert } from '../../components/ui'
 import { useAsync } from '../../hooks/useAsync'
 import { aplicarErroresCampos } from '../../utils/formErrors'
-import { AuthCard, PasswordInput } from './components'
+import { AuthCard, PasswordInput, ReglasPassword } from './components'
 import { restablecerSchema } from './schemas'
 
 export function RestablecerPage() {
@@ -17,8 +17,13 @@ export function RestablecerPage() {
     register,
     handleSubmit,
     setError,
+    watch,
     formState: { errors },
-  } = useForm({ resolver: zodResolver(restablecerSchema), defaultValues: { nuevaPassword: '', confirmar: '' } })
+  } = useForm({
+    resolver: zodResolver(restablecerSchema),
+    mode: 'onTouched',
+    defaultValues: { nuevaPassword: '', confirmar: '' },
+  })
 
   const onSubmit = async (v) => {
     const r = await peticion.run(() => restablecer(token, v.nuevaPassword))
@@ -47,11 +52,12 @@ export function RestablecerPage() {
         <PasswordInput
           label="Nueva contraseña"
           autoComplete="new-password"
-          hint="Mínimo 8 caracteres, con al menos una letra y un número"
           required
           error={errors.nuevaPassword?.message}
-          {...register('nuevaPassword')}
+          maxLength={72}
+          {...register('nuevaPassword', { deps: ['confirmar'] })}
         />
+        <ReglasPassword valor={watch('nuevaPassword')} />
         <PasswordInput
           label="Confirmar contraseña"
           autoComplete="new-password"

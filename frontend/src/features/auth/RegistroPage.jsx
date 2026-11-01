@@ -7,7 +7,15 @@ import { Alert, Button, ErrorAlert, Icon, Input } from '../../components/ui'
 import { useAsync } from '../../hooks/useAsync'
 import { useBloqueo } from '../../hooks/useBloqueo'
 import { aplicarErroresCampos } from '../../utils/formErrors'
-import { AuthCard, BloqueoAviso, IdentidadFields, PasswordInput } from './components'
+import {
+  AuthCard,
+  BloqueoAviso,
+  IdentidadFields,
+  PasswordInput,
+  PersonasPrueba,
+  ReglasPassword,
+  usarPersona,
+} from './components'
 import { cuentaSchema, identidadPayload, identidadSchema } from './schemas'
 
 function Pasos({ paso }) {
@@ -42,9 +50,11 @@ function PasoIdentidad({ onValidado }) {
     watch,
     setValue,
     setError,
+    clearErrors,
     formState: { errors },
   } = useForm({
     resolver: zodResolver(identidadSchema),
+    mode: 'onTouched',
     defaultValues: { cedula: '', metodo: 'fecha', fechaExpedicion: '', codigoDactilar: '' },
   })
 
@@ -79,6 +89,7 @@ function PasoIdentidad({ onValidado }) {
           register={register}
           errors={errors}
           metodo={watch('metodo')}
+          cedula={watch('cedula')}
           setValue={setValue}
           disabled={bloqueo.bloqueado}
         />
@@ -86,6 +97,7 @@ function PasoIdentidad({ onValidado }) {
       <Button type="submit" className="w-full" loading={peticion.loading} disabled={bloqueo.bloqueado}>
         {bloqueo.bloqueado ? `Bloqueado (${bloqueo.tiempo})` : 'Validar identidad'}
       </Button>
+      <PersonasPrueba onUsar={usarPersona(setValue, clearErrors)} />
     </form>
   )
 }
@@ -97,8 +109,13 @@ function PasoCuenta({ registroToken, onExpirado, onRegistrado }) {
     register,
     handleSubmit,
     setError,
+    watch,
     formState: { errors },
-  } = useForm({ resolver: zodResolver(cuentaSchema), defaultValues: { email: '', password: '', confirmar: '' } })
+  } = useForm({
+    resolver: zodResolver(cuentaSchema),
+    mode: 'onTouched',
+    defaultValues: { email: '', password: '', confirmar: '' },
+  })
 
   const onSubmit = async (v) => {
     const r = await peticion.run(() => registrar({ registroToken, email: v.email, password: v.password }))
@@ -117,6 +134,8 @@ function PasoCuenta({ registroToken, onExpirado, onRegistrado }) {
         icono="mail"
         type="email"
         autoComplete="email"
+        placeholder="nombre@correo.com"
+        maxLength={150}
         required
         error={errors.email?.message}
         {...register('email')}
@@ -124,11 +143,12 @@ function PasoCuenta({ registroToken, onExpirado, onRegistrado }) {
       <PasswordInput
         label="Contraseña"
         autoComplete="new-password"
-        hint="Mínimo 8 caracteres, con al menos una letra y un número"
+        maxLength={72}
         required
         error={errors.password?.message}
-        {...register('password')}
+        {...register('password', { deps: ['confirmar'] })}
       />
+      <ReglasPassword valor={watch('password')} />
       <PasswordInput
         label="Confirmar contraseña"
         autoComplete="new-password"

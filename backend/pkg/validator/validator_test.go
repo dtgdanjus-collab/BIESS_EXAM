@@ -1,6 +1,9 @@
 package validator
 
-import "testing"
+import (
+	"strings"
+	"testing"
+)
 
 func TestCedula(t *testing.T) {
 	casos := map[string]bool{
@@ -34,6 +37,9 @@ func TestCodigoDactilar(t *testing.T) {
 		"v4443v4442":  false, // minúsculas
 		"V4443V444":   false,
 		"V4443-V4442": false,
+		"V4443V444A":  false, // dígito final no numérico
+		"44430V4442":  false, // debe iniciar con letra
+		"VV443V4442":  false,
 	}
 	for c, want := range casos {
 		if got := CodigoDactilar(c); got != want {
@@ -44,11 +50,12 @@ func TestCodigoDactilar(t *testing.T) {
 
 func TestPassword(t *testing.T) {
 	casos := map[string]bool{
-		"Biess2026": true,
-		"abc12345":  true,
-		"abcdefgh":  false, // sin número
-		"12345678":  false, // sin letra
-		"ab12":      false, // corta
+		"Biess2026":              true,
+		"abc12345":               true,
+		"abcdefgh":               false, // sin número
+		"12345678":               false, // sin letra
+		"ab12":                   false, // corta
+		strings.Repeat("a1", 37): false, // 74 bytes: excede el límite de bcrypt
 	}
 	for p, want := range casos {
 		if got := Password(p); got != want {
