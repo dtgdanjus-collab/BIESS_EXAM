@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log"
 	"math"
 	"strings"
 	"time"
@@ -14,6 +15,7 @@ import (
 	"github.com/biess-dev/biess-postulacion/backend/internal/cache"
 	"github.com/biess-dev/biess-postulacion/backend/internal/domain"
 	"github.com/biess-dev/biess-postulacion/backend/internal/repository"
+	"github.com/biess-dev/biess-postulacion/backend/internal/simulador"
 	"github.com/biess-dev/biess-postulacion/backend/pkg/validator"
 )
 
@@ -33,6 +35,9 @@ const (
 type AuthConfig struct {
 	Bloqueo     time.Duration
 	FrontendURL string // base del enlace de recuperación que se "envía" por correo
+	// AutoRegistroCivil: una cédula válida que no está en el Registro Civil simulado se da
+	// de alta (una sola vez) con datos ficticios y los datos de identidad que ingresó.
+	AutoRegistroCivil bool
 }
 
 // TokenEmisor firma los JWT de sesión (implementado por pkg/jwtutil).
@@ -86,6 +91,11 @@ func (s *AuthService) VerificarIdentidad(ctx context.Context, in IdentidadInput)
 	if err != nil && !errors.Is(err, repository.ErrNotFound) {
 		return "", err
 	}
+	if persona == nil && s.cfg.AutoRegistroCivil {
+		if persona, err = s.altaSimulada(ctx, in); err != nil {
+			return "", err
+		}
+	}
 	if persona == nil || !coincideIdentidad(persona, in) {
 		return "", s.fallo(ctx, cache.AmbitoRegistro, in.Cedula)
 	}
@@ -109,6 +119,25 @@ func (s *AuthService) VerificarIdentidad(ctx context.Context, in IdentidadInput)
 		return "", err
 	}
 	return token, nil
+}
+
+// altaSimulada crea en el Registro Civil simulado la persona ficticia de la cédula, usando
+// la fecha de expedición o el código dactilar que ingresó el usuario. Si otra petición la
+// creó al mismo tiempo, devuelve la existente (y la comparación posterior decide).
+func (s *AuthService) altaSimulada(ctx context.Context, in IdentidadInput) (*domain.Persona, error) {
+	var fecha *time.Time
+	if in.FechaExpedicion != "" {
+		f, _ := time.Parse(time.DateOnly, in.FechaExpedicion) // ya validada
+		fecha = &f
+	}
+	p, calidades := simulador.Persona(in.Cedula, fecha, in.CodigoDactilar, time.Now())
+	persona, err := s.personas.CrearSimulada(ctx, p, calidades)
+	if err != nil {
+		return nil, err
+	}
+	log.Printf("REGISTRO CIVIL SIMULADO: alta de %s (%s %s) con calidades %v",
+		persona.Cedula, persona.Nombres, persona.Apellidos, calidades)
+	return persona, nil
 }
 
 type RegistroInput struct {

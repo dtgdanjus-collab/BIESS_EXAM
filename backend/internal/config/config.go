@@ -51,6 +51,8 @@ type APIConfig struct {
 	JWTTTL      time.Duration
 	CORSOrigins string
 	FrontendURL string
+	// AutoRegistroCivil da de alta con datos ficticios las cédulas válidas desconocidas (modo demostración).
+	AutoRegistroCivil bool
 }
 
 type SecurityConfig struct {
@@ -89,11 +91,12 @@ func Load() (*Config, error) {
 		},
 		API: APIConfig{
 			// PORT lo asigna Render; API_PORT es el de desarrollo local.
-			Port:        getInt("API_PORT", getInt("PORT", 8080, &errs), &errs),
-			JWTSecret:   getStr("JWT_SECRET", ""),
-			JWTTTL:      time.Duration(getInt("JWT_TTL_HOURS", 2, &errs)) * time.Hour,
-			CORSOrigins: getStr("CORS_ORIGINS", "http://localhost:5173"),
-			FrontendURL: strings.TrimRight(getStr("FRONTEND_URL", "http://localhost:5173"), "/"),
+			Port:              getInt("API_PORT", getInt("PORT", 8080, &errs), &errs),
+			JWTSecret:         getStr("JWT_SECRET", ""),
+			JWTTTL:            time.Duration(getInt("JWT_TTL_HOURS", 2, &errs)) * time.Hour,
+			CORSOrigins:       getStr("CORS_ORIGINS", "http://localhost:5173"),
+			FrontendURL:       strings.TrimRight(getStr("FRONTEND_URL", "http://localhost:5173"), "/"),
+			AutoRegistroCivil: getStr("REGISTRO_CIVIL_AUTOGENERAR", "true") == "true",
 		},
 		Security: SecurityConfig{
 			MaxIntentos:    getInt("MAX_INTENTOS", 3, &errs),
