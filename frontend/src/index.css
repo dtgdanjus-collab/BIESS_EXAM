@@ -1,6 +1,8 @@
 @import "tailwindcss";
 
-/* Paleta institucional (verde petróleo) y tokens de la interfaz */
+/* ---------------------------------------------------------------
+   Sistema visual: verde institucional profundo + acento dorado
+   --------------------------------------------------------------- */
 @theme {
   --color-brand-50: #eef8f4;
   --color-brand-100: #d5eee3;
@@ -12,8 +14,64 @@
   --color-brand-700: #0f5f4a;
   --color-brand-800: #0c4a3a;
   --color-brand-900: #093a2e;
+  --color-brand-950: #05241c;
 
-  --font-sans: "Segoe UI", system-ui, -apple-system, Roboto, "Helvetica Neue", Arial, sans-serif;
+  --color-gold-100: #faf1dc;
+  --color-gold-200: #f2dfae;
+  --color-gold-300: #e6c77f;
+  --color-gold-400: #d6ab55;
+  --color-gold-500: #c39a3f;
+  --color-gold-600: #9c7a2e;
+
+  --font-sans: "Plus Jakarta Sans", "Segoe UI", system-ui, -apple-system, Roboto, Arial, sans-serif;
+
+  --shadow-card: 0 1px 2px rgb(15 23 42 / 0.04), 0 12px 32px -16px rgb(15 23 42 / 0.18);
+  --shadow-lift: 0 2px 4px rgb(15 23 42 / 0.06), 0 24px 48px -20px rgb(9 58 46 / 0.35);
+  --shadow-glow: 0 10px 30px -10px rgb(15 95 74 / 0.55);
+
+  --animate-fade-up: fade-up 0.55s cubic-bezier(0.2, 0.7, 0.2, 1) both;
+  --animate-fade-in: fade-in 0.4s ease-out both;
+  --animate-float: float 9s ease-in-out infinite;
+
+  @keyframes fade-up {
+    from {
+      opacity: 0;
+      transform: translateY(12px);
+    }
+    to {
+      opacity: 1;
+      transform: none;
+    }
+  }
+  @keyframes fade-in {
+    from {
+      opacity: 0;
+    }
+    to {
+      opacity: 1;
+    }
+  }
+  @keyframes float {
+    0%,
+    100% {
+      transform: translate3d(0, 0, 0) scale(1);
+    }
+    50% {
+      transform: translate3d(0, -18px, 0) scale(1.05);
+    }
+  }
+}
+
+/* Trama de puntos para los paneles oscuros */
+@utility bg-dots {
+  background-image: radial-gradient(rgb(255 255 255 / 0.13) 1px, transparent 1px);
+  background-size: 22px 22px;
+}
+
+/* Trama sutil para fondos claros */
+@utility bg-dots-light {
+  background-image: radial-gradient(rgb(15 95 74 / 0.09) 1px, transparent 1px);
+  background-size: 24px 24px;
 }
 
 @layer base {
@@ -22,18 +80,35 @@
   }
   body {
     @apply bg-slate-50 text-slate-800 antialiased;
+    background-image:
+      radial-gradient(1100px 520px at 105% -8%, rgb(213 238 227 / 0.75), transparent 60%),
+      radial-gradient(900px 480px at -12% -6%, rgb(250 241 220 / 0.8), transparent 55%);
+    background-attachment: fixed;
   }
   :focus-visible {
     @apply outline-2 outline-offset-2 outline-brand-500;
   }
+  ::selection {
+    @apply bg-brand-200 text-brand-900;
+  }
 }
 
-/* Impresión del comprobante: solo se imprime el área marcada */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* Impresión del comprobante: se oculta todo lo que no es el documento */
 @media print {
   .no-print {
     display: none !important;
   }
   body {
-    background: white;
+    background: white !important;
   }
 }

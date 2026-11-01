@@ -72,6 +72,7 @@ export function LoginPage() {
           <fieldset disabled={bloqueo.bloqueado} className="space-y-4">
             <Input
               label="Número de cédula"
+              icono="id"
               inputMode="numeric"
               maxLength={10}
               autoComplete="username"
