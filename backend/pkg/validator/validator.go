@@ -8,7 +8,8 @@ import (
 	"unicode"
 )
 
-var reDactilar = regexp.MustCompile(`^[A-Z0-9]{10}$`)
+// Formato real del código dactilar: letra + 4 dígitos + letra + 4 dígitos (p. ej. V4443V4442).
+var reDactilar = regexp.MustCompile(`^[A-Z][0-9]{4}[A-Z][0-9]{4}$`)
 
 // Cedula valida una cédula ecuatoriana: 10 dígitos, provincia 01–24 o 30,
 // tercer dígito < 6 y dígito verificador por módulo 10.
@@ -45,14 +46,17 @@ func Cedula(c string) bool {
 	return verificador == d[9]
 }
 
-// CodigoDactilar valida el formato del código dactilar (10 caracteres alfanuméricos en mayúsculas).
+// CodigoDactilar valida el formato del código dactilar (en mayúsculas).
 func CodigoDactilar(c string) bool {
 	return reDactilar.MatchString(c)
 }
 
-// Password exige mínimo 8 caracteres, al menos una letra y un número.
+// MaxPasswordBytes es el límite de bcrypt: con más bytes GenerateFromPassword falla.
+const MaxPasswordBytes = 72
+
+// Password exige de 8 caracteres a 72 bytes, al menos una letra y un número.
 func Password(p string) bool {
-	if len([]rune(p)) < 8 {
+	if len([]rune(p)) < 8 || len(p) > MaxPasswordBytes {
 		return false
 	}
 	var letra, numero bool

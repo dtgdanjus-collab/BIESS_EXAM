@@ -3,6 +3,7 @@ import { useFieldArray, useForm } from 'react-hook-form'
 import { postulacionApi } from '../../../api/postulacion'
 import { Input } from '../../../components/ui'
 import { hoyIso } from '../../../utils/fechas'
+import { conFiltro, soloDigitos } from '../../../utils/filtros'
 import { AgregarItem, CampoSelect, ItemLista, Seccion, useFormulario, useGuardarSeccion } from '../components'
 import { capacitacionesSchema } from '../schemas'
 
@@ -43,7 +44,7 @@ export function CapacitacionSection() {
         return (
           <ItemLista key={f.id} titulo={`Capacitación ${i + 1}`} onEliminar={() => remove(i)}>
             <CampoSelect control={control} name={`items.${i}.tipo`} label="Tipo" required options={TIPOS} />
-            <Input label="Horas" type="number" min={1} inputMode="numeric" required error={e.horas?.message} {...register(`items.${i}.horas`)} />
+            <Input label="Horas" inputMode="numeric" placeholder="40" required error={e.horas?.message} {...conFiltro(register(`items.${i}.horas`), soloDigitos(4))} />
             <Input label="Nombre del evento" required className="sm:col-span-2" error={e.nombre?.message} {...register(`items.${i}.nombre`)} />
             <Input label="Institución organizadora" required className="sm:col-span-2" error={e.institucion?.message} {...register(`items.${i}.institucion`)} />
             <Input label="Fecha de inicio" type="date" max={hoyIso()} required error={e.fechaInicio?.message} {...register(`items.${i}.fechaInicio`)} />

@@ -1,5 +1,9 @@
 import { useState } from 'react'
 import { Icon, Input } from '../../components/ui'
+import { cedulaValida } from '../../utils/cedula'
+import { conFiltro, dactilar, soloDigitos } from '../../utils/filtros'
+import { PERSONAS_PRUEBA } from './personasPrueba'
+import { REGLAS_PASSWORD } from './schemas'
 
 export function AuthCard({ titulo, subtitulo, icono = 'lock', children, pie }) {
   return (
@@ -43,11 +47,113 @@ export function PasswordInput({ ref, ...props }) {
   )
 }
 
+/** Campo de cédula: solo dígitos y ✔ cuando el número es válido (módulo 10). */
+export function CampoCedula({ register, error, valor, disabled }) {
+  const valida = !error && cedulaValida(valor ?? '')
+  return (
+    <Input
+      label="Número de cédula"
+      inputMode="numeric"
+      maxLength={10}
+      autoComplete="username"
+      placeholder="0102345675"
+      icono="id"
+      required
+      disabled={disabled}
+      error={error}
+      hint={valida ? 'Cédula válida' : '10 dígitos, sin guiones'}
+      suffix={
+        valida && (
+          <span className="mr-2 flex size-6 items-center justify-center rounded-full bg-emerald-500 text-white" aria-hidden="true">
+            <Icon name="check" className="size-3.5" strokeWidth={3} />
+          </span>
+        )
+      }
+      {...conFiltro(register('cedula'), soloDigitos(10))}
+    />
+  )
+}
+
+/** Lista de requisitos de la contraseña que se marcan mientras el usuario escribe. */
+export function ReglasPassword({ valor = '' }) {
+  return (
+    <ul className="grid gap-1.5 rounded-xl bg-slate-50 px-4 py-3 sm:grid-cols-3" aria-label="Requisitos de la contraseña">
+      {REGLAS_PASSWORD.map((r) => {
+        const ok = r.cumple(valor)
+        return (
+          <li key={r.texto} className={`flex items-center gap-1.5 text-xs font-medium ${ok ? 'text-emerald-700' : 'text-slate-500'}`}>
+            <span
+              className={`flex size-4 shrink-0 items-center justify-center rounded-full transition-colors ${
+                ok ? 'bg-emerald-500 text-white' : 'border border-slate-300'
+              }`}
+            >
+              {ok && <Icon name="check" className="size-2.5" strokeWidth={4} />}
+            </span>
+            {r.texto}
+          </li>
+        )
+      })}
+    </ul>
+  )
+}
+
+/**
+ * Entorno de demostración: el Registro Civil es simulado y solo conoce a las personas
+ * ficticias de los datos semilla. Este panel las muestra y permite usarlas con un clic.
+ */
+export function PersonasPrueba({ onUsar }) {
+  return (
+    <details className="group rounded-2xl border border-gold-200 bg-gold-100/50 text-sm">
+      <summary className="flex cursor-pointer list-none items-center gap-2 px-4 py-3 font-semibold text-gold-600 [&::-webkit-details-marker]:hidden">
+        <Icon name="sparkles" className="size-4" />
+        <span className="rounded-md bg-gold-300 px-1.5 py-0.5 text-[10px] font-extrabold uppercase tracking-wider text-brand-950">Demo</span>
+        Personas de prueba
+        <Icon name="chevronRight" className="ml-auto size-4 transition-transform group-open:rotate-90" strokeWidth={2.2} />
+      </summary>
+      <div className="space-y-2 border-t border-gold-200 px-4 py-3">
+        <p className="text-xs leading-relaxed text-slate-600">
+          El Registro Civil está simulado: solo reconoce estas personas ficticias. Una cédula real, aunque sea válida,
+          responderá "La información ingresada es incorrecta".
+        </p>
+        <ul className="divide-y divide-gold-200/70">
+          {PERSONAS_PRUEBA.map((p) => (
+            <li key={p.cedula} className="flex items-center justify-between gap-3 py-2">
+              <div className="min-w-0">
+                <p className="font-mono text-[13px] font-bold text-slate-800">{p.cedula}</p>
+                <p className="truncate text-xs text-slate-500">
+                  {p.escenario} · exp. {p.fecha.split('-').reverse().join('/')}
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => onUsar(p)}
+                className="shrink-0 rounded-lg bg-white px-3 py-1.5 text-xs font-bold text-brand-700 shadow-xs ring-1 ring-slate-200 transition-colors hover:bg-brand-600 hover:text-white"
+                aria-label={`Usar la persona de prueba ${p.cedula}`}
+              >
+                Usar
+              </button>
+            </li>
+          ))}
+        </ul>
+      </div>
+    </details>
+  )
+}
+
+/** Llena el formulario de identidad con una persona de prueba (por fecha de expedición). */
+export const usarPersona = (setValue, clearErrors) => (p) => {
+  setValue('cedula', p.cedula, { shouldValidate: true })
+  setValue('metodo', 'fecha')
+  setValue('fechaExpedicion', p.fecha, { shouldValidate: true })
+  setValue('codigoDactilar', p.dactilar)
+  clearErrors?.()
+}
+
 /**
  * Campos de validación de identidad: cédula + fecha de expedición o código dactilar.
  * Se usa en el registro y en la recuperación de contraseña.
  */
-export function IdentidadFields({ register, errors, metodo, setValue, disabled }) {
+export function IdentidadFields({ register, errors, metodo, setValue, disabled, cedula }) {
   const opcion = (valor, texto, icono) => (
     <button
       type="button"
@@ -68,18 +174,7 @@ export function IdentidadFields({ register, errors, metodo, setValue, disabled }
 
   return (
     <div className="space-y-5">
-      <Input
-        label="Número de cédula"
-        inputMode="numeric"
-        maxLength={10}
-        autoComplete="username"
-        placeholder="0102345675"
-        icono="id"
-        required
-        disabled={disabled}
-        error={errors.cedula?.message}
-        {...register('cedula')}
-      />
+      <CampoCedula register={register} error={errors.cedula?.message} valor={cedula} disabled={disabled} />
       <div>
         <p className="mb-1.5 text-[13px] font-semibold text-slate-700">Validar con</p>
         <div role="radiogroup" className="flex gap-1 rounded-xl bg-slate-100 p-1">
@@ -93,7 +188,9 @@ export function IdentidadFields({ register, errors, metodo, setValue, disabled }
           type="date"
           required
           disabled={disabled}
+          min="1950-01-01"
           max={new Date().toISOString().slice(0, 10)}
+          hint="Está impresa en el anverso de su cédula"
           error={errors.fechaExpedicion?.message}
           {...register('fechaExpedicion')}
         />
@@ -105,11 +202,11 @@ export function IdentidadFields({ register, errors, metodo, setValue, disabled }
           autoCapitalize="characters"
           icono="fingerprint"
           className="[&_input]:font-mono [&_input]:uppercase [&_input]:tracking-widest"
-          hint="Se encuentra en el reverso de la cédula"
+          hint="Está en el reverso de la cédula: letra, 4 dígitos, letra y 4 dígitos"
           required
           disabled={disabled}
           error={errors.codigoDactilar?.message}
-          {...register('codigoDactilar')}
+          {...conFiltro(register('codigoDactilar'), dactilar)}
         />
       )}
     </div>

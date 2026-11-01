@@ -91,6 +91,11 @@
   ::selection {
     @apply bg-brand-200 text-brand-900;
   }
+  /* Edge agrega su propio botón para revelar la contraseña; usamos el nuestro */
+  input::-ms-reveal,
+  input::-ms-clear {
+    display: none;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
