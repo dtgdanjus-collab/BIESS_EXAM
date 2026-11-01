@@ -6,7 +6,7 @@ import { Alert, Button, ErrorAlert } from '../../components/ui'
 import { useAsync } from '../../hooks/useAsync'
 import { useBloqueo } from '../../hooks/useBloqueo'
 import { aplicarErroresCampos } from '../../utils/formErrors'
-import { AuthCard, BloqueoAviso, IdentidadFields } from './components'
+import { AuthCard, BloqueoAviso, IdentidadFields, PersonasPrueba, usarPersona } from './components'
 import { identidadPayload, identidadSchema } from './schemas'
 
 export function RecuperarPage() {
@@ -18,9 +18,11 @@ export function RecuperarPage() {
     watch,
     setValue,
     setError,
+    clearErrors,
     formState: { errors },
   } = useForm({
     resolver: zodResolver(identidadSchema),
+    mode: 'onTouched',
     defaultValues: { cedula: '', metodo: 'fecha', fechaExpedicion: '', codigoDactilar: '' },
   })
 
@@ -75,6 +77,7 @@ export function RecuperarPage() {
             register={register}
             errors={errors}
             metodo={watch('metodo')}
+            cedula={watch('cedula')}
             setValue={setValue}
             disabled={bloqueo.bloqueado}
           />
@@ -82,6 +85,7 @@ export function RecuperarPage() {
         <Button type="submit" className="w-full" loading={peticion.loading} disabled={bloqueo.bloqueado}>
           {bloqueo.bloqueado ? `Bloqueado (${bloqueo.tiempo})` : 'Enviar enlace'}
         </Button>
+        <PersonasPrueba onUsar={usarPersona(setValue, clearErrors)} />
       </form>
     </AuthCard>
   )

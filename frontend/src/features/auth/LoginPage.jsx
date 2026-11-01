@@ -2,12 +2,12 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { useForm } from 'react-hook-form'
 import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom'
 import { login } from '../../api/auth'
-import { Alert, Button, ErrorAlert, Input } from '../../components/ui'
+import { Alert, Button, ErrorAlert } from '../../components/ui'
 import { useAsync } from '../../hooks/useAsync'
 import { useBloqueo } from '../../hooks/useBloqueo'
 import { useAuthStore } from '../../store/authStore'
 import { aplicarErroresCampos } from '../../utils/formErrors'
-import { AuthCard, BloqueoAviso, PasswordInput } from './components'
+import { AuthCard, BloqueoAviso, CampoCedula, PasswordInput } from './components'
 import { loginSchema } from './schemas'
 
 export function LoginPage() {
@@ -22,9 +22,11 @@ export function LoginPage() {
     register,
     handleSubmit,
     setError,
+    watch,
     formState: { errors },
   } = useForm({
     resolver: zodResolver(loginSchema),
+    mode: 'onTouched', // valida al salir del campo y luego mientras se corrige
     defaultValues: { cedula: location.state?.cedula ?? '', password: '' },
   })
 
@@ -70,16 +72,7 @@ export function LoginPage() {
 
         <form onSubmit={handleSubmit(onSubmit)} noValidate className="space-y-4">
           <fieldset disabled={bloqueo.bloqueado} className="space-y-4">
-            <Input
-              label="Número de cédula"
-              icono="id"
-              inputMode="numeric"
-              maxLength={10}
-              autoComplete="username"
-              required
-              error={errors.cedula?.message}
-              {...register('cedula')}
-            />
+            <CampoCedula register={register} error={errors.cedula?.message} valor={watch('cedula')} />
             <PasswordInput
               label="Contraseña"
               autoComplete="current-password"

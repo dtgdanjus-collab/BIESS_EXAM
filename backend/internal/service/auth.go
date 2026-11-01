@@ -124,11 +124,11 @@ func (s *AuthService) Registrar(ctx context.Context, in RegistroInput) (*domain.
 	if strings.TrimSpace(in.RegistroToken) == "" {
 		campos["registroToken"] = "Es obligatorio"
 	}
-	if !validator.Email(in.Email) {
+	if !validator.Email(in.Email) || len(in.Email) > 150 {
 		campos["email"] = "Correo electrónico inválido"
 	}
 	if !validator.Password(in.Password) {
-		campos["password"] = "Mínimo 8 caracteres, con al menos una letra y un número"
+		campos["password"] = "De 8 a 72 caracteres, con al menos una letra y un número"
 	}
 	if len(campos) > 0 {
 		return nil, errValidacionCampos(campos)
@@ -220,7 +220,7 @@ func validarIdentidadInput(in IdentidadInput) error {
 		}
 	}
 	if in.CodigoDactilar != "" && !validator.CodigoDactilar(in.CodigoDactilar) {
-		campos["codigoDactilar"] = "El código dactilar debe tener 10 caracteres alfanuméricos"
+		campos["codigoDactilar"] = "Formato inválido: letra, 4 dígitos, letra y 4 dígitos (ej. V4443V4442)"
 	}
 	if len(campos) > 0 {
 		return errValidacionCampos(campos)

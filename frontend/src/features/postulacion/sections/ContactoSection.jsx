@@ -4,6 +4,7 @@ import { useForm } from 'react-hook-form'
 import { postulacionApi } from '../../../api/postulacion'
 import { Alert, Input } from '../../../components/ui'
 import { useCatalogo } from '../../../hooks/useCatalogo'
+import { conFiltro, telefono } from '../../../utils/filtros'
 import { CampoSelect, Seccion, opcional, useFormulario, useGuardarSeccion } from '../components'
 import { contactoSchema } from '../schemas'
 
@@ -150,14 +151,14 @@ export function ContactoSection() {
           placeholder="0991234567"
           required
           error={errors.telefonoCelular?.message}
-          {...register('telefonoCelular')}
+          {...conFiltro(register('telefonoCelular'), telefono)}
         />
         <Input
           label="Teléfono de domicilio"
           type="tel"
           inputMode="tel"
           error={errors.telefonoDomicilio?.message}
-          {...register('telefonoDomicilio')}
+          {...conFiltro(register('telefonoDomicilio'), telefono)}
         />
         <Input label="Correo electrónico principal" type="email" required error={errors.correo1?.message} {...register('correo1')} />
         <Input label="Correo electrónico alterno" type="email" error={errors.correo2?.message} {...register('correo2')} />

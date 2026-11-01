@@ -152,7 +152,7 @@ func (s *AuthService) Restablecer(ctx context.Context, token, nuevaPassword stri
 		campos["token"] = "Es obligatorio"
 	}
 	if !validator.Password(nuevaPassword) {
-		campos["nuevaPassword"] = "Mínimo 8 caracteres, con al menos una letra y un número"
+		campos["nuevaPassword"] = "De 8 a 72 caracteres, con al menos una letra y un número"
 	}
 	if len(campos) > 0 {
 		return errValidacionCampos(campos)

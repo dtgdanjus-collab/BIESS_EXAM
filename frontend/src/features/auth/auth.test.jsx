@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react'
+import { fireEvent, render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
@@ -66,7 +66,7 @@ describe('LoginPage', () => {
     await user.type(screen.getByLabelText(/número de cédula/i), '0102345674')
     await user.type(screen.getByLabelText(/^contraseña/i), 'x')
     await user.click(screen.getByRole('button', { name: /ingresar/i }))
-    expect(await screen.findByText('Cédula inválida')).toBeInTheDocument()
+    expect(await screen.findByText(/dígito verificador no coincide/i)).toBeInTheDocument()
     expect(authApi.login).not.toHaveBeenCalled()
   })
 
@@ -128,5 +128,55 @@ describe('RegistroPage', () => {
     await user.click(screen.getByRole('button', { name: /validar identidad/i }))
     expect(await screen.findByText('La información ingresada es incorrecta')).toBeInTheDocument()
     expect(screen.getByText(/le queda 1 intento/i)).toBeInTheDocument()
+  })
+})
+
+describe('validaciones del registro', () => {
+  beforeEach(() => {
+    vi.resetAllMocks()
+    useAuthStore.getState().logout()
+  })
+
+  it('la cédula solo admite dígitos y muestra ✔ cuando es válida', async () => {
+    const user = userEvent.setup()
+    abrir('/registro')
+    const cedula = screen.getByLabelText(/número de cédula/i)
+    await user.type(cedula, '01a02-3456 75')
+    expect(cedula).toHaveValue('0102345675')
+    expect(screen.getByText('Cédula válida')).toBeInTheDocument()
+  })
+
+  it('"Usar" llena el formulario con una persona de prueba', async () => {
+    authApi.verificarIdentidad.mockResolvedValue({ registroToken: 'tok' })
+    const user = userEvent.setup()
+    abrir('/registro')
+    await user.click(screen.getByText(/personas de prueba/i))
+    await user.click(screen.getByRole('button', { name: /usar la persona de prueba 0103456786/i }))
+    expect(screen.getByLabelText(/número de cédula/i)).toHaveValue('0103456786')
+    await user.click(screen.getByRole('button', { name: /validar identidad/i }))
+    expect(authApi.verificarIdentidad).toHaveBeenCalledWith({ cedula: '0103456786', fechaExpedicion: '2018-02-14' })
+  })
+
+  it('marca los requisitos de la contraseña y rechaza más de 72 bytes', async () => {
+    authApi.verificarIdentidad.mockResolvedValue({ registroToken: 'tok' })
+    const user = userEvent.setup()
+    abrir('/registro')
+    await user.type(screen.getByLabelText(/número de cédula/i), '0102345675')
+    await user.type(screen.getByLabelText(/fecha de expedición de la cédula/i), '2019-06-20')
+    await user.click(screen.getByRole('button', { name: /validar identidad/i }))
+
+    const pass = await screen.findByLabelText(/^contraseña/i)
+    await user.type(pass, 'abc1')
+    const reglas = screen.getByRole('list', { name: /requisitos de la contraseña/i })
+    expect(within(reglas).getByText('Al menos un número').className).toMatch(/emerald/)
+    expect(within(reglas).getByText('Entre 8 y 72 caracteres').className).not.toMatch(/emerald/)
+
+    await user.clear(pass)
+    await user.type(screen.getByLabelText(/correo electrónico/i), 'maria@correo.com')
+    fireEvent.change(pass, { target: { value: 'a1'.repeat(37) } }) // 74 bytes (maxLength lo impide al teclear)
+    await user.type(screen.getByLabelText(/confirmar contraseña/i), 'x')
+    await user.click(screen.getByRole('button', { name: /crear cuenta/i }))
+    expect(await screen.findByText(/entre 8 y 72 caracteres/i, { selector: 'p' })).toBeInTheDocument()
+    expect(authApi.registrar).not.toHaveBeenCalled()
   })
 })
