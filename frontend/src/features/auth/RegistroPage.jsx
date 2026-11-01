@@ -3,7 +3,7 @@ import { useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { Link, useNavigate } from 'react-router-dom'
 import { registrar, verificarIdentidad } from '../../api/auth'
-import { Alert, Button, ErrorAlert, Input } from '../../components/ui'
+import { Alert, Button, ErrorAlert, Icon, Input } from '../../components/ui'
 import { useAsync } from '../../hooks/useAsync'
 import { useBloqueo } from '../../hooks/useBloqueo'
 import { aplicarErroresCampos } from '../../utils/formErrors'
@@ -12,21 +12,21 @@ import { cuentaSchema, identidadPayload, identidadSchema } from './schemas'
 
 function Pasos({ paso }) {
   const item = (n, texto) => (
-    <li className="flex flex-1 items-center gap-2">
-      <span
-        className={`flex size-7 shrink-0 items-center justify-center rounded-full text-xs font-bold ${
-          paso > n ? 'bg-brand-600 text-white' : paso === n ? 'border-2 border-brand-600 text-brand-700' : 'border border-slate-300 text-slate-400'
-        }`}
-      >
-        {paso > n ? '✓' : n}
-      </span>
-      <span className={`text-xs font-medium ${paso >= n ? 'text-slate-800' : 'text-slate-400'}`}>{texto}</span>
+    <li className="flex-1">
+      <div className={`h-1.5 rounded-full transition-colors duration-500 ${paso >= n ? 'bg-brand-600' : 'bg-slate-200'}`} />
+      <p className={`mt-2 flex items-center gap-1.5 text-xs font-semibold ${paso >= n ? 'text-brand-800' : 'text-slate-400'}`}>
+        {paso > n ? (
+          <Icon name="check" className="size-3.5" strokeWidth={3} />
+        ) : (
+          <span className="tabular-nums">{n}.</span>
+        )}
+        {texto}
+      </p>
     </li>
   )
   return (
-    <ol className="mb-6 flex items-center gap-3" aria-label={`Paso ${paso} de 2`}>
+    <ol className="mb-7 flex gap-3" aria-label={`Paso ${paso} de 2`}>
       {item(1, 'Validar identidad')}
-      <li aria-hidden="true" className="h-px w-6 bg-slate-200" />
       {item(2, 'Crear cuenta')}
     </ol>
   )
@@ -114,6 +114,7 @@ function PasoCuenta({ registroToken, onExpirado, onRegistrado }) {
       {peticion.error?.details?.campo !== 'email' && <ErrorAlert error={peticion.error} />}
       <Input
         label="Correo electrónico"
+        icono="mail"
         type="email"
         autoComplete="email"
         required
@@ -150,6 +151,7 @@ export function RegistroPage() {
   return (
     <AuthCard
       titulo="Registro de postulante"
+      icono="id"
       subtitulo="Valide su identidad con los datos de su cédula."
       pie={
         <>

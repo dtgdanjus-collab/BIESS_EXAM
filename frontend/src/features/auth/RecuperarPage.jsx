@@ -40,7 +40,7 @@ export function RecuperarPage() {
 
   if (peticion.success) {
     return (
-      <AuthCard titulo="Revise su correo" pie={volver}>
+      <AuthCard titulo="Revise su correo" icono="send" pie={volver}>
         <Alert type="success" title="Enlace enviado">
           {peticion.data.message}. El enlace es válido por 15 minutos.
         </Alert>
@@ -55,6 +55,7 @@ export function RecuperarPage() {
   return (
     <AuthCard
       titulo="Recuperar contraseña"
+      icono="mail"
       subtitulo="Valide su identidad y le enviaremos un enlace a su correo registrado."
       pie={volver}
     >

@@ -2,7 +2,7 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { useState } from 'react'
 import { Controller, useForm } from 'react-hook-form'
 import { postulacionApi } from '../../../api/postulacion'
-import { Alert, Input, PageLoader, SiNo } from '../../../components/ui'
+import { Alert, Icon, Input, PageLoader, SiNo } from '../../../components/ui'
 import { useCatalogo } from '../../../hooks/useCatalogo'
 import { Seccion, opcional, useFormulario, useGuardarSeccion } from '../components'
 import { cargoSchema } from '../schemas'
@@ -11,20 +11,32 @@ import { cargoSchema } from '../schemas'
 function ResultadoValidacion({ resultado }) {
   if (!resultado) return null
   return resultado.cumple ? (
-    <div className="flex items-center gap-3 rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3" role="status">
-      <span className="flex size-7 items-center justify-center rounded-full bg-emerald-600 text-sm font-bold text-white">✔</span>
-      <p className="text-sm font-semibold text-emerald-900">{resultado.etiqueta}</p>
+    <div className="flex items-center gap-4 rounded-2xl border border-emerald-200 bg-gradient-to-r from-emerald-50 to-white px-4 py-4 animate-fade-in" role="status">
+      <span className="flex size-10 shrink-0 items-center justify-center rounded-full bg-emerald-500 text-white shadow-lg shadow-emerald-500/30">
+        <Icon name="check" className="size-5" strokeWidth={3} />
+      </span>
+      <div>
+        <p className="text-[11px] font-bold uppercase tracking-wider text-emerald-600">Validado en el Historial Laboral</p>
+        <p className="text-sm font-bold text-emerald-900">{resultado.etiqueta}</p>
+      </div>
     </div>
   ) : (
-    <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3" role="alert">
-      <div className="flex items-center gap-3">
-        <span className="flex size-7 items-center justify-center rounded-full bg-red-600 text-sm font-bold text-white">✖</span>
-        <p className="text-sm font-semibold text-red-900">{resultado.etiqueta}</p>
+    <div className="rounded-2xl border border-red-200 bg-gradient-to-r from-red-50 to-white px-4 py-4 animate-fade-in" role="alert">
+      <div className="flex items-center gap-4">
+        <span className="flex size-10 shrink-0 items-center justify-center rounded-full bg-red-500 text-white shadow-lg shadow-red-500/30">
+          <Icon name="x" className="size-5" strokeWidth={3} />
+        </span>
+        <div>
+          <p className="text-[11px] font-bold uppercase tracking-wider text-red-500">No cumple el requisito</p>
+          <p className="text-sm font-bold text-red-900">{resultado.etiqueta}</p>
+        </div>
       </div>
-      <p className="mt-2 text-sm text-red-800">{resultado.mensaje}</p>
+      <p className="mt-3 text-sm leading-relaxed text-red-800">{resultado.mensaje}</p>
     </div>
   )
 }
+
+const ICONO_SECTOR = { AFILIADOS: 'users', JUBILADOS: 'clock', EMPLEADORES: 'building' }
 
 // 1.4 — Cargo al que postula; se valida la calidad de afiliado/jubilado/empleador.
 export function CargoSection() {
@@ -82,26 +94,49 @@ export function CargoSection() {
       {sectores.error && <Alert type="error">No se pudo cargar el catálogo de cargos.</Alert>}
 
       <fieldset>
-        <legend className="mb-2 text-sm font-medium text-slate-700">
-          Cargo al que postula <span className="text-red-600">*</span>
+        <legend className="mb-3 text-sm font-semibold text-slate-800">
+          Cargo al que postula <span className="text-red-500">*</span>
         </legend>
-        <div className="space-y-2">
-          {sectores.data.map((s) => (
-            <label
-              key={s.codigo}
-              className={`flex cursor-pointer gap-3 rounded-lg border p-4 transition-colors ${
-                codigo === s.codigo ? 'border-brand-600 bg-brand-50' : 'border-slate-200 hover:bg-slate-50'
-              }`}
-            >
-              <input
-                type="radio"
-                value={s.codigo}
-                className="mt-0.5 size-4 shrink-0 accent-brand-700"
-                {...register('sector', { onChange: () => setResultado(null) })}
-              />
-              <span className="text-sm text-slate-800">{s.cargo}</span>
-            </label>
-          ))}
+        <div className="grid gap-3">
+          {sectores.data.map((s) => {
+            const activo = codigo === s.codigo
+            return (
+              <label
+                key={s.codigo}
+                className={`group relative flex cursor-pointer items-start gap-4 rounded-2xl border p-4 transition-all sm:p-5 ${
+                  activo
+                    ? 'border-brand-500 bg-gradient-to-br from-brand-50 to-white shadow-card ring-2 ring-brand-500/20'
+                    : 'border-slate-200 bg-white hover:border-brand-300 hover:shadow-card'
+                }`}
+              >
+                <input
+                  type="radio"
+                  value={s.codigo}
+                  className="sr-only"
+                  {...register('sector', { onChange: () => setResultado(null) })}
+                />
+                <span
+                  className={`flex size-11 shrink-0 items-center justify-center rounded-xl transition-colors ${
+                    activo ? 'bg-brand-600 text-white' : 'bg-slate-100 text-slate-500 group-hover:text-brand-700'
+                  }`}
+                >
+                  <Icon name={ICONO_SECTOR[s.codigo] ?? 'briefcase'} className="size-5" />
+                </span>
+                <span className="min-w-0 flex-1">
+                  <span className="block text-sm font-bold capitalize text-slate-900">{s.codigo.toLowerCase()}</span>
+                  <span className="mt-0.5 block text-sm leading-relaxed text-slate-600">{s.cargo}</span>
+                </span>
+                <span
+                  className={`mt-0.5 flex size-5 shrink-0 items-center justify-center rounded-full border-2 transition-colors ${
+                    activo ? 'border-brand-600 bg-brand-600 text-white' : 'border-slate-300'
+                  }`}
+                  aria-hidden="true"
+                >
+                  {activo && <Icon name="check" className="size-3" strokeWidth={3.5} />}
+                </span>
+              </label>
+            )
+          })}
         </div>
         {errors.sector && (
           <p className="mt-1 text-xs text-red-600" role="alert">
