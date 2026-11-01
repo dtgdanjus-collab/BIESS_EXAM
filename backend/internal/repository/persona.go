@@ -17,6 +17,40 @@ var ErrNotFound = errors.New("registro no encontrado")
 // RegistroCivilRepository simula el servicio externo del Registro Civil.
 type RegistroCivilRepository interface {
 	FindByCedula(ctx context.Context, cedula string) (*domain.Persona, error)
+	// CrearSimulada da de alta una persona ficticia y sus calidades en el Historial
+	// Laboral, en una transacción. Si la cédula ya existe no la modifica (una sola
+	// persona por cédula) y devuelve la que estaba guardada.
+	CrearSimulada(ctx context.Context, p domain.Persona, calidades []string) (*domain.Persona, error)
+}
+
+func (r *pgRegistroCivilRepository) CrearSimulada(ctx context.Context, p domain.Persona, calidades []string) (*domain.Persona, error) {
+	err := pgx.BeginFunc(ctx, r.pool, func(tx pgx.Tx) error {
+		tag, err := tx.Exec(ctx, `
+			INSERT INTO mock_registro_civil (cedula, nombres, apellidos, genero, fecha_nacimiento, nacionalidad,
+				estado_civil, conyuge_nombres, conyuge_cedula, fecha_expedicion, codigo_dactilar)
+			VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+			ON CONFLICT (cedula) DO NOTHING`,
+			p.Cedula, p.Nombres, p.Apellidos, p.Genero, p.FechaNacimiento, p.Nacionalidad, p.EstadoCivil,
+			p.ConyugeNombres, p.ConyugeCedula, p.FechaExpedicion, p.CodigoDactilar)
+		if err != nil {
+			return fmt.Errorf("creando persona simulada: %w", err)
+		}
+		if tag.RowsAffected() == 0 {
+			return nil // otra petición la creó primero: se conserva esa
+		}
+		for _, c := range calidades {
+			if _, err := tx.Exec(ctx, `
+				INSERT INTO mock_historial_laboral (cedula, tipo) VALUES ($1, $2)
+				ON CONFLICT DO NOTHING`, p.Cedula, c); err != nil {
+				return fmt.Errorf("creando historial simulado: %w", err)
+			}
+		}
+		return nil
+	})
+	if err != nil {
+		return nil, err
+	}
+	return r.FindByCedula(ctx, p.Cedula)
 }
 
 type pgRegistroCivilRepository struct {

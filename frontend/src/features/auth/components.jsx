@@ -112,8 +112,8 @@ export function PersonasPrueba({ onUsar }) {
       </summary>
       <div className="space-y-2 border-t border-gold-200 px-4 py-3">
         <p className="text-xs leading-relaxed text-slate-600">
-          El Registro Civil está simulado: solo reconoce estas personas ficticias. Una cédula real, aunque sea válida,
-          responderá "La información ingresada es incorrecta".
+          El Registro Civil está simulado. Puede usar <strong>cualquier cédula válida</strong>: la primera vez se crea una
+          persona ficticia con la fecha o el código que ingrese, y después esos datos deben coincidir. Estas personas traen escenarios preparados:
         </p>
         <ul className="divide-y divide-gold-200/70">
           {PERSONAS_PRUEBA.map((p) => (
