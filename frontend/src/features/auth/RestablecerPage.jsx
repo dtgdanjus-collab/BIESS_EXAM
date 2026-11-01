@@ -34,14 +34,14 @@ export function RestablecerPage() {
 
   if (!token) {
     return (
-      <AuthCard titulo="Enlace inválido" pie={pedirOtro}>
+      <AuthCard titulo="Enlace inválido" icono="alert" pie={pedirOtro}>
         <Alert type="error">El enlace de recuperación no es válido o está incompleto.</Alert>
       </AuthCard>
     )
   }
 
   return (
-    <AuthCard titulo="Nueva contraseña" subtitulo="Defina la contraseña con la que ingresará al sistema." pie={pedirOtro}>
+    <AuthCard titulo="Nueva contraseña" icono="shield" subtitulo="Defina la contraseña con la que ingresará al sistema." pie={pedirOtro}>
       <form onSubmit={handleSubmit(onSubmit)} noValidate className="space-y-4">
         <ErrorAlert error={peticion.error} />
         <PasswordInput
