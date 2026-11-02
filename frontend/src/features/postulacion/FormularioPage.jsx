@@ -1,7 +1,8 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { postulacionApi } from '../../api/postulacion'
 import { Alert, Button, ErrorAlert, Icon, PageLoader, ProgressRing, Stepper } from '../../components/ui'
+import { useAnimatedNumber } from '../../hooks/useAnimatedNumber'
 import { useAsync } from '../../hooks/useAsync'
 import { useAuthStore } from '../../store/authStore'
 import { EstadoBadge, FormularioContext } from './components'
@@ -97,10 +98,10 @@ function IniciarPostulacion({ onIniciar, peticion }) {
 }
 
 /** Cabecera con el código, el estado y el anillo de avance. */
-function Cabecera({ postulacion, completas, total }) {
+function Cabecera({ postulacion, completas, total, pendiente, irA }) {
   const usuario = useAuthStore((s) => s.usuario)
   const enviada = postulacion.estado === 'ENVIADA'
-  const pct = Math.round((completas / total) * 100)
+  const pct = useAnimatedNumber(Math.round((completas / total) * 100))
   return (
     <section className="no-print relative mb-6 overflow-hidden rounded-3xl bg-brand-950 px-6 py-7 text-white shadow-lift sm:px-9 sm:py-8 animate-fade-up">
       <div aria-hidden="true" className="absolute inset-0 bg-dots opacity-40" />
@@ -122,12 +123,26 @@ function Cabecera({ postulacion, completas, total }) {
             </span>
             <EstadoBadge estado={postulacion.estado} className="ring-white/30" />
           </div>
+          {pendiente && (
+            <button
+              type="button"
+              onClick={() => irA(pendiente.id)}
+              className="group mt-4 inline-flex items-center gap-2 rounded-xl bg-gold-300 px-4 py-2 text-sm font-bold text-brand-950 transition-all hover:-translate-y-0.5 hover:bg-gold-200 active:scale-[0.98] animate-slide-down"
+            >
+              Continuar: {pendiente.titulo}
+              <Icon name="arrowRight" className="size-4 transition-transform group-hover:translate-x-1" strokeWidth={2.4} />
+            </button>
+          )}
         </div>
 
         <div className="flex items-center gap-4 rounded-2xl bg-white/5 p-3 pr-5 ring-1 ring-inset ring-white/10 backdrop-blur sm:shrink-0">
-          <ProgressRing value={completas / total} size={76} stroke={7}>
-            <span className="text-lg font-extrabold leading-none">{pct}%</span>
-          </ProgressRing>
+          <div className="relative">
+            {/* key: el pulso se repite cada vez que se completa una sección */}
+            <span key={completas} aria-hidden="true" className="absolute inset-0 rounded-full ring-2 ring-gold-300 animate-ring-pulse" />
+            <ProgressRing value={completas / total} size={76} stroke={7}>
+              <span className="text-lg font-extrabold leading-none tabular-nums">{pct}%</span>
+            </ProgressRing>
+          </div>
           <div>
             <p className="text-sm font-bold">
               {completas} de {total} secciones
@@ -207,6 +222,15 @@ export function FormularioPage() {
   // Sin sección en la URL: el comprobante si ya se envió; si no, la primera sección.
   const porDefecto = postulacion?.estado === 'ENVIADA' ? 'envio' : 'personal'
   const seccionActual = SECCIONES.some((s) => s.id === params.get('seccion')) ? params.get('seccion') : porDefecto
+
+  // Dirección de la transición: avanzar entra por la derecha, retroceder por la izquierda.
+  const indiceActual = SECCIONES.findIndex((s) => s.id === seccionActual)
+  const indicePrevio = useRef(indiceActual)
+  const direccion = useRef('animate-fade-up')
+  if (indicePrevio.current !== indiceActual) {
+    direccion.current = indiceActual > indicePrevio.current ? 'animate-slide-right' : 'animate-slide-left'
+    indicePrevio.current = indiceActual
+  }
   const irA = useCallback(
     (id) => {
       setParams({ seccion: id })
@@ -250,10 +274,15 @@ export function FormularioPage() {
   }))
   const completas = pasos.filter((p) => p.completo).length
   const Componente = COMPONENTES[seccionActual]
+  // Primera sección obligatoria sin completar (distinta de la visible), para el botón "Continuar".
+  const pendiente =
+    postulacion.estado === 'BORRADOR'
+      ? SECCIONES.find((s) => s.id !== seccionActual && s.id !== 'capacitacion' && !s.completa(postulacion))
+      : null
 
   return (
     <FormularioContext value={contexto}>
-      <Cabecera postulacion={postulacion} completas={completas} total={pasos.length} />
+      <Cabecera postulacion={postulacion} completas={completas} total={pasos.length} pendiente={pendiente} irA={irA} />
 
       {postulacion.estado === 'ENVIADA' && seccionActual !== 'envio' && (
         <Alert type="success" className="no-print mb-6">
@@ -273,7 +302,9 @@ export function FormularioPage() {
 
         <div className="min-w-0">
           {/* key: al cambiar de sección el formulario se monta de nuevo con los datos guardados */}
-          <Componente key={seccionActual} />
+          <div key={seccionActual} className={direccion.current}>
+            <Componente />
+          </div>
           <NavegacionSecciones actual={seccionActual} irA={irA} />
         </div>
       </div>

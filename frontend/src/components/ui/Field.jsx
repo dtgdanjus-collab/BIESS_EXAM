@@ -3,7 +3,7 @@ import { Icon } from './Icon'
 import { Spinner } from './Spinner'
 
 const base =
-  'block w-full rounded-xl border bg-white px-3.5 py-2.5 text-sm text-slate-900 shadow-xs transition-[border-color,box-shadow] placeholder:text-slate-400 focus:outline-none focus:ring-4 disabled:cursor-not-allowed disabled:bg-slate-50 disabled:text-slate-500'
+  'block w-full rounded-xl border bg-white px-3.5 py-2.5 text-sm text-slate-900 shadow-xs transition-[border-color,box-shadow,background-color] duration-200 placeholder:text-slate-400 focus:outline-none focus:ring-4 disabled:cursor-not-allowed disabled:bg-slate-50 disabled:text-slate-500'
 
 const borde = (error) =>
   error
@@ -22,7 +22,7 @@ function Campo({ id, label, error, hint, required, children, className = '' }) {
       )}
       {children}
       {error ? (
-        <p id={`${id}-error`} className="mt-1.5 flex items-center gap-1 text-xs font-medium text-red-600" role="alert">
+        <p id={`${id}-error`} className="mt-1.5 flex items-center gap-1 text-xs font-medium text-red-600 animate-slide-down" role="alert">
           <Icon name="alert" className="size-3.5" strokeWidth={2} />
           {error}
         </p>
@@ -41,9 +41,9 @@ export function Input({ label, error, hint, required, className, ref, icono, suf
   const id = useId()
   return (
     <Campo id={id} label={label} error={error} hint={hint} required={required} className={className}>
-      <div className="relative">
+      <div className={`group/campo relative ${error ? 'animate-shake' : ''}`}>
         {icono && (
-          <span className="pointer-events-none absolute inset-y-0 left-3.5 flex items-center text-slate-400">
+          <span className="pointer-events-none absolute inset-y-0 left-3.5 flex items-center text-slate-400 transition-colors group-focus-within/campo:text-brand-600">
             <Icon name={icono} className="size-[18px]" />
           </span>
         )}
@@ -99,7 +99,7 @@ export function Select({
   const id = useId()
   return (
     <Campo id={id} label={label} error={error} hint={hint} required={required} className={className}>
-      <div className="relative">
+      <div className={`group/campo relative ${error ? 'animate-shake' : ''}`}>
         <select
           id={id}
           ref={ref}
@@ -161,7 +161,7 @@ export function SiNo({ label, value, onChange, error, name, disabled }) {
     const activo = value === v
     return (
       <label
-        className={`flex min-h-11 flex-1 cursor-pointer items-center justify-center gap-2 rounded-xl border px-5 text-sm font-semibold transition-all sm:min-w-28 sm:flex-none ${
+        className={`flex min-h-11 flex-1 cursor-pointer items-center justify-center gap-2 rounded-xl border px-5 text-sm font-semibold transition-all active:scale-95 sm:min-w-28 sm:flex-none ${
           activo
             ? v
               ? 'border-brand-600 bg-brand-600 text-white shadow-glow'
@@ -177,7 +177,7 @@ export function SiNo({ label, value, onChange, error, name, disabled }) {
           onChange={() => onChange(v)}
           disabled={disabled}
         />
-        {activo && <Icon name="check" className="size-4" strokeWidth={2.5} />}
+        {activo && <Icon name="check" className="size-4 animate-pop" strokeWidth={2.5} />}
         {texto}
       </label>
     )

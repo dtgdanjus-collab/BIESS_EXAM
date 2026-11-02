@@ -1,6 +1,8 @@
+import { useEffect, useState } from 'react'
 import { Link, Outlet, useNavigate } from 'react-router-dom'
 import { useAuthStore } from '../../store/authStore'
 import { Icon } from '../ui'
+import { MenuPerfil } from './MenuPerfil'
 
 export function Marca({ claro = false, compacta = false }) {
   return (
@@ -30,10 +32,27 @@ const PASOS = [
 
 /** Panel institucional de las pantallas públicas (solo escritorio). */
 function PanelInstitucional() {
+  // La luz sigue al cursor con variables CSS, sin volver a renderizar React.
+  const moverLuz = (e) => {
+    const r = e.currentTarget.getBoundingClientRect()
+    e.currentTarget.style.setProperty('--luz-x', `${e.clientX - r.left}px`)
+    e.currentTarget.style.setProperty('--luz-y', `${e.clientY - r.top}px`)
+  }
+
   return (
-    <aside className="relative hidden overflow-hidden bg-brand-950 text-white lg:flex lg:flex-col lg:justify-between lg:px-12 lg:py-10 xl:px-16">
+    <aside
+      onPointerMove={moverLuz}
+      className="relative hidden overflow-hidden bg-brand-950 text-white lg:flex lg:flex-col lg:justify-between lg:px-12 lg:py-10 xl:px-16"
+    >
       {/* Fondo: gradientes en movimiento lento + trama de puntos */}
       <div aria-hidden="true" className="pointer-events-none absolute inset-0">
+        <div
+          className="absolute inset-0"
+          style={{
+            background:
+              'radial-gradient(420px circle at var(--luz-x, 60%) var(--luz-y, 30%), rgb(230 199 127 / 0.14), transparent 70%)',
+          }}
+        />
         <div className="absolute -left-32 -top-32 size-[28rem] rounded-full bg-brand-600/50 blur-3xl animate-float" />
         <div
           className="absolute -bottom-40 right-[-6rem] size-[30rem] rounded-full bg-gold-500/25 blur-3xl animate-float"
@@ -64,8 +83,12 @@ function PanelInstitucional() {
 
         <ol className="mt-10 space-y-5">
           {PASOS.map((p, i) => (
-            <li key={p.titulo} className="flex gap-4">
-              <span className="relative flex size-11 shrink-0 items-center justify-center rounded-xl bg-white/10 text-gold-300 ring-1 ring-inset ring-white/15">
+            <li
+              key={p.titulo}
+              className="group flex gap-4 transition-transform duration-300 hover:translate-x-1.5 animate-fade-up"
+              style={{ animationDelay: `${150 + i * 110}ms` }}
+            >
+              <span className="relative flex size-11 shrink-0 items-center justify-center rounded-xl bg-white/10 text-gold-300 ring-1 ring-inset ring-white/15 transition-colors duration-300 group-hover:bg-white/20">
                 <Icon name={p.icono} className="size-5" />
                 <span className="absolute -right-1.5 -top-1.5 flex size-5 items-center justify-center rounded-full bg-gold-400 text-[10px] font-extrabold text-brand-950">
                   {i + 1}
@@ -125,14 +148,19 @@ export function AuthLayout() {
   )
 }
 
-const iniciales = (u) =>
-  `${u?.nombres?.[0] ?? ''}${u?.apellidos?.[0] ?? ''}`.toUpperCase() || 'U'
-
-/** Área privada: barra superior con el usuario y cierre de sesión. */
+/** Área privada: barra superior con el perfil del usuario y cierre de sesión. */
 export function AppLayout() {
-  const usuario = useAuthStore((s) => s.usuario)
   const logout = useAuthStore((s) => s.logout)
   const navigate = useNavigate()
+  const [conScroll, setConScroll] = useState(false)
+
+  // La barra gana sombra cuando el contenido pasa por debajo.
+  useEffect(() => {
+    const alMover = () => setConScroll(window.scrollY > 8)
+    alMover()
+    window.addEventListener('scroll', alMover, { passive: true })
+    return () => window.removeEventListener('scroll', alMover)
+  }, [])
 
   const salir = () => {
     logout()
@@ -141,27 +169,21 @@ export function AppLayout() {
 
   return (
     <div className="flex min-h-dvh flex-col">
-      <header className="no-print sticky top-0 z-20 border-b border-slate-200/70 bg-white/75 backdrop-blur-xl">
+      <header
+        className={`no-print sticky top-0 z-20 border-b bg-white/75 backdrop-blur-xl transition-shadow duration-300 ${
+          conScroll ? 'border-slate-200 shadow-card' : 'border-slate-200/70'
+        }`}
+      >
         <div className="mx-auto flex max-w-6xl items-center justify-between gap-3 px-4 py-3 sm:px-6">
           <Marca compacta />
           <div className="flex min-w-0 items-center gap-2 sm:gap-4">
-            <div className="flex min-w-0 items-center gap-3 rounded-full py-1 pl-1 pr-1 sm:pr-4 sm:ring-1 sm:ring-slate-200/80">
-              <span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-gold-300 to-gold-500 text-sm font-extrabold text-brand-950 ring-2 ring-white">
-                {iniciales(usuario)}
-              </span>
-              <div className="hidden min-w-0 sm:block">
-                <p className="truncate text-sm font-semibold leading-tight text-slate-800">
-                  {usuario?.nombres} {usuario?.apellidos}
-                </p>
-                <p className="text-xs text-slate-500">C.I. {usuario?.cedula}</p>
-              </div>
-            </div>
+            <MenuPerfil />
             <button
               type="button"
               onClick={salir}
-              className="inline-flex min-h-10 items-center gap-2 rounded-xl px-3 text-sm font-semibold text-slate-600 transition-colors hover:bg-slate-100 hover:text-slate-900"
+              className="group inline-flex min-h-10 items-center gap-2 rounded-xl px-3 text-sm font-semibold text-slate-600 transition-all hover:bg-red-50 hover:text-red-700 active:scale-95"
             >
-              <Icon name="logout" className="size-[18px]" />
+              <Icon name="logout" className="size-[18px] transition-transform group-hover:translate-x-0.5" />
               <span className="hidden sm:inline">Cerrar sesión</span>
             </button>
           </div>

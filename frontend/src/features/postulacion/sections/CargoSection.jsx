@@ -11,7 +11,7 @@ import { cargoSchema } from '../schemas'
 function ResultadoValidacion({ resultado }) {
   if (!resultado) return null
   return resultado.cumple ? (
-    <div className="flex items-center gap-4 rounded-2xl border border-emerald-200 bg-gradient-to-r from-emerald-50 to-white px-4 py-4 animate-fade-in" role="status">
+    <div className="flex items-center gap-4 rounded-2xl border border-emerald-200 bg-gradient-to-r from-emerald-50 to-white px-4 py-4 animate-scale-in" role="status">
       <span className="flex size-10 shrink-0 items-center justify-center rounded-full bg-emerald-500 text-white shadow-lg shadow-emerald-500/30">
         <Icon name="check" className="size-5" strokeWidth={3} />
       </span>
@@ -21,7 +21,7 @@ function ResultadoValidacion({ resultado }) {
       </div>
     </div>
   ) : (
-    <div className="rounded-2xl border border-red-200 bg-gradient-to-r from-red-50 to-white px-4 py-4 animate-fade-in" role="alert">
+    <div className="rounded-2xl border border-red-200 bg-gradient-to-r from-red-50 to-white px-4 py-4 animate-shake" role="alert">
       <div className="flex items-center gap-4">
         <span className="flex size-10 shrink-0 items-center justify-center rounded-full bg-red-500 text-white shadow-lg shadow-red-500/30">
           <Icon name="x" className="size-5" strokeWidth={3} />
@@ -103,10 +103,10 @@ export function CargoSection() {
             return (
               <label
                 key={s.codigo}
-                className={`group relative flex cursor-pointer items-start gap-4 rounded-2xl border p-4 transition-all sm:p-5 ${
+                className={`group relative flex cursor-pointer items-start gap-4 rounded-2xl border p-4 transition-all duration-200 active:scale-[0.99] sm:p-5 ${
                   activo
                     ? 'border-brand-500 bg-gradient-to-br from-brand-50 to-white shadow-card ring-2 ring-brand-500/20'
-                    : 'border-slate-200 bg-white hover:border-brand-300 hover:shadow-card'
+                    : 'border-slate-200 bg-white hover:-translate-y-0.5 hover:border-brand-300 hover:shadow-card'
                 }`}
               >
                 <input
@@ -132,7 +132,7 @@ export function CargoSection() {
                   }`}
                   aria-hidden="true"
                 >
-                  {activo && <Icon name="check" className="size-3" strokeWidth={3.5} />}
+                  {activo && <Icon name="check" className="size-3 animate-pop" strokeWidth={3.5} />}
                 </span>
               </label>
             )

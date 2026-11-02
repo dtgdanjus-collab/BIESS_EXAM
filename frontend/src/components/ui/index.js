@@ -1,6 +1,7 @@
 export { Alert, ErrorAlert } from './Alert'
 export { Button } from './Button'
 export { Card } from './Card'
+export { Confetti } from './Confetti'
 export { Checkbox, Input, Select, SiNo, Textarea } from './Field'
 export { Icon, ProgressRing } from './Icon'
 export { Modal } from './Modal'
