@@ -22,6 +22,6 @@ describe('errorCedula', () => {
     expect(errorCedula('2502345675')).toMatch(/provincia/)
     expect(errorCedula('0172345675')).toMatch(/tercer dígito/)
     expect(errorCedula('0102345674')).toMatch(/dígito verificador/)
-    expect(errorCedula('2450320433')).toBeNull() // válida aunque no exista en el Registro Civil simulado
+    expect(errorCedula('0101010122')).toBeNull() // válida aunque no exista en el Registro Civil simulado
   })
 })

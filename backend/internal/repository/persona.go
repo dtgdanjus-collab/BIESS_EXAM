@@ -17,10 +17,24 @@ var ErrNotFound = errors.New("registro no encontrado")
 // RegistroCivilRepository simula el servicio externo del Registro Civil.
 type RegistroCivilRepository interface {
 	FindByCedula(ctx context.Context, cedula string) (*domain.Persona, error)
+	// FindPadron devuelve los nombres reales de la cédula si está en el padrón (ErrNotFound si no).
+	FindPadron(ctx context.Context, cedula string) (nombres, apellidos string, err error)
 	// CrearSimulada da de alta una persona ficticia y sus calidades en el Historial
 	// Laboral, en una transacción. Si la cédula ya existe no la modifica (una sola
 	// persona por cédula) y devuelve la que estaba guardada.
 	CrearSimulada(ctx context.Context, p domain.Persona, calidades []string) (*domain.Persona, error)
+}
+
+func (r *pgRegistroCivilRepository) FindPadron(ctx context.Context, cedula string) (string, string, error) {
+	var nombres, apellidos string
+	err := r.pool.QueryRow(ctx, `SELECT nombres, apellidos FROM mock_padron WHERE cedula = $1`, cedula).Scan(&nombres, &apellidos)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return "", "", ErrNotFound
+	}
+	if err != nil {
+		return "", "", fmt.Errorf("consultando padrón: %w", err)
+	}
+	return nombres, apellidos, nil
 }
 
 func (r *pgRegistroCivilRepository) CrearSimulada(ctx context.Context, p domain.Persona, calidades []string) (*domain.Persona, error) {

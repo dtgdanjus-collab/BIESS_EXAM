@@ -22,6 +22,16 @@ func (f fakePersonas) FindByCedula(_ context.Context, c string) (*domain.Persona
 	return nil, repository.ErrNotFound
 }
 
+// padronPrueba hace de tabla mock_padron para los dobles (cédula sintética, no es de nadie).
+var padronPrueba = map[string][2]string{"0101010114": {"NOMBRE REAL", "APELLIDO REAL"}}
+
+func (f fakePersonas) FindPadron(_ context.Context, c string) (string, string, error) {
+	if n, ok := padronPrueba[c]; ok {
+		return n[0], n[1], nil
+	}
+	return "", "", repository.ErrNotFound
+}
+
 // CrearSimulada imita el ON CONFLICT DO NOTHING: si ya existe, se conserva la guardada.
 func (f fakePersonas) CrearSimulada(_ context.Context, p domain.Persona, _ []string) (*domain.Persona, error) {
 	if existente, ok := f[p.Cedula]; ok {
@@ -237,24 +247,24 @@ func TestVerificarIdentidad_RegistroCivilAutogenerado(t *testing.T) {
 	svc := nuevoAuthService()
 	svc.cfg.AutoRegistroCivil = true
 	ctx := context.Background()
-	nueva := IdentidadInput{Cedula: "0928017326", FechaExpedicion: "2024-07-29"}
+	nueva := IdentidadInput{Cedula: "0101010106", FechaExpedicion: "2024-07-29"}
 
 	// Primera vez: se da de alta con datos ficticios y la fecha ingresada.
 	if _, err := svc.VerificarIdentidad(ctx, nueva); err != nil {
 		t.Fatalf("primera validación: %v", err)
 	}
-	p, _ := svc.personas.FindByCedula(ctx, "0928017326")
+	p, _ := svc.personas.FindByCedula(ctx, "0101010106")
 	if p == nil || p.Nacionalidad != "ECUATORIANA" || p.FechaExpedicion.Format(time.DateOnly) != "2024-07-29" {
 		t.Fatalf("persona simulada incorrecta: %+v", p)
 	}
 	nombre := p.Nombres
 
 	// Después ya existe: otra fecha es un intento fallido y no crea otra persona.
-	_, err := svc.VerificarIdentidad(ctx, IdentidadInput{Cedula: "0928017326", FechaExpedicion: "2020-01-01"})
+	_, err := svc.VerificarIdentidad(ctx, IdentidadInput{Cedula: "0101010106", FechaExpedicion: "2020-01-01"})
 	if !errors.Is(err, domain.ErrIdentidad) {
 		t.Fatalf("fecha distinta: se esperaba ErrIdentidad, se obtuvo %v", err)
 	}
-	if q, _ := svc.personas.FindByCedula(ctx, "0928017326"); q.Nombres != nombre {
+	if q, _ := svc.personas.FindByCedula(ctx, "0101010106"); q.Nombres != nombre {
 		t.Fatal("se generó una segunda persona para la misma cédula")
 	}
 
@@ -266,8 +276,36 @@ func TestVerificarIdentidad_RegistroCivilAutogenerado(t *testing.T) {
 
 func TestVerificarIdentidad_SinAutogenerarEsEstricto(t *testing.T) {
 	svc := nuevoAuthService() // AutoRegistroCivil = false
-	_, err := svc.VerificarIdentidad(context.Background(), IdentidadInput{Cedula: "0928017326", FechaExpedicion: "2024-07-29"})
+	_, err := svc.VerificarIdentidad(context.Background(), IdentidadInput{Cedula: "0101010106", FechaExpedicion: "2024-07-29"})
 	if !errors.Is(err, domain.ErrIdentidad) {
 		t.Fatalf("se esperaba ErrIdentidad, se obtuvo %v", err)
+	}
+}
+
+func TestVerificarIdentidad_PadronUsaNombresRealesYUnaSolaCuenta(t *testing.T) {
+	svc := nuevoAuthService() // sin AutoRegistroCivil: el padrón funciona igual
+	ctx := context.Background()
+	in := IdentidadInput{Cedula: "0101010114", FechaExpedicion: "2024-07-29"}
+
+	if _, err := svc.personas.FindByCedula(ctx, in.Cedula); !errors.Is(err, repository.ErrNotFound) {
+		t.Fatalf("no debe existir persona antes de validar: %v", err)
+	}
+	token, err := svc.VerificarIdentidad(ctx, in)
+	if err != nil {
+		t.Fatalf("primera validación: %v", err)
+	}
+	p, _ := svc.personas.FindByCedula(ctx, in.Cedula)
+	if p.Nombres != "NOMBRE REAL" || p.Apellidos != "APELLIDO REAL" || p.ConyugeNombres != nil {
+		t.Fatalf("no usó los datos del padrón: %+v", p)
+	}
+	if existe, _ := svc.usuarios.ExistsByCedula(ctx, in.Cedula); existe {
+		t.Fatal("validar la identidad no debe crear la cuenta")
+	}
+
+	if _, err := svc.Registrar(ctx, RegistroInput{RegistroToken: token, Email: "real@correo.com", Password: "Biess2026"}); err != nil {
+		t.Fatalf("registrar: %v", err)
+	}
+	if _, err := svc.VerificarIdentidad(ctx, in); !errors.Is(err, domain.ErrConflicto) {
+		t.Fatalf("segunda vez: se esperaba ErrConflicto (ya existe una cuenta), se obtuvo %v", err)
 	}
 }

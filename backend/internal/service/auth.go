@@ -91,7 +91,7 @@ func (s *AuthService) VerificarIdentidad(ctx context.Context, in IdentidadInput)
 	if err != nil && !errors.Is(err, repository.ErrNotFound) {
 		return "", err
 	}
-	if persona == nil && s.cfg.AutoRegistroCivil {
+	if persona == nil {
 		if persona, err = s.altaSimulada(ctx, in); err != nil {
 			return "", err
 		}
@@ -121,16 +121,32 @@ func (s *AuthService) VerificarIdentidad(ctx context.Context, in IdentidadInput)
 	return token, nil
 }
 
-// altaSimulada crea en el Registro Civil simulado la persona ficticia de la cédula, usando
-// la fecha de expedición o el código dactilar que ingresó el usuario. Si otra petición la
-// creó al mismo tiempo, devuelve la existente (y la comparación posterior decide).
+// altaSimulada crea en el Registro Civil simulado la persona de la cédula, usando la fecha
+// de expedición o el código dactilar que ingresó el usuario. Si la cédula está en el padrón
+// lleva sus nombres reales; si no, solo se crea con AutoRegistroCivil y con datos ficticios.
+// Devuelve nil si no corresponde crearla. Si otra petición la creó al mismo tiempo, devuelve
+// la existente (y la comparación posterior decide).
 func (s *AuthService) altaSimulada(ctx context.Context, in IdentidadInput) (*domain.Persona, error) {
+	nombres, apellidos, err := s.personas.FindPadron(ctx, in.Cedula)
+	enPadron := err == nil
+	if err != nil && !errors.Is(err, repository.ErrNotFound) {
+		return nil, err
+	}
+	if !enPadron && !s.cfg.AutoRegistroCivil {
+		return nil, nil
+	}
+
 	var fecha *time.Time
 	if in.FechaExpedicion != "" {
 		f, _ := time.Parse(time.DateOnly, in.FechaExpedicion) // ya validada
 		fecha = &f
 	}
 	p, calidades := simulador.Persona(in.Cedula, fecha, in.CodigoDactilar, time.Now())
+	if enPadron {
+		// Persona real: sus nombres son los del padrón y no se le inventa un cónyuge.
+		p.Nombres, p.Apellidos = nombres, apellidos
+		p.EstadoCivil, p.ConyugeNombres, p.ConyugeCedula = "SOLTERO/A", nil, nil
+	}
 	persona, err := s.personas.CrearSimulada(ctx, p, calidades)
 	if err != nil {
 		return nil, err
