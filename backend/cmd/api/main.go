@@ -64,6 +64,12 @@ func run() error {
 
 	// --- Caches ---
 	catalogoCache := cache.NewCatalogoCache(rdb, cfg.Security.CatalogoTTL)
+	// Los catálogos pueden cambiar entre despliegues: se parte sin caché para no servir datos viejos.
+	if n, err := catalogoCache.Limpiar(ctx); err != nil {
+		log.Printf("no se pudo limpiar la caché de catálogos: %v", err)
+	} else {
+		log.Printf("caché de catálogos limpiada: %d claves", n)
+	}
 	intentosCache := cache.NewIntentosCache(rdb, cfg.Security.MaxIntentos, cfg.Security.Bloqueo)
 	tokenCache := cache.NewTokenCache(rdb)
 

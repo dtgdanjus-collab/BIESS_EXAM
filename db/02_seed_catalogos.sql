@@ -405,6 +405,7 @@ SELECT pr.id, v.canton FROM (VALUES
   ('Pichincha', 'San Miguel de los Bancos'),
   ('Santa Elena', 'Santa Elena'),
   ('Santa Elena', 'La Libertad'),
+  ('Santa Elena', 'Salinas'),
   ('Santo Domingo de los Tsáchilas', 'La Concordia'),
   ('Santo Domingo de los Tsáchilas', 'Santo Domingo'),
   ('Sucumbíos', 'Cascales'),
