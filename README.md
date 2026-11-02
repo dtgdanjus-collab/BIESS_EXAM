@@ -70,7 +70,9 @@ Para recrear la base desde cero: `docker compose down -v && docker compose up -d
 
 No hay usuarios precargados: cada persona se **registra** en `/registro` con su cédula y **uno** de los dos datos de identidad. Los datos son ficticios; las cédulas son válidas por módulo 10. En el registro, el panel **Demo · Personas de prueba** las llena con un clic.
 
-**Cualquier otra cédula válida también funciona** (`REGISTRO_CIVIL_AUTOGENERAR=true`): la primera vez que se valida, el Registro Civil simulado la da de alta **una sola vez** con datos ficticios fijos para esa cédula (siempre ecuatoriana y afiliada) y con la fecha de expedición o el código dactilar ingresados. Desde ese momento se comporta como un registro normal: si los datos no coinciden cuenta como intento fallido y aplica el bloqueo. Con `REGISTRO_CIVIL_AUTOGENERAR=false` solo existen las 6 personas de la tabla.
+**Cualquier otra cédula válida también funciona** (`REGISTRO_CIVIL_AUTOGENERAR=true`): la primera vez que se valida, el Registro Civil simulado la da de alta **una sola vez** con datos ficticios fijos para esa cédula (siempre ecuatoriana y afiliada) y con la fecha de expedición o el código dactilar ingresados. Desde ese momento se comporta como un registro normal: si los datos no coinciden cuenta como intento fallido y aplica el bloqueo. Con `REGISTRO_CIVIL_AUTOGENERAR=false` solo existen las 6 personas de la tabla y las del padrón.
+
+**Padrón de estudiantes:** la tabla `mock_padron` guarda nombres reales para ciertas cédulas. Validar una de ellas no crea ninguna cuenta: solo da de alta a la persona en el Registro Civil simulado con esos nombres (el resto de sus datos sigue siendo ficticio). La cuenta se crea al registrarse y, a partir de ahí, se responde que ya existe. Los datos **no se versionan** porque el repositorio es público: van en `db/*_privado.sql`, ignorado por Git, que Docker carga solo al crear la base local.
 
 | Caso | Cédula | Fecha de expedición | Código dactilar | Escenario |
 |---|---|---|---|---|
