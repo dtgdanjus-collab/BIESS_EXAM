@@ -31,6 +31,7 @@ type verificarIdentidadReq struct {
 	Cedula          string `json:"cedula"`
 	FechaExpedicion string `json:"fechaExpedicion"`
 	CodigoDactilar  string `json:"codigoDactilar"`
+	Genero          string `json:"genero"`
 }
 
 // VerificarIdentidad atiende POST /auth/verificar-identidad (paso 1 del registro).

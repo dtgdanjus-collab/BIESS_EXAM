@@ -33,6 +33,7 @@ export const identidadSchema = z
     metodo: z.enum(['fecha', 'dactilar']),
     fechaExpedicion: z.string().optional(),
     codigoDactilar: z.string().trim().toUpperCase().optional(),
+    genero: z.string().optional(),
   })
   .superRefine((v, ctx) => {
     const error = (path, message) => ctx.addIssue({ code: 'custom', path: [path], message })

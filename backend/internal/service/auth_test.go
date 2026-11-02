@@ -247,7 +247,7 @@ func TestVerificarIdentidad_RegistroCivilAutogenerado(t *testing.T) {
 	svc := nuevoAuthService()
 	svc.cfg.AutoRegistroCivil = true
 	ctx := context.Background()
-	nueva := IdentidadInput{Cedula: "0101010106", FechaExpedicion: "2024-07-29"}
+	nueva := IdentidadInput{Cedula: "0101010106", FechaExpedicion: "2024-07-29", Genero: "FEMENINO"}
 
 	// Primera vez: se da de alta con datos ficticios y la fecha ingresada.
 	if _, err := svc.VerificarIdentidad(ctx, nueva); err != nil {
@@ -285,7 +285,7 @@ func TestVerificarIdentidad_SinAutogenerarEsEstricto(t *testing.T) {
 func TestVerificarIdentidad_PadronUsaNombresRealesYUnaSolaCuenta(t *testing.T) {
 	svc := nuevoAuthService() // sin AutoRegistroCivil: el padrón funciona igual
 	ctx := context.Background()
-	in := IdentidadInput{Cedula: "0101010114", FechaExpedicion: "2024-07-29"}
+	in := IdentidadInput{Cedula: "0101010114", FechaExpedicion: "2024-07-29", Genero: "MASCULINO"}
 
 	if _, err := svc.personas.FindByCedula(ctx, in.Cedula); !errors.Is(err, repository.ErrNotFound) {
 		t.Fatalf("no debe existir persona antes de validar: %v", err)
@@ -307,5 +307,52 @@ func TestVerificarIdentidad_PadronUsaNombresRealesYUnaSolaCuenta(t *testing.T) {
 	}
 	if _, err := svc.VerificarIdentidad(ctx, in); !errors.Is(err, domain.ErrConflicto) {
 		t.Fatalf("segunda vez: se esperaba ErrConflicto (ya existe una cuenta), se obtuvo %v", err)
+	}
+}
+
+func TestVerificarIdentidad_PideGeneroAntesDeCrear(t *testing.T) {
+	svc := nuevoAuthService()
+	svc.cfg.AutoRegistroCivil = true
+	ctx := context.Background()
+	in := IdentidadInput{Cedula: "0101010106", FechaExpedicion: "2024-07-29"}
+
+	_, err := svc.VerificarIdentidad(ctx, in)
+	var de *domain.Error
+	if !errors.As(err, &de) || de.Details["requiereGenero"] != true {
+		t.Fatalf("se esperaba requiereGenero, se obtuvo %v", err)
+	}
+	if _, err := svc.personas.FindByCedula(ctx, in.Cedula); !errors.Is(err, repository.ErrNotFound) {
+		t.Fatal("no debe crearse la persona sin conocer el género")
+	}
+	if r, _, _ := svc.intentos.RegistrarFallo(ctx, cache.AmbitoRegistro, in.Cedula); r != 2 {
+		t.Fatal("pedir el género no debe contar como intento fallido")
+	}
+	svc.intentos.Limpiar(ctx, cache.AmbitoRegistro, in.Cedula)
+
+	in.Genero = "femenino"
+	if _, err := svc.VerificarIdentidad(ctx, in); err != nil {
+		t.Fatalf("con género: %v", err)
+	}
+	if p, _ := svc.personas.FindByCedula(ctx, in.Cedula); p.Genero != "FEMENINO" {
+		t.Fatalf("género guardado = %q", p.Genero)
+	}
+
+	in.Genero = "OTRO"
+	in.Cedula = "0101010122"
+	if _, err := svc.VerificarIdentidad(ctx, in); !errors.Is(err, domain.ErrValidacion) {
+		t.Fatalf("género inválido: %v", err)
+	}
+}
+
+func TestVerificarIdentidad_CuentaExistenteSinImportarLosDatos(t *testing.T) {
+	svc := nuevoAuthService()
+	ctx := context.Background()
+	token, _ := svc.VerificarIdentidad(ctx, IdentidadInput{Cedula: "0106789019", CodigoDactilar: "E7777V8888"})
+	if _, err := svc.Registrar(ctx, RegistroInput{RegistroToken: token, Email: "d@correo.com", Password: "Biess2026"}); err != nil {
+		t.Fatal(err)
+	}
+	_, err := svc.VerificarIdentidad(ctx, IdentidadInput{Cedula: "0106789019", FechaExpedicion: "2001-01-01"})
+	if !errors.Is(err, domain.ErrConflicto) {
+		t.Fatalf("datos incorrectos con cuenta existente: se esperaba ErrConflicto, se obtuvo %v", err)
 	}
 }

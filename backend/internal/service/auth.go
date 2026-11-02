@@ -71,6 +71,7 @@ type IdentidadInput struct {
 	Cedula          string
 	FechaExpedicion string // YYYY-MM-DD
 	CodigoDactilar  string
+	Genero          string // solo para dar de alta una cédula nueva: MASCULINO | FEMENINO
 }
 
 // VerificarIdentidad compara los datos con el Registro Civil. Tras MAX_INTENTOS fallos
@@ -79,12 +80,22 @@ func (s *AuthService) VerificarIdentidad(ctx context.Context, in IdentidadInput)
 	in.Cedula = strings.TrimSpace(in.Cedula)
 	in.CodigoDactilar = strings.ToUpper(strings.TrimSpace(in.CodigoDactilar))
 	in.FechaExpedicion = strings.TrimSpace(in.FechaExpedicion)
+	in.Genero = strings.ToUpper(strings.TrimSpace(in.Genero))
 	if err := validarIdentidadInput(in); err != nil {
 		return "", err
 	}
 
 	if err := s.verificarBloqueo(ctx, cache.AmbitoRegistro, in.Cedula); err != nil {
 		return "", err
+	}
+
+	// Lo primero: una cédula con cuenta no puede volver a registrarse, sea cual sea el dato ingresado.
+	existe, err := s.usuarios.ExistsByCedula(ctx, in.Cedula)
+	if err != nil {
+		return "", err
+	}
+	if existe {
+		return "", domain.NewError(domain.ErrConflicto, "Ya existe una cuenta registrada con esta cédula")
 	}
 
 	persona, err := s.personas.FindByCedula(ctx, in.Cedula)
@@ -102,16 +113,6 @@ func (s *AuthService) VerificarIdentidad(ctx context.Context, in IdentidadInput)
 
 	if err := s.intentos.Limpiar(ctx, cache.AmbitoRegistro, in.Cedula); err != nil {
 		return "", err
-	}
-
-	// El 409 se informa solo después de validar la identidad, para no revelar
-	// a terceros qué cédulas tienen cuenta.
-	existe, err := s.usuarios.ExistsByCedula(ctx, in.Cedula)
-	if err != nil {
-		return "", err
-	}
-	if existe {
-		return "", domain.NewError(domain.ErrConflicto, "Ya existe una cuenta registrada con esta cédula")
 	}
 
 	token := uuid.NewString()
@@ -135,13 +136,19 @@ func (s *AuthService) altaSimulada(ctx context.Context, in IdentidadInput) (*dom
 	if !enPadron && !s.cfg.AutoRegistroCivil {
 		return nil, nil
 	}
+	// El género se consulta antes de crear nada: no se inventa.
+	if in.Genero == "" {
+		return nil, domain.NewError(domain.ErrValidacion, "Indique su género para completar la validación").
+			WithDetail("requiereGenero", true).
+			WithDetail("campos", map[string]string{"genero": "Seleccione una opción"})
+	}
 
 	var fecha *time.Time
 	if in.FechaExpedicion != "" {
 		f, _ := time.Parse(time.DateOnly, in.FechaExpedicion) // ya validada
 		fecha = &f
 	}
-	p, calidades := simulador.Persona(in.Cedula, fecha, in.CodigoDactilar, time.Now())
+	p, calidades := simulador.Persona(in.Cedula, fecha, in.CodigoDactilar, in.Genero, time.Now())
 	if enPadron {
 		// Persona real: sus nombres son los del padrón y no se le inventa un cónyuge.
 		p.Nombres, p.Apellidos = nombres, apellidos
@@ -263,6 +270,9 @@ func validarIdentidadInput(in IdentidadInput) error {
 		if _, err := time.Parse(time.DateOnly, in.FechaExpedicion); err != nil {
 			campos["fechaExpedicion"] = "Formato de fecha inválido (YYYY-MM-DD)"
 		}
+	}
+	if in.Genero != "" && in.Genero != "MASCULINO" && in.Genero != "FEMENINO" {
+		campos["genero"] = "Seleccione una opción válida"
 	}
 	if in.CodigoDactilar != "" && !validator.CodigoDactilar(in.CodigoDactilar) {
 		campos["codigoDactilar"] = "Formato inválido: letra, 4 dígitos, letra y 4 dígitos (ej. V4443V4442)"
