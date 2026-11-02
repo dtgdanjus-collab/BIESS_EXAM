@@ -12,7 +12,7 @@ export function Alert({ type = 'info', title, children, className = '' }) {
   return (
     <div
       role={type === 'error' || type === 'warning' ? 'alert' : 'status'}
-      className={`flex gap-3 rounded-xl border px-4 py-3 text-sm animate-fade-in ${e.caja} ${className}`}
+      className={`flex gap-3 rounded-xl border px-4 py-3 text-sm animate-slide-down ${e.caja} ${className}`}
     >
       <span className={`mt-0.5 flex size-5 shrink-0 items-center justify-center rounded-full ${e.chip}`}>
         <Icon name={e.icono} className="size-3" strokeWidth={3} />

@@ -1,4 +1,4 @@
-import { Button, Icon } from '../../components/ui'
+import { Button, Confetti, Icon } from '../../components/ui'
 import { useCatalogo } from '../../hooks/useCatalogo'
 import { formatoFecha, textoDuracion } from '../../utils/fechas'
 import { Dato } from './components'
@@ -19,14 +19,15 @@ function Bloque({ titulo, icono, children }) {
 }
 
 /** Resumen imprimible de la postulación enviada con su código único. */
-export function Comprobante({ postulacion }) {
+export function Comprobante({ postulacion, celebrar = false }) {
   const sectores = useCatalogo('sectores')
   const d = postulacion.datosPersonales
   const c = postulacion.contacto
   const sector = sectores.data.find((s) => s.codigo === postulacion.sectorCodigo)
 
   return (
-    <article className="relative overflow-hidden rounded-3xl bg-white shadow-lift ring-1 ring-slate-900/5 animate-fade-up print:rounded-none print:shadow-none print:ring-0">
+    <article className="relative overflow-hidden rounded-3xl bg-white shadow-lift ring-1 ring-slate-900/5 print:rounded-none print:shadow-none print:ring-0">
+      {celebrar && <Confetti />}
       {/* Encabezado del documento */}
       <header className="relative overflow-hidden bg-brand-950 px-6 py-7 text-white sm:px-9 print:bg-white print:text-slate-900">
         <div aria-hidden="true" className="absolute inset-0 bg-dots opacity-40 print:hidden" />
@@ -50,7 +51,7 @@ export function Comprobante({ postulacion }) {
 
       {/* Sello de recepción */}
       <div className="flex items-center gap-3 border-b border-dashed border-slate-200 bg-emerald-50/70 px-6 py-3 text-sm text-emerald-900 sm:px-9">
-        <span className="flex size-7 items-center justify-center rounded-full bg-emerald-500 text-white">
+        <span className={`flex size-7 items-center justify-center rounded-full bg-emerald-500 text-white ${celebrar ? 'animate-stamp' : ''}`}>
           <Icon name="check" className="size-4" strokeWidth={3} />
         </span>
         <p>

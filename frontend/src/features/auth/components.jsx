@@ -39,7 +39,7 @@ export function PasswordInput({ ref, ...props }) {
           className="flex size-9 items-center justify-center rounded-lg text-slate-400 transition-colors hover:bg-slate-100 hover:text-brand-700"
           aria-label={visible ? 'Ocultar la contraseña' : 'Mostrar la contraseña'}
         >
-          <Icon name={visible ? 'eyeOff' : 'eye'} className="size-[18px]" />
+          <Icon key={visible ? 'ocultar' : 'ver'} name={visible ? 'eyeOff' : 'eye'} className="size-[18px] animate-pop" />
         </button>
       }
       {...props}
@@ -161,10 +161,8 @@ export function IdentidadFields({ register, errors, metodo, setValue, disabled, 
       aria-checked={metodo === valor}
       disabled={disabled}
       onClick={() => setValue('metodo', valor, { shouldValidate: false })}
-      className={`flex flex-1 items-center justify-center gap-2 whitespace-nowrap rounded-lg px-2 py-2 text-[13px] font-semibold transition-all sm:px-3 ${
-        metodo === valor
-          ? 'bg-white text-brand-800 shadow-sm ring-1 ring-slate-900/5'
-          : 'text-slate-500 hover:text-slate-800'
+      className={`relative z-10 flex flex-1 items-center justify-center gap-2 whitespace-nowrap rounded-lg px-2 py-2 text-[13px] font-semibold transition-colors duration-200 active:scale-[0.98] sm:px-3 ${
+        metodo === valor ? 'text-brand-800' : 'text-slate-500 hover:text-slate-800'
       }`}
     >
       <Icon name={icono} className="hidden size-4 min-[420px]:block" />
@@ -177,7 +175,13 @@ export function IdentidadFields({ register, errors, metodo, setValue, disabled, 
       <CampoCedula register={register} error={errors.cedula?.message} valor={cedula} disabled={disabled} />
       <div>
         <p className="mb-1.5 text-[13px] font-semibold text-slate-700">Validar con</p>
-        <div role="radiogroup" className="flex gap-1 rounded-xl bg-slate-100 p-1">
+        <div role="radiogroup" className="relative flex gap-1 rounded-xl bg-slate-100 p-1">
+          <span
+            aria-hidden="true"
+            className={`absolute inset-y-1 left-1 w-[calc(50%-0.375rem)] rounded-lg bg-white shadow-sm ring-1 ring-slate-900/5 transition-transform duration-300 ease-out ${
+              metodo === 'dactilar' ? 'translate-x-[calc(100%+0.25rem)]' : ''
+            }`}
+          />
           {opcion('fecha', 'Fecha de expedición', 'calendar')}
           {opcion('dactilar', 'Código dactilar', 'fingerprint')}
         </div>
@@ -224,7 +228,7 @@ export function BloqueoAviso({ bloqueo, mensajeBloqueo, maxIntentos = 3 }) {
         <div aria-hidden="true" className="absolute inset-0 bg-dots opacity-40" />
         <div className="relative flex items-center gap-4">
           <span className="flex size-12 shrink-0 items-center justify-center rounded-2xl bg-white/15 ring-1 ring-white/25">
-            <Icon name="lock" className="size-6" />
+            <Icon name="lock" className="size-6 animate-stamp" />
           </span>
           <div className="min-w-0">
             <p className="text-sm font-semibold leading-snug">{mensajeBloqueo}</p>

@@ -64,7 +64,7 @@ export function Seccion({ id, numeral, titulo, descripcion, children, peticion, 
   const siguiente = siguienteSeccion(id)
   const icono = SECCIONES.find((s) => s.id === id)?.icono
   return (
-    <form onSubmit={onSubmit} noValidate className="animate-fade-up">
+    <form onSubmit={onSubmit} noValidate>
       <Card icono={icono} eyebrow={`Sección ${numeral}`} title={titulo} description={descripcion}>
         <fieldset disabled={soloLectura || peticion?.loading} className="space-y-6">
           {children}
@@ -123,7 +123,7 @@ export function Dato({ etiqueta, valor, className = '' }) {
 export function ItemLista({ titulo, onEliminar, children }) {
   const { soloLectura } = useFormulario()
   return (
-    <div className="rounded-2xl border border-slate-200 bg-gradient-to-b from-slate-50/80 to-white p-4 transition-shadow hover:shadow-card sm:p-5 animate-fade-in">
+    <div className="rounded-2xl border border-slate-200 bg-gradient-to-b from-slate-50/80 to-white p-4 transition-shadow hover:shadow-card sm:p-5 animate-scale-in">
       <div className="mb-4 flex items-center justify-between gap-2">
         <p className="flex items-center gap-2 text-sm font-bold text-slate-800">
           <span className="h-4 w-1 rounded-full bg-gradient-to-b from-brand-500 to-gold-400" aria-hidden="true" />

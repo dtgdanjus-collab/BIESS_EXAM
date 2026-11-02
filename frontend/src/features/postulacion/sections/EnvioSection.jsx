@@ -16,14 +16,16 @@ export function EnvioSection() {
   const [acepta, setAcepta] = useState(false)
   const [confirmar, setConfirmar] = useState(false)
 
-  if (postulacion.estado === 'ENVIADA') return <Comprobante postulacion={postulacion} />
+  if (postulacion.estado === 'ENVIADA') return <Comprobante postulacion={postulacion} celebrar={peticion.success} />
 
   const faltantes = SECCIONES.filter((s) => OBLIGATORIAS.includes(s.id) && !s.completa(postulacion))
   const faltantesBackend = peticion.error?.details?.faltantes
 
   const enviar = async () => {
     setConfirmar(false)
-    await peticion.guardar(postulacionApi.enviar)
+    const r = await peticion.guardar(postulacionApi.enviar)
+    // Lo primero que debe verse tras enviar es el código único, arriba del todo.
+    if (r.ok) window.scrollTo({ top: 0, behavior: 'smooth' })
   }
 
   return (
@@ -32,7 +34,6 @@ export function EnvioSection() {
       eyebrow="Sección 1.10"
       title="Consentimiento y envío"
       description="Revise su postulación, acepte la declaración y envíela. Después no podrá modificarla."
-      className="animate-fade-up"
     >
       <div className="space-y-6">
         {faltantes.length > 0 ? (
