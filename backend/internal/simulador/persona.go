@@ -4,8 +4,9 @@
 package simulador
 
 import (
+	"crypto/sha256"
+	"encoding/binary"
 	"fmt"
-	"hash/fnv"
 	"math/rand/v2"
 	"time"
 
@@ -13,22 +14,21 @@ import (
 )
 
 var (
-	nombresM  = []string{"Juan", "Carlos", "Luis", "José", "Andrés", "Diego", "Fernando", "Ricardo", "Pablo", "Santiago", "Javier", "Miguel", "Esteban", "Mateo", "Daniel", "Gabriel", "Marco", "Patricio", "Xavier", "Héctor"}
-	nombresF  = []string{"María", "Ana", "Gabriela", "Daniela", "Sofía", "Valeria", "Carolina", "Lucía", "Paola", "Verónica", "Fernanda", "Andrea", "Patricia", "Isabel", "Camila", "Mónica", "Diana", "Elena", "Rosa", "Natalia"}
+	nombresM  = []string{"Juan", "Carlos", "Luis", "José", "Andrés", "Diego", "Fernando", "Ricardo", "Pablo", "Santiago", "Javier", "Miguel", "Esteban", "Mateo", "Daniel", "Gabriel", "Marco", "Patricio", "Xavier", "Héctor", "Alberto", "Alejandro", "Álvaro", "Antonio", "Bryan", "César", "Cristian", "David", "Eduardo", "Emilio", "Enrique", "Ernesto", "Felipe", "Francisco", "Gonzalo", "Gustavo", "Hugo", "Ignacio", "Iván", "Jaime", "Joaquín", "Jorge", "Julio", "Kevin", "Leonardo", "Manuel", "Mario", "Martín", "Mauricio", "Nicolás", "Óscar", "Pedro", "Rafael", "Ramiro", "Raúl", "Roberto", "Rodrigo", "Sebastián", "Sergio", "Víctor"}
+	nombresF  = []string{"María", "Ana", "Gabriela", "Daniela", "Sofía", "Valeria", "Carolina", "Lucía", "Paola", "Verónica", "Fernanda", "Andrea", "Patricia", "Isabel", "Camila", "Mónica", "Diana", "Elena", "Rosa", "Natalia", "Adriana", "Alejandra", "Alicia", "Amanda", "Ángela", "Beatriz", "Bianca", "Carla", "Catalina", "Cecilia", "Claudia", "Cristina", "Doménica", "Emilia", "Esther", "Eva", "Gloria", "Inés", "Irene", "Jimena", "Johanna", "Julia", "Karina", "Laura", "Liliana", "Lorena", "Marcela", "Martha", "Melissa", "Mercedes", "Miriam", "Nancy", "Noelia", "Pamela", "Pilar", "Raquel", "Sandra", "Silvia", "Tatiana", "Ximena"}
 	apellidos = []string{"Andrade", "Benítez", "Cevallos", "Chávez", "Delgado", "Espinoza", "Flores", "Guerrero", "Herrera", "Jaramillo", "León", "Mendoza", "Moreira", "Naranjo", "Ochoa", "Paredes", "Quintero", "Ramírez", "Salazar", "Torres", "Vásquez", "Villacís", "Zambrano", "Cárdenas", "Montalvo", "Peñafiel", "Romero", "Suárez", "Yépez", "Zúñiga"}
 	estados   = []string{"SOLTERO/A", "SOLTERO/A", "CASADO/A", "CASADO/A", "DIVORCIADO/A", "UNION DE HECHO", "VIUDO/A"}
 )
 
-// Persona inventa la persona de la cédula. fechaExp y dactilar son los datos que ingresó
-// el usuario en su primera validación: se respetan para que esa validación coincida.
+// Persona inventa la persona de la cédula. fechaExp, dactilar y genero son los datos que
+// ingresó el usuario en su primera validación: se respetan, y los nombres van según el género.
 // Devuelve también sus calidades en el IESS (AFILIADO siempre; JUBILADO y EMPLEADOR según el caso).
-func Persona(cedula string, fechaExp *time.Time, dactilar string, hoy time.Time) (domain.Persona, []string) {
+func Persona(cedula string, fechaExp *time.Time, dactilar, genero string, hoy time.Time) (domain.Persona, []string) {
 	r := generador(cedula)
 
-	genero := "MASCULINO"
 	nombres, otros := nombresM, nombresF
-	if r.IntN(2) == 0 {
-		genero, nombres, otros = "FEMENINO", nombresF, nombresM
+	if genero == "FEMENINO" {
+		nombres, otros = nombresF, nombresM
 	}
 
 	nacimiento := time.Date(1958+r.IntN(39), time.Month(1+r.IntN(12)), 1+r.IntN(28), 0, 0, 0, 0, time.UTC)
@@ -69,12 +69,11 @@ func Persona(cedula string, fechaExp *time.Time, dactilar string, hoy time.Time)
 	return p, calidades
 }
 
-// generador crea una fuente pseudoaleatoria fija para la cédula.
+// generador crea una fuente pseudoaleatoria fija para la cédula. SHA-256 reparte bien
+// incluso cédulas casi iguales, que con un hash simple producían nombres muy parecidos.
 func generador(cedula string) *rand.Rand {
-	h := fnv.New64a()
-	h.Write([]byte(cedula))
-	s := h.Sum64()
-	return rand.New(rand.NewPCG(s, s^0x9e3779b97f4a7c15))
+	h := sha256.Sum256([]byte(cedula))
+	return rand.New(rand.NewPCG(binary.BigEndian.Uint64(h[:8]), binary.BigEndian.Uint64(h[8:16])))
 }
 
 func uno(r *rand.Rand, lista []string) string { return lista[r.IntN(len(lista))] }

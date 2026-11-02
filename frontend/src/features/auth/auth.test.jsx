@@ -180,3 +180,44 @@ describe('validaciones del registro', () => {
     expect(authApi.registrar).not.toHaveBeenCalled()
   })
 })
+
+describe('género de una cédula nueva', () => {
+  beforeEach(() => {
+    vi.resetAllMocks()
+    useAuthStore.getState().logout()
+  })
+
+  it('lo pide solo si el backend lo requiere y lo envía al reintentar', async () => {
+    authApi.verificarIdentidad
+      .mockRejectedValueOnce(
+        new ApiError({
+          status: 400,
+          code: 'VALIDACION',
+          message: 'Indique su género',
+          details: { requiereGenero: true, campos: { genero: 'Seleccione una opción' } },
+        }),
+      )
+      .mockResolvedValueOnce({ registroToken: 'tok' })
+    const user = userEvent.setup()
+    abrir('/registro')
+    expect(screen.queryByLabelText(/^género/i)).not.toBeInTheDocument()
+
+    await user.type(screen.getByLabelText(/número de cédula/i), '0101010106')
+    await user.type(screen.getByLabelText(/fecha de expedición de la cédula/i), '2024-07-29')
+    await user.click(screen.getByRole('button', { name: /validar identidad/i }))
+
+    const genero = await screen.findByLabelText(/^género/i)
+    await user.click(screen.getByRole('button', { name: /validar identidad/i }))
+    expect(await screen.findByText('Seleccione una opción')).toBeInTheDocument()
+    expect(authApi.verificarIdentidad).toHaveBeenCalledTimes(1)
+
+    await user.selectOptions(genero, 'FEMENINO')
+    await user.click(screen.getByRole('button', { name: /validar identidad/i }))
+    expect(authApi.verificarIdentidad).toHaveBeenLastCalledWith({
+      cedula: '0101010106',
+      fechaExpedicion: '2024-07-29',
+      genero: 'FEMENINO',
+    })
+    expect(await screen.findByLabelText(/correo electrónico/i)).toBeInTheDocument()
+  })
+})

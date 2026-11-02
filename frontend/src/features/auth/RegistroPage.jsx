@@ -3,7 +3,7 @@ import { useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { Link, useNavigate } from 'react-router-dom'
 import { registrar, verificarIdentidad } from '../../api/auth'
-import { Alert, Button, ErrorAlert, Icon, Input } from '../../components/ui'
+import { Alert, Button, ErrorAlert, Icon, Input, Select } from '../../components/ui'
 import { useAsync } from '../../hooks/useAsync'
 import { useBloqueo } from '../../hooks/useBloqueo'
 import { aplicarErroresCampos } from '../../utils/formErrors'
@@ -40,10 +40,17 @@ function Pasos({ paso }) {
   )
 }
 
+const GENEROS = [
+  { id: 'FEMENINO', nombre: 'Femenino' },
+  { id: 'MASCULINO', nombre: 'Masculino' },
+]
+
 /** Paso 1: validación contra el Registro Civil (con bloqueo de 3 intentos). */
 function PasoIdentidad({ onValidado }) {
   const peticion = useAsync()
   const bloqueo = useBloqueo()
+  // Cédula para la que el backend pidió el género (aún no está registrada).
+  const [generoPara, setGeneroPara] = useState(null)
   const {
     register,
     handleSubmit,
@@ -59,13 +66,18 @@ function PasoIdentidad({ onValidado }) {
   })
 
   const onSubmit = async (v) => {
-    const r = await peticion.run(() => verificarIdentidad(identidadPayload(v)))
+    const conGenero = generoPara === v.cedula
+    if (conGenero && !v.genero) return setError('genero', { message: 'Seleccione una opción' })
+    const datos = identidadPayload(v)
+    const r = await peticion.run(() => verificarIdentidad(conGenero ? { ...datos, genero: v.genero } : datos))
     if (r.ok) return onValidado({ token: r.data.registroToken, cedula: v.cedula })
+    if (r.error.details?.requiereGenero) return setGeneroPara(v.cedula)
     bloqueo.procesarError(r.error)
     aplicarErroresCampos(r.error, setError)
   }
 
-  const error = peticion.error
+  const error = peticion.error?.details?.requiereGenero ? null : peticion.error
+  const pedirGenero = generoPara !== null && generoPara === watch('cedula')
   return (
     <form onSubmit={handleSubmit(onSubmit)} noValidate className="space-y-4">
       {error?.status === 409 ? (
@@ -94,6 +106,14 @@ function PasoIdentidad({ onValidado }) {
           disabled={bloqueo.bloqueado}
         />
       </fieldset>
+      {pedirGenero && (
+        <div className="space-y-3 rounded-2xl border border-brand-200 bg-brand-50/50 p-4 animate-slide-down">
+          <p className="text-sm text-slate-700">
+            Esta cédula aún no está en el Registro Civil simulado. Indique su género para crear su registro.
+          </p>
+          <Select label="Género" required options={GENEROS} error={errors.genero?.message} {...register('genero')} />
+        </div>
+      )}
       <Button type="submit" className="w-full" loading={peticion.loading} disabled={bloqueo.bloqueado}>
         {bloqueo.bloqueado ? `Bloqueado (${bloqueo.tiempo})` : 'Validar identidad'}
       </Button>
