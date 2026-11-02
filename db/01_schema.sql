@@ -111,6 +111,13 @@ CREATE TABLE mock_historial_laboral (
     activo  BOOLEAN     NOT NULL DEFAULT TRUE,
     PRIMARY KEY (cedula, tipo)
 );
+-- Padrón de estudiantes: nombres reales para ciertas cédulas. Los datos NO se versionan (db/*_privado.sql).
+CREATE TABLE IF NOT EXISTS mock_padron (
+    cedula     CHAR(10)     PRIMARY KEY,
+    nombres    VARCHAR(100) NOT NULL,
+    apellidos  VARCHAR(100) NOT NULL,
+    correo     VARCHAR(150)
+);
 
 -- =====================================================================
 -- 3. NÚCLEO: usuarios y postulaciones
