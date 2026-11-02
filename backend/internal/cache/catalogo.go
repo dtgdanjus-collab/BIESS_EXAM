@@ -16,6 +16,8 @@ type CatalogoCache interface {
 	// Get deserializa el valor de key en dest. Devuelve false si la clave no existe.
 	Get(ctx context.Context, key string, dest any) (bool, error)
 	Set(ctx context.Context, key string, value any) error
+	// Limpiar borra todos los catálogos cacheados (claves cat:*) y devuelve cuántos eran.
+	Limpiar(ctx context.Context) (int, error)
 }
 
 type redisCatalogoCache struct {
@@ -39,6 +41,21 @@ func (c *redisCatalogoCache) Get(ctx context.Context, key string, dest any) (boo
 		return false, fmt.Errorf("decodificando %s: %w", key, err)
 	}
 	return true, nil
+}
+
+func (c *redisCatalogoCache) Limpiar(ctx context.Context) (int, error) {
+	borradas := 0
+	iter := c.rdb.Scan(ctx, 0, "cat:*", 100).Iterator()
+	for iter.Next(ctx) {
+		if err := c.rdb.Del(ctx, iter.Val()).Err(); err != nil {
+			return borradas, fmt.Errorf("borrando %s de redis: %w", iter.Val(), err)
+		}
+		borradas++
+	}
+	if err := iter.Err(); err != nil {
+		return borradas, fmt.Errorf("recorriendo catálogos en redis: %w", err)
+	}
+	return borradas, nil
 }
 
 func (c *redisCatalogoCache) Set(ctx context.Context, key string, value any) error {
