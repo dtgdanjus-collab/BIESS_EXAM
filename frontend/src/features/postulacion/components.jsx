@@ -123,7 +123,7 @@ export function Grupo({ titulo, children, className = 'grid gap-4 sm:grid-cols-2
 /** La cédula en celdas, como se lee en el acceso. */
 export function CeldasCedula({ cedula }) {
   return (
-    <div role="img" aria-label={`Cédula ${cedula}`} className="grid max-w-sm grid-cols-10 gap-0.5 sm:gap-1">
+    <div role="img" aria-label={`Cédula ${cedula}`} className="grid w-full min-w-60 max-w-sm grid-cols-10 gap-0.5 sm:gap-1">
       {[...cedula].map((digito, i) => (
         <span key={i} className={`flex aspect-[4/5] items-center justify-center text-sm font-medium tabular-nums text-white sm:text-lg ${i === 9 ? 'bg-sello' : 'bg-tinta'}`}>
           {digito}
