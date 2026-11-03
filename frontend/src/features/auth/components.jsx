@@ -33,7 +33,7 @@ export function PasswordInput({ ref, ...props }) {
         <button
           type="button"
           onClick={() => setVisible((v) => !v)}
-          className="flex size-11 items-center justify-center rounded-md text-tenue transition-colors hover:bg-realce hover:text-tinta lg:size-9"
+          className="flex size-11 items-center justify-center rounded-md text-tenue transition-colors hover:bg-realce hover:text-tinta pointer-fine:lg:size-9"
           aria-label={visible ? 'Ocultar la contraseña' : 'Mostrar la contraseña'}
         >
           <Icon key={visible ? 'ocultar' : 'ver'} name={visible ? 'eyeOff' : 'eye'} className="size-4 animate-pop" />
@@ -118,7 +118,7 @@ export function PersonasPrueba({ onUsar }) {
               <button
                 type="button"
                 onClick={() => onUsar(p)}
-                className="min-h-11 shrink-0 rounded-md px-2.5 text-[13px] lg:min-h-9 font-medium underline underline-offset-4 transition-colors hover:bg-realce"
+                className="min-h-11 shrink-0 rounded-md px-2.5 text-[13px] pointer-fine:lg:min-h-9 font-medium underline underline-offset-4 transition-colors hover:bg-realce"
                 aria-label={`Usar la persona de prueba ${p.cedula}`}
               >
                 Usar
@@ -164,7 +164,7 @@ export function IdentidadFields({ register, errors, metodo, setValue, disabled, 
       disabled={disabled}
       onClick={() => elegir(valor)}
       onKeyDown={conFlechas}
-      className={`min-h-11 flex-1 whitespace-nowrap px-2 text-sm font-medium transition-colors first:rounded-l-md last:rounded-r-md lg:min-h-9 ${
+      className={`min-h-11 flex-1 whitespace-nowrap px-2 text-sm font-medium transition-colors first:rounded-l-md last:rounded-r-md pointer-fine:lg:min-h-9 ${
         metodo === valor ? 'bg-tinta text-white' : 'bg-realce text-tinta hover:bg-control'
       }`}
     >

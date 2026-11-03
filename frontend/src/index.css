@@ -104,6 +104,8 @@
 @layer base {
   html {
     -webkit-text-size-adjust: 100%;
+    /* Por debajo de lg la barra superior es fija: el campo enfocado no debe quedar debajo de ella. */
+    @apply scroll-pt-18 lg:scroll-pt-0;
   }
   body {
     @apply bg-fondo text-sm text-tinta antialiased;

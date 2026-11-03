@@ -132,7 +132,7 @@ function NavegacionSecciones({ actual, irA, anchoCompleto }) {
       <button
         type="button"
         onClick={() => irA(s.id)}
-        className={`group flex min-h-14 min-w-0 flex-1 items-center gap-3 rounded-md border border-borde bg-papel px-4 py-2 text-left text-sm transition-colors hover:border-tinta hover:bg-tinta hover:text-white ${dir === 'sig' ? 'justify-end text-right' : ''}`}
+        className={`group flex min-h-14 min-w-0 flex-1 items-center gap-1.5 rounded-md border border-borde bg-papel px-2.5 py-2 sm:gap-3 sm:px-4 text-left text-sm transition-colors hover:border-tinta hover:bg-tinta hover:text-white ${dir === 'sig' ? 'justify-end text-right' : ''}`}
       >
         {dir === 'ant' && <Icon name="arrowLeft" className="size-4 transition-transform group-hover:-translate-x-0.5" />}
         <span className="min-w-0">
@@ -143,7 +143,7 @@ function NavegacionSecciones({ actual, irA, anchoCompleto }) {
       </button>
     )
   return (
-    <div className={`no-print mt-4 flex gap-4 ${anchoCompleto ? '' : 'xl:pl-[19rem]'}`}>
+    <div className={`no-print mt-4 flex gap-2 sm:gap-4 ${anchoCompleto ? '' : 'xl:pl-[19rem]'}`}>
       {enlace(anterior, 'ant')}
       {enlace(siguiente, 'sig')}
     </div>
