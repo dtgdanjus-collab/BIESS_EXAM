@@ -70,7 +70,8 @@ export function Seccion({ id, numeral, titulo, descripcion, children, peticion, 
         description={descripcion}
         nota={!soloLectura && peticion && 'Su avance se guarda como borrador hasta que lo envíe.'}
         pie={
-          peticion && (
+          // En solo lectura no hay nada que mostrar al pie, salvo lo que aporte el folio.
+          peticion && (!soloLectura || pie) && (
             <>
               {peticion.success && (
                 <Alert type="success">
@@ -101,11 +102,34 @@ export function Seccion({ id, numeral, titulo, descripcion, children, peticion, 
           )
         }
       >
-        <fieldset disabled={soloLectura || peticion?.loading} className="space-y-6">
+        <fieldset disabled={soloLectura || peticion?.loading} className="space-y-8">
           {children}
         </fieldset>
       </Card>
     </form>
+  )
+}
+
+/** Bloque de campos de un folio con su propio título. */
+export function Grupo({ titulo, children, className = 'grid gap-4 sm:grid-cols-2' }) {
+  return (
+    <section>
+      <h3 className="mb-4 border-b border-regla pb-2 text-base font-medium">{titulo}</h3>
+      <div className={className}>{children}</div>
+    </section>
+  )
+}
+
+/** La cédula en celdas, como se lee en el acceso. */
+export function CeldasCedula({ cedula }) {
+  return (
+    <div role="img" aria-label={`Cédula ${cedula}`} className="grid max-w-sm grid-cols-10 gap-0.5 sm:gap-1">
+      {[...cedula].map((digito, i) => (
+        <span key={i} className={`flex aspect-[4/5] items-center justify-center text-sm font-medium tabular-nums text-white sm:text-lg ${i === 9 ? 'bg-sello' : 'bg-tinta'}`}>
+          {digito}
+        </span>
+      ))}
+    </div>
   )
 }
 
@@ -123,8 +147,8 @@ export function Dato({ etiqueta, valor, className = '' }) {
 export function ItemLista({ titulo, onEliminar, children }) {
   const { soloLectura } = useFormulario()
   return (
-    <div className="rounded-md bg-fondo p-4 animate-slide-down">
-      <div className="mb-3 flex min-h-8 items-center justify-between gap-2">
+    <div className="overflow-hidden rounded-md border border-borde animate-slide-down">
+      <div className="flex min-h-11 items-center justify-between gap-2 bg-fondo px-4">
         <p className="text-sm font-medium">{titulo}</p>
         {!soloLectura && onEliminar && (
           <Button variant="danger" className="-mr-2 px-2 text-xs lg:!min-h-8" onClick={onEliminar}>
@@ -132,7 +156,7 @@ export function ItemLista({ titulo, onEliminar, children }) {
           </Button>
         )}
       </div>
-      <div className="grid gap-4 sm:grid-cols-2">{children}</div>
+      <div className="grid gap-4 p-4 sm:grid-cols-2">{children}</div>
     </div>
   )
 }
@@ -144,7 +168,7 @@ export function AgregarItem({ onClick, children }) {
     <button
       type="button"
       onClick={onClick}
-      className="flex min-h-11 w-full items-center justify-center gap-2 rounded-md border border-dashed border-control text-sm font-medium transition-colors hover:border-tinta"
+      className="flex min-h-12 w-full items-center justify-center gap-2 rounded-md border border-dashed border-control text-sm font-medium transition-colors hover:border-tinta hover:bg-fondo"
     >
       <Icon name="plus" className="size-4" strokeWidth={2} />
       {children}

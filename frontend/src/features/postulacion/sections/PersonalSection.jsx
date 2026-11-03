@@ -6,7 +6,7 @@ import { Alert, Button, Card, ErrorAlert, Input, Modal, Select } from '../../../
 import { useAuthStore } from '../../../store/authStore'
 import { formatoFecha, hoyIso } from '../../../utils/fechas'
 import { conFiltro, soloDigitos } from '../../../utils/filtros'
-import { Dato, Seccion, opcional, useFormulario, useGuardarSeccion } from '../components'
+import { CeldasCedula, Dato, Grupo, Seccion, opcional, useFormulario, useGuardarSeccion } from '../components'
 import { CON_CONYUGE, datosPersonalesSchema } from '../schemas'
 
 const GENEROS = [
@@ -85,17 +85,22 @@ function FormularioDatos({ d }) {
           </>
         }
       >
-        <fieldset disabled={peticion.loading} className="space-y-6">
+        <fieldset disabled={peticion.loading} className="space-y-8">
           <Alert type="warning" title="Solo podrá hacerlo una vez">
             Al confirmar, estos datos quedan fijos y ya no se podrán cambiar.
           </Alert>
 
-          <dl className="grid gap-4 sm:grid-cols-2">
-            <Dato etiqueta="Cédula" valor={<span className="font-mono">{d.cedula}</span>} />
-            <Dato etiqueta="Nacionalidad" valor={d.nacionalidad} />
-          </dl>
+          <div className="flex flex-wrap items-end justify-between gap-x-8 gap-y-3">
+            <div className="min-w-0 flex-1">
+              <p className="mb-1.5 text-xs text-tenue">Cédula, no se puede cambiar</p>
+              <CeldasCedula cedula={d.cedula} />
+            </div>
+            <dl>
+              <Dato etiqueta="Nacionalidad, no se puede cambiar" valor={d.nacionalidad} />
+            </dl>
+          </div>
 
-          <div className="grid gap-4 sm:grid-cols-2">
+          <Grupo titulo="Sus datos">
             <Input label="Nombres" autoComplete="given-name" maxLength={100} required error={errors.nombres?.message} {...register('nombres')} />
             <Input label="Apellidos" autoComplete="family-name" maxLength={100} required error={errors.apellidos?.message} {...register('apellidos')} />
             <Input
@@ -110,7 +115,7 @@ function FormularioDatos({ d }) {
             />
             <Select label="Género" required options={GENEROS} error={errors.genero?.message} {...register('genero')} />
             <Select label="Estado civil" required options={ESTADOS_CIVILES} error={errors.estadoCivil?.message} {...register('estadoCivil')} />
-          </div>
+          </Grupo>
 
           {CON_CONYUGE.includes(estadoCivil) && (
             <div className="grid gap-4 rounded-md bg-fondo p-4 sm:grid-cols-2 animate-slide-down">
@@ -181,7 +186,9 @@ export function PersonalSection() {
           <p className="text-2xl font-medium leading-tight tracking-tight">
             {d.nombres} {d.apellidos}
           </p>
-          <p className="mt-1 font-mono text-sm text-tenue">{d.cedula}</p>
+          <div className="mt-3">
+            <CeldasCedula cedula={d.cedula} />
+          </div>
         </div>
         {confirmados && (
           <span className="inline-flex h-6 flex-none items-center whitespace-nowrap rounded bg-ok-fondo px-2 text-xs font-medium text-ok-tinta">
@@ -190,7 +197,7 @@ export function PersonalSection() {
         )}
       </div>
 
-      <dl className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <dl className="grid gap-px overflow-hidden rounded-md bg-regla sm:grid-cols-2 lg:grid-cols-4 [&>div]:bg-[#fafafa] [&>div]:p-3">
         <Dato etiqueta="Nacionalidad" valor={d.nacionalidad} />
         <Dato etiqueta="Género" valor={d.genero} />
         <Dato etiqueta="Fecha de nacimiento" valor={formatoFecha(d.fechaNacimiento)} />

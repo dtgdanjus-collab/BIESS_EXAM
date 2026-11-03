@@ -26,6 +26,9 @@ function Formulario({ preguntas }) {
     },
   })
 
+  const respuestas = watch('respuestas') ?? []
+  const contestadas = respuestas.filter((r) => r.respuesta !== null && r.respuesta !== undefined).length
+
   const onSubmit = handleSubmit((v) =>
     peticion.guardar(
       () =>
@@ -49,13 +52,32 @@ function Formulario({ preguntas }) {
       peticion={peticion}
       onSubmit={onSubmit}
     >
+      <div>
+        <p className="mb-2 text-sm" aria-live="polite">
+          <span className="text-2xl font-medium tabular-nums tracking-tight">{contestadas}</span>
+          <span className="text-tenue"> de {preguntas.length} preguntas respondidas</span>
+        </p>
+        <div aria-hidden="true" className="grid gap-1" style={{ gridTemplateColumns: `repeat(${preguntas.length}, minmax(0, 1fr))` }}>
+          {preguntas.map((q, i) => (
+            <span
+              key={q.id}
+              className={`flex h-8 items-center justify-center text-xs font-medium tabular-nums transition-colors ${
+                respuestas[i]?.respuesta === null || respuestas[i]?.respuesta === undefined ? 'bg-realce text-tinta' : 'bg-sello text-white'
+              }`}
+            >
+              {i + 1}
+            </span>
+          ))}
+        </div>
+      </div>
+
       <ol className="divide-y divide-regla">
         {preguntas.map((q, i) => {
           const respuesta = watch(`respuestas.${i}.respuesta`)
           const muestraDetalle = q.requiereDetalle && respuesta !== null && respuesta !== q.respuestaEsperada
           const e = errors.respuestas?.[i]?.detalle ?? {}
           return (
-            <li key={q.id} className="py-4 first:pt-0 last:pb-0">
+            <li key={q.id} className="py-5 first:pt-0 last:pb-0">
               <Controller
                 control={control}
                 name={`respuestas.${i}.respuesta`}

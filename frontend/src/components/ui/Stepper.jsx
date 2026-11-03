@@ -1,5 +1,12 @@
 import { Icon } from './Icon'
 
+/** Celda del índice: el mismo lenguaje que los dígitos de la cédula en el acceso. */
+const celdaFolio = (completo, activo) => {
+  if (completo) return 'bg-sello text-white'
+  if (activo) return 'bg-white text-tinta'
+  return 'bg-noche-celda text-noche-tenue'
+}
+
 /**
  * Índice de folios para la barra lateral.
  * steps: [{ id, titulo, numeral, completo }]; actual: id del folio visible.
@@ -7,8 +14,8 @@ import { Icon } from './Icon'
 export function Stepper({ steps, actual, onSelect }) {
   return (
     <nav aria-label="Secciones del formulario">
-      <p className="mb-1.5 px-3 text-xs text-tenue">Folios del expediente</p>
-      <ol>
+      <p className="mb-2 px-2 text-xs text-noche-tenue">Folios del expediente</p>
+      <ol className="space-y-0.5">
         {steps.map((s) => {
           const activo = s.id === actual
           return (
@@ -17,18 +24,17 @@ export function Stepper({ steps, actual, onSelect }) {
                 type="button"
                 onClick={() => onSelect(s.id)}
                 aria-current={activo ? 'step' : undefined}
-                className={`flex min-h-8 w-full items-center gap-2 rounded-md px-3 py-1 text-left text-sm transition-colors ${
-                  activo ? 'bg-realce' : 'hover:bg-realce/60'
+                className={`flex min-h-10 w-full items-center gap-2.5 rounded-md px-2 py-1 text-left text-sm transition-colors ${
+                  activo ? 'bg-noche-celda text-white' : 'text-[#dcdcdc] hover:bg-white/10 hover:text-white'
                 }`}
               >
-                <span className="w-7 shrink-0 text-xs tabular-nums text-tenue">{s.numeral}</span>
+                <span
+                  className={`flex h-7 w-9 shrink-0 items-center justify-center text-xs font-medium tabular-nums transition-colors ${celdaFolio(s.completo, activo)}`}
+                >
+                  {s.completo ? <Icon name="check" className="size-4 animate-pop" strokeWidth={2.6} /> : s.numeral}
+                </span>
                 <span className="min-w-0 flex-1 truncate">{s.titulo}</span>
-                {s.completo && (
-                  <span key="completo" className="text-sello animate-pop">
-                    <Icon name="check" className="size-4" strokeWidth={2.4} />
-                    <span className="sr-only">completa</span>
-                  </span>
-                )}
+                {s.completo && <span className="sr-only">completa</span>}
               </button>
             </li>
           )
@@ -63,29 +69,35 @@ export function SelectorFolios({ steps, actual, onSelect }) {
 }
 
 /**
- * El pliego: una marca por folio. Lo asentado va en tinta de sello, el folio abierto en negro
- * y lo pendiente en gris. Cada marca lleva a su folio.
+ * El pliego: una marca por folio sobre la cabecera negra. Lo asentado va en azul de sello,
+ * el folio abierto en blanco y lo pendiente en gris. Cada marca lleva a su folio.
  */
 export function Pliego({ steps, actual, onSelect }) {
   return (
     <ol className="flex gap-1" aria-label="Avance por folio">
-      {steps.map((s) => (
-        <li key={s.id} className="min-w-0 flex-1">
-          <button
-            type="button"
-            onClick={() => onSelect(s.id)}
-            aria-label={`Ir al folio ${s.numeral} ${s.titulo}`}
-            title={`${s.numeral} ${s.titulo}`}
-            className="group flex h-11 w-full items-center lg:h-6"
-          >
-            <span
-              className={`block h-2 w-full transition-[background-color,transform] duration-200 group-hover:scale-y-150 ${
-                s.completo ? 'bg-sello' : s.id === actual ? 'bg-tinta' : 'bg-control'
-              }`}
-            />
-          </button>
-        </li>
-      ))}
+      {steps.map((s) => {
+        const activo = s.id === actual
+        return (
+          <li key={s.id} className="min-w-0 flex-1">
+            <button
+              type="button"
+              onClick={() => onSelect(s.id)}
+              aria-label={`Ir al folio ${s.numeral} ${s.titulo}`}
+              title={`${s.numeral} ${s.titulo}`}
+              className="group flex h-11 w-full flex-col justify-center gap-1.5 lg:h-10"
+            >
+              <span
+                className={`block h-3 w-full transition-colors duration-200 ${
+                  s.completo ? 'bg-sello group-hover:bg-[#3b7fe0]' : activo ? 'bg-white' : 'bg-[#3a3a3a] group-hover:bg-[#555]'
+                }`}
+              />
+              <span aria-hidden="true" className={`hidden text-left text-xs tabular-nums lg:block ${activo ? 'text-white' : 'text-noche-tenue'}`}>
+                {s.numeral}
+              </span>
+            </button>
+          </li>
+        )
+      })}
     </ol>
   )
 }
