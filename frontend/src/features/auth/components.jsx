@@ -102,7 +102,7 @@ export function PersonasPrueba({ onUsar }) {
       </summary>
       <div className="px-3 pb-3">
         <p className="text-[13px] leading-relaxed text-tenue">
-          El Registro Civil está simulado. Puede usar <strong className="font-medium text-tinta">cualquier cédula válida</strong>: la
+          Puede usar <strong className="font-medium text-tinta">cualquier cédula válida</strong>: la
           primera vez se crea una persona ficticia con la fecha o el código que ingrese, y después esos datos deben coincidir. Estas
           personas traen escenarios preparados:
         </p>

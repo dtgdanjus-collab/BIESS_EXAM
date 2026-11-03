@@ -106,7 +106,7 @@ function PasoIdentidad({ onValidado }) {
       {pedirGenero && (
         <div className="space-y-3 rounded-md bg-fondo p-3 animate-slide-down">
           <p className="text-sm">
-            Esta cédula aún no está en el Registro Civil simulado. Indique su género para crear su registro.
+            Esta cédula aún no está en el Registro Civil. Indique su género para crear su registro.
           </p>
           <Select label="Género" required options={GENEROS} error={errors.genero?.message} {...register('genero')} />
         </div>
