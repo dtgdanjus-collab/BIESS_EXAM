@@ -45,7 +45,9 @@ export function AuthLayout() {
             </div>
           </main>
           <footer className="px-4 pb-5 text-xs text-tenue sm:px-6 lg:text-center">
-            Sistema académico de demostración · Requerimiento Funcional IESS v1.4 · Resolución C.D. 701
+            <p className="mx-auto max-w-md lg:max-w-none">
+              Sistema académico de demostración · Requerimiento Funcional IESS v1.4 · Resolución C.D. 701
+            </p>
           </footer>
         </div>
       </div>
@@ -101,7 +103,7 @@ export function AppLayout() {
               onClick={salir}
               aria-label="Cerrar sesión"
               title="Cerrar sesión"
-              className="flex size-11 shrink-0 items-center justify-center rounded-md text-noche-tenue transition-colors hover:bg-white/10 hover:text-white lg:size-9"
+              className="flex size-11 shrink-0 items-center justify-center rounded-md text-noche-tenue transition-colors hover:bg-white/10 hover:text-white pointer-fine:lg:size-9"
             >
               <Icon name="logout" className="size-4" />
             </button>

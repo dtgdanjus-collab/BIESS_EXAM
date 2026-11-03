@@ -3,7 +3,7 @@ import { Icon } from './Icon'
 import { Spinner } from './Spinner'
 
 const base =
-  'block min-h-11 w-full rounded-md border bg-papel px-3 py-2 text-sm text-tinta transition-colors duration-150 placeholder:text-tenue focus:outline-none focus:ring-1 disabled:cursor-not-allowed disabled:bg-fondo disabled:text-tenue lg:min-h-10'
+  'block min-h-11 w-full rounded-md border bg-papel px-3 py-2 text-base text-tinta pointer-fine:text-sm transition-colors duration-150 placeholder:text-tenue focus:outline-none focus:ring-1 disabled:cursor-not-allowed disabled:bg-fondo disabled:text-tenue pointer-fine:lg:min-h-10'
 
 const borde = (error) =>
   error
@@ -27,7 +27,7 @@ function Campo({ id, label, error, hint, required, children, className = '' }) {
       {label && (
         <label htmlFor={id} className="mb-1.5 block text-sm font-medium">
           {label}
-          {required && <span className="text-mal"> *</span>}
+          {required && <span className="text-mal">&nbsp;*</span>}
         </label>
       )}
       {children}
@@ -152,7 +152,7 @@ export function SiNo({ label, value, onChange, error, name, disabled }) {
     const activo = value === v
     return (
       <label
-        className={`flex min-h-11 flex-1 cursor-pointer items-center justify-center px-5 text-sm font-medium transition-colors first:rounded-l-md last:rounded-r-md has-focus-visible:outline-2 has-focus-visible:outline-offset-2 has-focus-visible:outline-tinta sm:min-w-24 sm:flex-none lg:min-h-10 ${
+        className={`flex min-h-11 flex-1 cursor-pointer items-center justify-center px-5 text-sm font-medium transition-colors first:rounded-l-md last:rounded-r-md has-focus-visible:outline-2 has-focus-visible:outline-offset-2 has-focus-visible:outline-tinta sm:min-w-24 sm:flex-none pointer-fine:lg:min-h-10 ${
           activo ? 'bg-tinta text-white' : 'bg-realce text-tinta hover:bg-control'
         } ${disabled ? 'cursor-not-allowed opacity-70' : ''}`}
       >
