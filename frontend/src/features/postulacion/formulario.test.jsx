@@ -189,37 +189,84 @@ describe('domicilio: cascada País → Provincia → Cantón', () => {
 })
 
 describe('cargo', () => {
-  it('muestra ✖ con el mensaje del backend si no acredita la calidad', async () => {
+  const cumple = { cumple: true, etiqueta: 'Postulante afiliado al IESS' }
+
+  it('si no acredita la calidad muestra ✖ y no despliega la pregunta ni deja guardar', async () => {
     postulacionApi.obtener.mockResolvedValue(postulacionBase())
-    postulacionApi.cargo.mockRejectedValue(
-      new ApiError({
-        status: 422,
-        code: 'REGLA_NEGOCIO',
-        message: 'NO puede continuar, no acredita jubilación',
-        details: { cumple: false, etiqueta: 'Postulante no acredita jubilación' },
-      }),
-    )
+    postulacionApi.validarCargo.mockResolvedValue({
+      cumple: false,
+      etiqueta: 'Postulante no acredita jubilación',
+      mensaje: 'NO puede continuar, no acredita jubilación',
+    })
     const user = userEvent.setup()
     abrirFormulario('cargo')
 
     await user.click(await screen.findByLabelText(/sector de los jubilados/i))
-    await user.click(screen.getByRole('radio', { name: 'No' }))
-    await user.click(screen.getByRole('button', { name: /guardar progreso/i }))
 
     expect(await screen.findByText('Postulante no acredita jubilación')).toBeInTheDocument()
     expect(screen.getByText('NO puede continuar, no acredita jubilación')).toBeInTheDocument()
+    expect(postulacionApi.validarCargo).toHaveBeenCalledWith('JUBILADOS')
+    expect(screen.queryByText(/respaldado por una organización/i)).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /guardar postulación/i })).not.toBeInTheDocument()
   })
 
-  it('muestra ✔ cuando el cargo se valida', async () => {
+  it('la pregunta del respaldo aparece solo después de validar ✔', async () => {
     postulacionApi.obtener.mockResolvedValue(postulacionBase())
+    postulacionApi.validarCargo.mockResolvedValue(cumple)
     postulacionApi.cargo.mockResolvedValue(postulacionBase({ sectorCodigo: 'AFILIADOS', tieneRespaldo: false }))
     const user = userEvent.setup()
     abrirFormulario('cargo')
 
     await user.click(await screen.findByLabelText(/sector de afiliados/i))
-    await user.click(screen.getByRole('radio', { name: 'No' }))
-    await user.click(screen.getByRole('button', { name: /guardar progreso/i }))
     expect(await screen.findByText('Postulante afiliado al IESS')).toBeInTheDocument()
+    expect(screen.getByText(/respaldado por una organización de trabajadores/i)).toBeInTheDocument()
+
+    await user.click(screen.getByRole('radio', { name: 'No' }))
+    await user.click(screen.getByRole('button', { name: /guardar postulación/i }))
+    expect(await screen.findByRole('button', { name: 'Editar' })).toBeInTheDocument()
+    expect(postulacionApi.cargo).toHaveBeenCalledWith(
+      { sector: 'AFILIADOS', tieneRespaldo: false, organizacionNombre: null, organizacionDocumentoId: null },
+    )
+  })
+
+  it('con respaldo exige el nombre y el PDF, y lo sube con su categoría', async () => {
+    postulacionApi.obtener.mockResolvedValue(postulacionBase())
+    postulacionApi.validarCargo.mockResolvedValue(cumple)
+    postulacionApi.subirDocumento.mockResolvedValue({ id: 9, categoria: 'RESPALDO_ORG', nombre: 'acta.pdf', tamanoBytes: 2048 })
+    postulacionApi.cargo.mockResolvedValue(postulacionBase({ sectorCodigo: 'AFILIADOS', tieneRespaldo: true, organizacionNombre: 'FUT', organizacionDocumento: { id: 9, nombre: 'acta.pdf', tamanoBytes: 2048 } }))
+    const user = userEvent.setup()
+    abrirFormulario('cargo')
+
+    await user.click(await screen.findByLabelText(/sector de afiliados/i))
+    await user.click(await screen.findByRole('radio', { name: 'Sí' }))
+    await user.click(screen.getByRole('button', { name: /guardar postulación/i }))
+    expect(await screen.findByText(/adjunte el documento de respaldo/i)).toBeInTheDocument()
+    expect(postulacionApi.cargo).not.toHaveBeenCalled()
+
+    await user.type(screen.getByLabelText(/nombre de organización/i), 'FUT')
+    const archivo = new File(['%PDF-1.4'], 'acta.pdf', { type: 'application/pdf' })
+    await user.upload(screen.getByLabelText(/máximo 4 MB/i), archivo)
+    expect(await screen.findByText('acta.pdf')).toBeInTheDocument()
+    expect(postulacionApi.subirDocumento).toHaveBeenCalledWith('RESPALDO_ORG', archivo)
+
+    await user.click(screen.getByRole('button', { name: /guardar postulación/i }))
+    await screen.findByRole('button', { name: 'Editar' })
+    expect(postulacionApi.cargo).toHaveBeenCalledWith(
+      { sector: 'AFILIADOS', tieneRespaldo: true, organizacionNombre: 'FUT', organizacionDocumentoId: 9 },
+    )
+  })
+
+  it('Eliminar quita el cargo guardado tras confirmar', async () => {
+    postulacionApi.obtener.mockResolvedValue(postulacionBase({ sectorCodigo: 'AFILIADOS', tieneRespaldo: false }))
+    postulacionApi.eliminarCargo.mockResolvedValue(postulacionBase())
+    const user = userEvent.setup()
+    abrirFormulario('cargo')
+
+    await user.click(await screen.findByRole('button', { name: 'Eliminar' }))
+    expect(postulacionApi.eliminarCargo).not.toHaveBeenCalled()
+    await user.click(await screen.findByRole('button', { name: /sí, eliminar/i }))
+    expect(await screen.findByLabelText(/sector de afiliados/i)).not.toBeChecked()
+    expect(postulacionApi.eliminarCargo).toHaveBeenCalledTimes(1)
   })
 })
 

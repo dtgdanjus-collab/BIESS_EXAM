@@ -14,7 +14,15 @@ import (
 // DetalleRepository: secciones 1:N de la postulación (1.4 a 1.10).
 // Los Replace* hacen DELETE + INSERT y deben llamarse dentro de WithTx.
 type DetalleRepository interface {
-	UpdateCargo(ctx context.Context, postulacionID int64, sector string, tieneRespaldo bool, organizacion *string) error
+	UpdateCargo(ctx context.Context, postulacionID int64, sector string, tieneRespaldo bool, organizacion *string, documentoID *int64) error
+	EliminarCargo(ctx context.Context, postulacionID int64) error
+
+	// Documentos de respaldo (documento.go).
+	TotalDocumentos(ctx context.Context, postulacionID int64) (int64, error)
+	InsertDocumento(ctx context.Context, postulacionID int64, categoria, nombre string, contenido []byte) (*domain.Documento, error)
+	FindDocumento(ctx context.Context, usuarioID, documentoID int64) (*domain.Documento, []byte, error)
+	DocumentosValidos(ctx context.Context, postulacionID int64, categoria string) (map[int64]bool, error)
+	LimpiarDocumentos(ctx context.Context, postulacionID int64, categoria string) error
 
 	ListFormacion(ctx context.Context, postulacionID int64) ([]domain.Formacion, error)
 	ReplaceFormacion(ctx context.Context, postulacionID int64, items []domain.Formacion) error
@@ -42,27 +50,43 @@ func NewDetalleRepository(pool *pgxpool.Pool) DetalleRepository {
 	return &pgDetalleRepository{pool: pool}
 }
 
-func (r *pgDetalleRepository) UpdateCargo(ctx context.Context, id int64, sector string, tieneRespaldo bool, org *string) error {
+func (r *pgDetalleRepository) UpdateCargo(ctx context.Context, id int64, sector string, tieneRespaldo bool, org *string, documentoID *int64) error {
 	_, err := conn(ctx, r.pool).Exec(ctx, `
-		UPDATE postulaciones SET sector_codigo = $2, tiene_respaldo = $3, organizacion_nombre = $4
-		WHERE id = $1`, id, sector, tieneRespaldo, org)
+		UPDATE postulaciones SET sector_codigo = $2, tiene_respaldo = $3, organizacion_nombre = $4,
+			organizacion_documento_id = $5
+		WHERE id = $1`, id, sector, tieneRespaldo, org, documentoID)
 	return traducir(err, "guardando cargo")
 }
+
+func (r *pgDetalleRepository) EliminarCargo(ctx context.Context, id int64) error {
+	_, err := conn(ctx, r.pool).Exec(ctx, `
+		UPDATE postulaciones SET sector_codigo = NULL, tiene_respaldo = NULL, organizacion_nombre = NULL,
+			organizacion_documento_id = NULL
+		WHERE id = $1`, id)
+	return traducir(err, "eliminando cargo")
+}
+
+// El PDF de cada registro: solo sus datos, nunca el contenido.
+const (
+	columnasAdjunto = `d.id, d.nombre_original, d.tamano_bytes`
+	joinAdjunto     = `LEFT JOIN documentos d ON d.id = t.documento_id`
+)
 
 // --- Formación ---
 
 func (r *pgDetalleRepository) ListFormacion(ctx context.Context, id int64) ([]domain.Formacion, error) {
 	return listar[domain.Formacion](ctx, conn(ctx, r.pool), `
-		SELECT id, nivel_id, institucion, tipo, titulo, area_id, registro_senescyt, fecha_registro
-		FROM formacion_academica WHERE postulacion_id = $1 ORDER BY fecha_registro DESC, id`, id)
+		SELECT t.id, t.nivel_id, t.institucion, t.tipo, t.titulo, t.area_id, t.registro_senescyt, t.fecha_registro,
+			`+columnasAdjunto+`
+		FROM formacion_academica t `+joinAdjunto+` WHERE t.postulacion_id = $1 ORDER BY t.fecha_registro DESC, t.id`, id)
 }
 
 func (r *pgDetalleRepository) ReplaceFormacion(ctx context.Context, id int64, items []domain.Formacion) error {
 	return reemplazar(ctx, conn(ctx, r.pool), "formacion_academica", id, `
 		INSERT INTO formacion_academica (postulacion_id, nivel_id, institucion, tipo, titulo, area_id,
-			registro_senescyt, fecha_registro) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
+			registro_senescyt, fecha_registro, documento_id) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
 		items, func(f domain.Formacion) []any {
-			return []any{f.NivelID, f.Institucion, f.Tipo, f.Titulo, f.AreaID, f.RegistroSenescyt, f.FechaRegistro}
+			return []any{f.NivelID, f.Institucion, f.Tipo, f.Titulo, f.AreaID, f.RegistroSenescyt, f.FechaRegistro, f.DocumentoID}
 		})
 }
 
@@ -70,16 +94,17 @@ func (r *pgDetalleRepository) ReplaceFormacion(ctx context.Context, id int64, it
 
 func (r *pgDetalleRepository) ListExperiencia(ctx context.Context, id int64) ([]domain.Experiencia, error) {
 	return listar[domain.Experiencia](ctx, conn(ctx, r.pool), `
-		SELECT id, tipo, cargo, institucion, fecha_inicio, fecha_fin, area_id, descripcion
-		FROM experiencia WHERE postulacion_id = $1 ORDER BY fecha_inicio DESC, id`, id)
+		SELECT t.id, t.tipo, t.cargo, t.institucion, t.fecha_inicio, t.fecha_fin, t.area_id, t.descripcion,
+			`+columnasAdjunto+`
+		FROM experiencia t `+joinAdjunto+` WHERE t.postulacion_id = $1 ORDER BY t.fecha_inicio DESC, t.id`, id)
 }
 
 func (r *pgDetalleRepository) ReplaceExperiencia(ctx context.Context, id int64, items []domain.Experiencia) error {
 	return reemplazar(ctx, conn(ctx, r.pool), "experiencia", id, `
 		INSERT INTO experiencia (postulacion_id, tipo, cargo, institucion, fecha_inicio, fecha_fin,
-			area_id, descripcion) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
+			area_id, descripcion, documento_id) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
 		items, func(e domain.Experiencia) []any {
-			return []any{e.Tipo, e.Cargo, e.Institucion, e.FechaInicio, e.FechaFin, e.AreaID, e.Descripcion}
+			return []any{e.Tipo, e.Cargo, e.Institucion, e.FechaInicio, e.FechaFin, e.AreaID, e.Descripcion, e.DocumentoID}
 		})
 }
 
@@ -87,8 +112,9 @@ func (r *pgDetalleRepository) ReplaceExperiencia(ctx context.Context, id int64, 
 
 func (r *pgDetalleRepository) ListPublicaciones(ctx context.Context, id int64) ([]domain.Publicacion, error) {
 	return listar[domain.Publicacion](ctx, conn(ctx, r.pool), `
-		SELECT id, titulo, tipo, medio, fecha, relacionada
-		FROM publicaciones WHERE postulacion_id = $1 ORDER BY fecha DESC, id`, id)
+		SELECT t.id, t.titulo, t.tipo, t.medio, t.fecha, t.relacionada,
+			`+columnasAdjunto+`
+		FROM publicaciones t `+joinAdjunto+` WHERE t.postulacion_id = $1 ORDER BY t.fecha DESC, t.id`, id)
 }
 
 func (r *pgDetalleRepository) ReplacePublicaciones(ctx context.Context, id int64, tiene bool, items []domain.Publicacion) error {
@@ -97,10 +123,10 @@ func (r *pgDetalleRepository) ReplacePublicaciones(ctx context.Context, id int64
 		return traducir(err, "actualizando postulación")
 	}
 	return reemplazar(ctx, db, "publicaciones", id, `
-		INSERT INTO publicaciones (postulacion_id, titulo, tipo, medio, fecha, relacionada)
-		VALUES ($1, $2, $3, $4, $5, $6)`,
+		INSERT INTO publicaciones (postulacion_id, titulo, tipo, medio, fecha, relacionada, documento_id)
+		VALUES ($1, $2, $3, $4, $5, $6, $7)`,
 		items, func(p domain.Publicacion) []any {
-			return []any{p.Titulo, p.Tipo, p.Medio, p.Fecha, p.Relacionada}
+			return []any{p.Titulo, p.Tipo, p.Medio, p.Fecha, p.Relacionada, p.DocumentoID}
 		})
 }
 
@@ -108,16 +134,17 @@ func (r *pgDetalleRepository) ReplacePublicaciones(ctx context.Context, id int64
 
 func (r *pgDetalleRepository) ListCapacitaciones(ctx context.Context, id int64) ([]domain.Capacitacion, error) {
 	return listar[domain.Capacitacion](ctx, conn(ctx, r.pool), `
-		SELECT id, tipo, nombre, institucion, fecha_inicio, fecha_fin, horas
-		FROM capacitaciones WHERE postulacion_id = $1 ORDER BY fecha_inicio DESC, id`, id)
+		SELECT t.id, t.tipo, t.nombre, t.institucion, t.fecha_inicio, t.fecha_fin, t.horas,
+			`+columnasAdjunto+`
+		FROM capacitaciones t `+joinAdjunto+` WHERE t.postulacion_id = $1 ORDER BY t.fecha_inicio DESC, t.id`, id)
 }
 
 func (r *pgDetalleRepository) ReplaceCapacitaciones(ctx context.Context, id int64, items []domain.Capacitacion) error {
 	return reemplazar(ctx, conn(ctx, r.pool), "capacitaciones", id, `
-		INSERT INTO capacitaciones (postulacion_id, tipo, nombre, institucion, fecha_inicio, fecha_fin, horas)
-		VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+		INSERT INTO capacitaciones (postulacion_id, tipo, nombre, institucion, fecha_inicio, fecha_fin, horas, documento_id)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
 		items, func(c domain.Capacitacion) []any {
-			return []any{c.Tipo, c.Nombre, c.Institucion, c.FechaInicio, c.FechaFin, c.Horas}
+			return []any{c.Tipo, c.Nombre, c.Institucion, c.FechaInicio, c.FechaFin, c.Horas, c.DocumentoID}
 		})
 }
 

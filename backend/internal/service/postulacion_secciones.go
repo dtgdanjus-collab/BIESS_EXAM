@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"slices"
 	"strings"
 	"time"
 
@@ -16,17 +17,24 @@ const maxItemsSeccion = 30
 
 // GuardarCargo (1.4): valida en el Historial Laboral que el postulante tenga la calidad
 // que exige el sector. Si no la tiene, responde 422 con el mensaje literal del requerimiento.
-func (s *PostulacionService) GuardarCargo(ctx context.Context, usuarioID int64, sector string, tieneRespaldo bool, organizacion *string) (*domain.Postulacion, error) {
+func (s *PostulacionService) GuardarCargo(ctx context.Context, usuarioID int64, sector string, tieneRespaldo bool, organizacion *string, documentoID *int64) (*domain.Postulacion, error) {
 	sector = strings.ToUpper(strings.TrimSpace(sector))
 	organizacion = limpiar(organizacion)
 	if !tieneRespaldo {
-		organizacion = nil
+		organizacion, documentoID = nil, nil
 	}
 
 	return s.editarBorrador(ctx, usuarioID, "SELECCIONAR_CARGO", func(ctx context.Context, p *domain.Postulacion) error {
 		errs := campos{}
 		if tieneRespaldo {
 			errs.req("organizacionNombre", deref(organizacion), 200)
+			if documentoID == nil {
+				errs["organizacionDocumentoId"] = "Adjunte el documento de respaldo"
+			}
+		}
+		if err := s.validarDocumentos(ctx, errs, p.ID, domain.DocRespaldoOrganizacion,
+			map[string]*int64{"organizacionDocumentoId": documentoID}); err != nil {
+			return err
 		}
 		sec, err := s.catalogos.FindSector(ctx, sector)
 		switch {
@@ -52,7 +60,58 @@ func (s *PostulacionService) GuardarCargo(ctx context.Context, usuarioID int64, 
 				WithDetail("cumple", false).
 				WithDetail("etiqueta", sec.EtiquetaNoCumple)
 		}
-		return s.detalle.UpdateCargo(ctx, p.ID, sec.Codigo, tieneRespaldo, organizacion)
+		if err := s.detalle.UpdateCargo(ctx, p.ID, sec.Codigo, tieneRespaldo, organizacion, documentoID); err != nil {
+			return err
+		}
+		return s.detalle.LimpiarDocumentos(ctx, p.ID, domain.DocRespaldoOrganizacion)
+	})
+}
+
+// ResultadoCargo es lo que se visualiza tras consultar el Historial Laboral.
+type ResultadoCargo struct {
+	Cumple   bool   `json:"cumple"`
+	Etiqueta string `json:"etiqueta"`
+	Mensaje  string `json:"mensaje,omitempty"`
+}
+
+// ValidarCargo (1.4) consulta el Historial Laboral al elegir el cargo, sin guardar nada: según
+// lo que se visualice se despliega la pregunta del respaldo o el mensaje de rechazo.
+func (s *PostulacionService) ValidarCargo(ctx context.Context, usuarioID int64, sector string) (*ResultadoCargo, error) {
+	p, err := s.repo.FindByUsuario(ctx, usuarioID, false)
+	if errors.Is(err, repository.ErrNotFound) {
+		return nil, domain.NewError(domain.ErrNoEncontrado, "Aún no ha iniciado su postulación")
+	}
+	if err != nil {
+		return nil, err
+	}
+	sec, err := s.catalogos.FindSector(ctx, strings.ToUpper(strings.TrimSpace(sector)))
+	if errors.Is(err, repository.ErrNotFound) {
+		return nil, errValidacionCampos(map[string]string{"sector": "Seleccione un sector válido"})
+	}
+	if err != nil {
+		return nil, err
+	}
+	dp, err := s.repo.GetDatosPersonales(ctx, p.ID)
+	if err != nil {
+		return nil, err
+	}
+	cumple, err := s.historial.TieneCalidad(ctx, dp.Cedula, sec.TipoRequerido)
+	if err != nil {
+		return nil, err
+	}
+	if !cumple {
+		return &ResultadoCargo{Etiqueta: sec.EtiquetaNoCumple, Mensaje: sec.MensajeRechazo}, nil
+	}
+	return &ResultadoCargo{Cumple: true, Etiqueta: sec.EtiquetaCumple}, nil
+}
+
+// EliminarCargo (1.4.3.4) deja la sección sin responder, junto con su respaldo.
+func (s *PostulacionService) EliminarCargo(ctx context.Context, usuarioID int64) (*domain.Postulacion, error) {
+	return s.editarBorrador(ctx, usuarioID, "ELIMINAR_CARGO", func(ctx context.Context, p *domain.Postulacion) error {
+		if err := s.detalle.EliminarCargo(ctx, p.ID); err != nil {
+			return err
+		}
+		return s.detalle.LimpiarDocumentos(ctx, p.ID, domain.DocRespaldoOrganizacion)
 	})
 }
 
@@ -60,6 +119,7 @@ func (s *PostulacionService) GuardarCargo(ctx context.Context, usuarioID int64, 
 func (s *PostulacionService) GuardarFormacion(ctx context.Context, usuarioID int64, items []domain.Formacion) (*domain.Postulacion, error) {
 	return s.editarBorrador(ctx, usuarioID, "ACTUALIZAR_FORMACION", func(ctx context.Context, p *domain.Postulacion) error {
 		errs := campos{}
+		docs := map[string]*int64{}
 		if len(items) == 0 {
 			errs["items"] = "Registre al menos un título"
 		}
@@ -76,11 +136,18 @@ func (s *PostulacionService) GuardarFormacion(ctx context.Context, usuarioID int
 			errs.id(k+"nivelId", f.NivelID)
 			errs.id(k+"areaId", f.AreaID)
 			errs.fechaPasada(k+"fechaRegistro", f.FechaRegistro)
+			docs[k+"documentoId"] = f.DocumentoID
+		}
+		if err := s.validarDocumentos(ctx, errs, p.ID, domain.DocFormacion, docs); err != nil {
+			return err
 		}
 		if err := errs.err(); err != nil {
 			return err
 		}
-		return s.detalle.ReplaceFormacion(ctx, p.ID, items)
+		if err := s.detalle.ReplaceFormacion(ctx, p.ID, items); err != nil {
+			return err
+		}
+		return s.detalle.LimpiarDocumentos(ctx, p.ID, domain.DocFormacion)
 	})
 }
 
@@ -88,6 +155,7 @@ func (s *PostulacionService) GuardarFormacion(ctx context.Context, usuarioID int
 func (s *PostulacionService) GuardarExperiencia(ctx context.Context, usuarioID int64, items []domain.Experiencia) (*domain.Postulacion, error) {
 	return s.editarBorrador(ctx, usuarioID, "ACTUALIZAR_EXPERIENCIA", func(ctx context.Context, p *domain.Postulacion) error {
 		errs := campos{}
+		docs := map[string]*int64{}
 		if len(items) == 0 {
 			errs["items"] = "Registre al menos una experiencia"
 		}
@@ -103,11 +171,21 @@ func (s *PostulacionService) GuardarExperiencia(ctx context.Context, usuarioID i
 			errs.req(k+"descripcion", e.Descripcion, 1000)
 			errs.id(k+"areaId", e.AreaID)
 			errs.rango(k, e.FechaInicio, e.FechaFin)
+			if e.DocumentoID == nil {
+				errs[k+"documentoId"] = "Adjunte el documento de respaldo"
+			}
+			docs[k+"documentoId"] = e.DocumentoID
+		}
+		if err := s.validarDocumentos(ctx, errs, p.ID, domain.DocExperiencia, docs); err != nil {
+			return err
 		}
 		if err := errs.err(); err != nil {
 			return err
 		}
-		return s.detalle.ReplaceExperiencia(ctx, p.ID, items)
+		if err := s.detalle.ReplaceExperiencia(ctx, p.ID, items); err != nil {
+			return err
+		}
+		return s.detalle.LimpiarDocumentos(ctx, p.ID, domain.DocExperiencia)
 	})
 }
 
@@ -118,6 +196,7 @@ func (s *PostulacionService) GuardarPublicaciones(ctx context.Context, usuarioID
 	}
 	return s.editarBorrador(ctx, usuarioID, "ACTUALIZAR_PUBLICACIONES", func(ctx context.Context, p *domain.Postulacion) error {
 		errs := campos{}
+		docs := map[string]*int64{}
 		if tiene && len(items) == 0 {
 			errs["items"] = "Agregue al menos una publicación o indique que no tiene"
 		}
@@ -130,11 +209,21 @@ func (s *PostulacionService) GuardarPublicaciones(ctx context.Context, usuarioID
 			errs.req(k+"medio", pb.Medio, 200)
 			errs.enum(k+"tipo", pb.Tipo, "PUBLICACION", "INVESTIGACION")
 			errs.fechaPasada(k+"fecha", pb.Fecha)
+			if pb.DocumentoID == nil {
+				errs[k+"documentoId"] = "Adjunte el documento de respaldo"
+			}
+			docs[k+"documentoId"] = pb.DocumentoID
+		}
+		if err := s.validarDocumentos(ctx, errs, p.ID, domain.DocPublicacion, docs); err != nil {
+			return err
 		}
 		if err := errs.err(); err != nil {
 			return err
 		}
-		return s.detalle.ReplacePublicaciones(ctx, p.ID, tiene, items)
+		if err := s.detalle.ReplacePublicaciones(ctx, p.ID, tiene, items); err != nil {
+			return err
+		}
+		return s.detalle.LimpiarDocumentos(ctx, p.ID, domain.DocPublicacion)
 	})
 }
 
@@ -142,6 +231,7 @@ func (s *PostulacionService) GuardarPublicaciones(ctx context.Context, usuarioID
 func (s *PostulacionService) GuardarCapacitaciones(ctx context.Context, usuarioID int64, items []domain.Capacitacion) (*domain.Postulacion, error) {
 	return s.editarBorrador(ctx, usuarioID, "ACTUALIZAR_CAPACITACIONES", func(ctx context.Context, p *domain.Postulacion) error {
 		errs := campos{}
+		docs := map[string]*int64{}
 		validarCantidad(errs, len(items))
 		for i := range items {
 			c, k := &items[i], fmt.Sprintf("items[%d].", i)
@@ -154,11 +244,18 @@ func (s *PostulacionService) GuardarCapacitaciones(ctx context.Context, usuarioI
 			if c.Horas <= 0 {
 				errs[k+"horas"] = "Debe ser mayor a 0"
 			}
+			docs[k+"documentoId"] = c.DocumentoID
+		}
+		if err := s.validarDocumentos(ctx, errs, p.ID, domain.DocCapacitacion, docs); err != nil {
+			return err
 		}
 		if err := errs.err(); err != nil {
 			return err
 		}
-		return s.detalle.ReplaceCapacitaciones(ctx, p.ID, items)
+		if err := s.detalle.ReplaceCapacitaciones(ctx, p.ID, items); err != nil {
+			return err
+		}
+		return s.detalle.LimpiarDocumentos(ctx, p.ID, domain.DocCapacitacion)
 	})
 }
 
@@ -265,16 +362,16 @@ func seccionesFaltantes(p *domain.Postulacion) []string {
 	if p.TieneFamiliares == nil {
 		faltan = append(faltan, "familiares")
 	}
-	if p.SectorCodigo == nil {
+	if p.SectorCodigo == nil || (p.TieneRespaldo != nil && *p.TieneRespaldo && p.OrganizacionDocumento == nil) {
 		faltan = append(faltan, "cargo")
 	}
 	if len(p.Formacion) == 0 {
 		faltan = append(faltan, "formacion")
 	}
-	if len(p.Experiencia) == 0 {
+	if len(p.Experiencia) == 0 || slices.ContainsFunc(p.Experiencia, func(e domain.Experiencia) bool { return e.DocumentoID == nil }) {
 		faltan = append(faltan, "experiencia")
 	}
-	if p.TienePublicaciones == nil {
+	if p.TienePublicaciones == nil || slices.ContainsFunc(p.Publicaciones, func(pb domain.Publicacion) bool { return pb.DocumentoID == nil }) {
 		faltan = append(faltan, "publicaciones")
 	}
 	if len(p.Inhabilidades) == 0 {

@@ -1,13 +1,13 @@
 import { zodResolver } from '@hookform/resolvers/zod'
-import { useFieldArray, useForm } from 'react-hook-form'
+import { useFieldArray, useForm, useWatch } from 'react-hook-form'
 import { postulacionApi } from '../../../api/postulacion'
 import { Alert, Input } from '../../../components/ui'
 import { useCatalogo } from '../../../hooks/useCatalogo'
 import { hoyIso } from '../../../utils/fechas'
-import { AgregarItem, CampoSelect, ItemLista, Seccion, useFormulario, useGuardarSeccion } from '../components'
+import { AgregarItem, CampoDocumento, CampoSelect, ItemLista, Seccion, adjuntoDe, useFormulario, useGuardarSeccion, useItemsPlegables } from '../components'
 import { formacionSchema } from '../schemas'
 
-const vacio = { nivelId: '', institucion: '', tipo: '', titulo: '', areaId: '', registroSenescyt: '', fechaRegistro: '' }
+const vacio = { nivelId: '', institucion: '', tipo: '', titulo: '', areaId: '', registroSenescyt: '', fechaRegistro: '', documentoId: null }
 const TIPOS = [{ id: 'NACIONAL', nombre: 'Nacional' }, { id: 'EXTRANJERA', nombre: 'Extranjera' }]
 
 // 1.5 — Títulos académicos registrados en la SENESCYT.
@@ -20,22 +20,20 @@ export function FormacionSection() {
   const { register, control, handleSubmit, setError, formState: { errors } } = useForm({
     resolver: zodResolver(formacionSchema),
     defaultValues: {
-      items: postulacion.formacion.length
-        ? postulacion.formacion.map((f) => ({ ...f, nivelId: String(f.nivelId), areaId: String(f.areaId) }))
-        : [vacio],
+      items: postulacion.formacion.map((f) => ({ ...f, nivelId: String(f.nivelId), areaId: String(f.areaId) })),
     },
   })
   const { fields, append, remove } = useFieldArray({ control, name: 'items' })
+  const items = useWatch({ control, name: 'items' }) ?? []
+  const plegables = useItemsPlegables(fields, errors.items)
 
-  const onSubmit = handleSubmit((v) =>
-    peticion.guardar(
-      () =>
-        postulacionApi.formacion(
-          v.items.map(({ id, ...f }) => ({ ...f, nivelId: Number(f.nivelId), areaId: Number(f.areaId) })),
-        ),
+  const onSubmit = handleSubmit(async (v) => {
+    const r = await peticion.guardar(
+      () => postulacionApi.formacion(v.items.map((f) => ({ ...f, nivelId: Number(f.nivelId), areaId: Number(f.areaId) }))),
       setError,
-    ),
-  )
+    )
+    if (r.ok) plegables.plegarTodos()
+  })
 
   return (
     <Seccion
@@ -47,24 +45,34 @@ export function FormacionSection() {
       onSubmit={onSubmit}
     >
       {errors.items?.root && <Alert type="error">{errors.items.root.message}</Alert>}
+      {fields.length === 0 && <p className="text-sm text-tenue">No ha registrado títulos.</p>}
       {fields.map((f, i) => {
         const e = errors.items?.[i] ?? {}
+        const actual = items[i] ?? {}
         return (
-          <ItemLista key={f.id} titulo={`Título ${i + 1}`} onEliminar={fields.length > 1 ? () => remove(i) : null}>
+          <ItemLista
+            key={f.id}
+            titulo={`Título ${i + 1}`}
+            resumen={[actual.titulo, actual.institucion].filter(Boolean).join(' · ')}
+            plegado={plegables.plegado(f, i)}
+            onEditar={() => plegables.editar(f)}
+            onEliminar={() => remove(i)}
+          >
             <CampoSelect control={control} name={`items.${i}.nivelId`} label="Nivel de instrucción" required options={niveles.data} loading={niveles.loading} />
-            <CampoSelect control={control} name={`items.${i}.tipo`} label="Tipo de institución" required options={TIPOS} />
+            <CampoSelect control={control} name={`items.${i}.tipo`} label="Tipo" required options={TIPOS} />
             <Input label="Institución educativa" required className="sm:col-span-2" error={e.institucion?.message} {...register(`items.${i}.institucion`)} />
             <Input label="Título obtenido" required className="sm:col-span-2" error={e.titulo?.message} {...register(`items.${i}.titulo`)} />
-            <CampoSelect control={control} name={`items.${i}.areaId`} label="Área de estudio" required options={areas.data} loading={areas.loading} />
-            <Input label="N.º de registro SENESCYT" required error={e.registroSenescyt?.message} {...register(`items.${i}.registroSenescyt`)} />
+            <CampoSelect control={control} name={`items.${i}.areaId`} label="Área de estudios" required options={areas.data} loading={areas.loading} />
+            <Input label="Número de registro SENESCYT" required error={e.registroSenescyt?.message} {...register(`items.${i}.registroSenescyt`)} />
             <Input
-              label="Fecha de registro"
+              label="Fecha de registro SENESCYT"
               type="date"
               max={hoyIso()}
               required
               error={e.fechaRegistro?.message}
               {...register(`items.${i}.fechaRegistro`)}
             />
+            <CampoDocumento control={control} name={`items.${i}.documentoId`} categoria="FORMACION" inicial={adjuntoDe(f)} className="sm:col-span-2" />
           </ItemLista>
         )
       })}

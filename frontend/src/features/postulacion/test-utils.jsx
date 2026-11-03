@@ -14,6 +14,7 @@ export const postulacionBase = (cambios = {}) => ({
   sectorCodigo: null,
   tieneRespaldo: null,
   organizacionNombre: null,
+  organizacionDocumento: null,
   tieneFamiliares: null,
   tienePublicaciones: null,
   posibleInhabilidad: false,

@@ -99,8 +99,10 @@ func run() error {
 	app := fiber.New(fiber.Config{
 		AppName:      "BIESS Postulación API",
 		ErrorHandler: middleware.ErrorHandler,
-		ReadTimeout:  10 * time.Second,
-		WriteTimeout: 10 * time.Second,
+		// Un PDF de 4 MB por datos móviles tarda: los 4 MB y 10 s por omisión no alcanzan.
+		BodyLimit:    service.MaxDocumentoOrganizacion + 64<<10,
+		ReadTimeout:  90 * time.Second,
+		WriteTimeout: 90 * time.Second,
 	})
 	middleware.RegisterCommon(app, cfg.API.CORSOrigins)
 	handler.RegisterRoutes(app, handlers, middleware.RequireAuth(jwtManager))

@@ -2,15 +2,22 @@ package handler
 
 import (
 	"context"
+	"fmt"
+	"io"
 
 	"github.com/gofiber/fiber/v2"
 
 	"github.com/biess-dev/biess-postulacion/backend/internal/domain"
 	"github.com/biess-dev/biess-postulacion/backend/internal/middleware"
+	"github.com/biess-dev/biess-postulacion/backend/internal/service"
 )
 
 type SeccionesService interface {
-	GuardarCargo(ctx context.Context, usuarioID int64, sector string, tieneRespaldo bool, organizacion *string) (*domain.Postulacion, error)
+	GuardarCargo(ctx context.Context, usuarioID int64, sector string, tieneRespaldo bool, organizacion *string, documentoID *int64) (*domain.Postulacion, error)
+	ValidarCargo(ctx context.Context, usuarioID int64, sector string) (*service.ResultadoCargo, error)
+	EliminarCargo(ctx context.Context, usuarioID int64) (*domain.Postulacion, error)
+	SubirDocumento(ctx context.Context, usuarioID int64, categoria, nombre string, contenido []byte) (*domain.Documento, error)
+	ObtenerDocumento(ctx context.Context, usuarioID, documentoID int64) (*domain.Documento, []byte, error)
 	GuardarFormacion(ctx context.Context, usuarioID int64, items []domain.Formacion) (*domain.Postulacion, error)
 	GuardarExperiencia(ctx context.Context, usuarioID int64, items []domain.Experiencia) (*domain.Postulacion, error)
 	GuardarPublicaciones(ctx context.Context, usuarioID int64, tiene bool, items []domain.Publicacion) (*domain.Postulacion, error)
@@ -31,6 +38,7 @@ type cargoReq struct {
 	Sector             string  `json:"sector"`
 	TieneRespaldo      *bool   `json:"tieneRespaldo"`
 	OrganizacionNombre *string `json:"organizacionNombre"`
+	OrganizacionDocID  *int64  `json:"organizacionDocumentoId"`
 }
 
 // Cargo atiende POST /postulacion/cargo.
@@ -42,7 +50,65 @@ func (h *SeccionesHandler) Cargo(c *fiber.Ctx) error {
 	if req.TieneRespaldo == nil {
 		return errCampoObligatorio("tieneRespaldo")
 	}
-	return responder(c)(h.svc.GuardarCargo(c.UserContext(), middleware.UsuarioID(c), req.Sector, *req.TieneRespaldo, req.OrganizacionNombre))
+	return responder(c)(h.svc.GuardarCargo(c.UserContext(), middleware.UsuarioID(c), req.Sector, *req.TieneRespaldo, req.OrganizacionNombre, req.OrganizacionDocID))
+}
+
+// ValidarCargo atiende POST /postulacion/cargo/validar.
+func (h *SeccionesHandler) ValidarCargo(c *fiber.Ctx) error {
+	var req struct {
+		Sector string `json:"sector"`
+	}
+	if err := parseBody(c, &req); err != nil {
+		return err
+	}
+	r, err := h.svc.ValidarCargo(c.UserContext(), middleware.UsuarioID(c), req.Sector)
+	if err != nil {
+		return err
+	}
+	return c.JSON(r)
+}
+
+// EliminarCargo atiende DELETE /postulacion/cargo.
+func (h *SeccionesHandler) EliminarCargo(c *fiber.Ctx) error {
+	return responder(c)(h.svc.EliminarCargo(c.UserContext(), middleware.UsuarioID(c)))
+}
+
+// SubirDocumento atiende POST /postulacion/documentos (multipart: categoria y archivo).
+func (h *SeccionesHandler) SubirDocumento(c *fiber.Ctx) error {
+	archivo, err := c.FormFile("archivo")
+	if err != nil {
+		return errCampoObligatorio("archivo")
+	}
+	f, err := archivo.Open()
+	if err != nil {
+		return fmt.Errorf("abriendo documento: %w", err)
+	}
+	defer f.Close()
+	contenido, err := io.ReadAll(f)
+	if err != nil {
+		return fmt.Errorf("leyendo documento: %w", err)
+	}
+	d, err := h.svc.SubirDocumento(c.UserContext(), middleware.UsuarioID(c), c.FormValue("categoria"), archivo.Filename, contenido)
+	if err != nil {
+		return err
+	}
+	return c.Status(fiber.StatusCreated).JSON(d)
+}
+
+// Documento atiende GET /postulacion/documentos/:id.
+func (h *SeccionesHandler) Documento(c *fiber.Ctx) error {
+	id, err := c.ParamsInt("id")
+	if err != nil || id <= 0 {
+		return domain.NewError(domain.ErrNoEncontrado, "El documento no existe")
+	}
+	d, contenido, err := h.svc.ObtenerDocumento(c.UserContext(), middleware.UsuarioID(c), int64(id))
+	if err != nil {
+		return err
+	}
+	c.Attachment(d.Nombre)
+	c.Set(fiber.HeaderContentType, "application/pdf")
+	c.Set(fiber.HeaderCacheControl, "private, no-store")
+	return c.Send(contenido)
 }
 
 type itemsReq[T any] struct {
