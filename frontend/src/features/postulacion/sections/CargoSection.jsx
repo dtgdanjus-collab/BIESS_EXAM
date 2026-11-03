@@ -83,14 +83,14 @@ export function CargoSection() {
         <legend className="mb-2 text-sm font-medium">
           Cargo al que postula <span className="text-mal">*</span>
         </legend>
-        <div className="grid gap-1">
+        <div className="grid gap-2 lg:grid-cols-3">
           {sectores.data.map((s) => {
             const activo = codigo === s.codigo
             return (
               <label
                 key={s.codigo}
-                className={`flex cursor-pointer items-start gap-3 rounded-md px-3 py-3 transition-colors has-focus-visible:outline-2 has-focus-visible:outline-offset-2 has-focus-visible:outline-tinta ${
-                  activo ? 'bg-tinta text-white' : 'bg-fondo hover:bg-realce'
+                className={`flex cursor-pointer flex-col gap-3 rounded-md border p-4 transition-colors has-focus-visible:outline-2 has-focus-visible:outline-offset-2 has-focus-visible:outline-tinta ${
+                  activo ? 'border-tinta bg-tinta text-white' : 'border-borde bg-papel hover:border-tinta'
                 }`}
               >
                 <input
@@ -99,12 +99,16 @@ export function CargoSection() {
                   className="sr-only"
                   {...register('sector', { onChange: () => setResultado(null) })}
                 />
+                <span className="flex items-start justify-between gap-2">
+                  <span className="text-lg font-medium capitalize leading-tight">{s.codigo.toLowerCase()}</span>
+                  <span className={`flex size-5 shrink-0 items-center justify-center rounded-full border ${activo ? 'border-white bg-white text-tinta' : 'border-control'}`} aria-hidden="true">
+                    {activo && <Icon name="check" className="size-3.5 animate-pop" strokeWidth={3} />}
+                  </span>
+                </span>
                 <span className="min-w-0 flex-1">
-                  <span className="block text-sm font-medium capitalize">{s.codigo.toLowerCase()}</span>
                   <span className="mt-0.5 block text-sm leading-relaxed opacity-80">{s.cargo}</span>
                 </span>
-                {activo && <Icon name="check" className="mt-0.5 size-4 animate-pop" strokeWidth={2.6} />}
-              </label>
+                              </label>
             )
           })}
         </div>

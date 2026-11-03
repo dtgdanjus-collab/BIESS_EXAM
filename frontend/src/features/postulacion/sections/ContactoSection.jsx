@@ -5,7 +5,7 @@ import { postulacionApi } from '../../../api/postulacion'
 import { Alert, Input } from '../../../components/ui'
 import { useCatalogo } from '../../../hooks/useCatalogo'
 import { conFiltro, telefono } from '../../../utils/filtros'
-import { CampoSelect, Seccion, opcional, useFormulario, useGuardarSeccion } from '../components'
+import { CampoSelect, Grupo, Seccion, opcional, useFormulario, useGuardarSeccion } from '../components'
 import { contactoSchema } from '../schemas'
 
 const str = (v) => (v === null || v === undefined ? '' : String(v))
@@ -90,7 +90,7 @@ export function ContactoSection() {
     >
       {paises.error && <Alert type="error">No se pudo cargar el catálogo de países.</Alert>}
 
-      <div className="grid gap-4 sm:grid-cols-3">
+      <Grupo titulo="Lugar de residencia" className="grid gap-4 sm:grid-cols-3">
         <CampoSelect
           control={control}
           name="paisId"
@@ -128,9 +128,9 @@ export function ContactoSection() {
             <Input label="Ciudad" required error={errors.ciudadTexto?.message} {...register('ciudadTexto')} />
           </>
         )}
-      </div>
+      </Grupo>
 
-      <div className="grid gap-4 sm:grid-cols-2">
+      <Grupo titulo="Dirección">
         <Input label="Calle principal" required error={errors.callePrincipal?.message} {...register('callePrincipal')} />
         <Input label="Número" error={errors.numero?.message} {...register('numero')} />
         <Input label="Calle secundaria" error={errors.calleSecundaria?.message} {...register('calleSecundaria')} />
@@ -141,9 +141,9 @@ export function ContactoSection() {
           error={errors.referencia?.message}
           {...register('referencia')}
         />
-      </div>
+      </Grupo>
 
-      <div className="grid gap-4 sm:grid-cols-2">
+      <Grupo titulo="Cómo comunicarnos con usted">
         <Input
           label="Teléfono celular"
           type="tel"
@@ -163,7 +163,7 @@ export function ContactoSection() {
         />
         <Input label="Correo electrónico principal" type="email" autoComplete="email" required error={errors.correo1?.message} {...register('correo1')} />
         <Input label="Correo electrónico alterno" type="email" error={errors.correo2?.message} {...register('correo2')} />
-      </div>
+      </Grupo>
     </Seccion>
   )
 }
