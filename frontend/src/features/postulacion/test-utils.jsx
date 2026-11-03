@@ -19,6 +19,7 @@ export const postulacionBase = (cambios = {}) => ({
   posibleInhabilidad: false,
   consentimientoAceptado: false,
   fechaEnvio: null,
+  datosConfirmadosEn: '2026-01-15T10:00:00Z',
   datosPersonales: {
     cedula: '0102345675',
     nombres: 'María Fernanda',

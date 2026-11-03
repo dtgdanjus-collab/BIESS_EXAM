@@ -38,7 +38,7 @@ export function CapacitacionSection() {
       peticion={peticion}
       onSubmit={onSubmit}
     >
-      {fields.length === 0 && <p className="text-sm text-slate-500">No ha registrado capacitaciones.</p>}
+      {fields.length === 0 && <p className="text-sm text-tenue">No ha registrado capacitaciones.</p>}
       {fields.map((f, i) => {
         const e = errors.items?.[i] ?? {}
         return (

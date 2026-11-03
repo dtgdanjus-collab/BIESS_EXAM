@@ -181,6 +181,25 @@ describe('validaciones del registro', () => {
   })
 })
 
+describe('teclado en el método de validación', () => {
+  it('las flechas cambian la opción y solo la activa recibe el tabulador', async () => {
+    useAuthStore.getState().logout()
+    const user = userEvent.setup()
+    abrir('/registro')
+    const fecha = screen.getByRole('radio', { name: /fecha de expedición/i })
+    const codigo = screen.getByRole('radio', { name: /código dactilar/i })
+    expect(screen.getByRole('radiogroup', { name: /validar con/i })).toBeInTheDocument()
+    expect(fecha).toHaveAttribute('tabindex', '0')
+    expect(codigo).toHaveAttribute('tabindex', '-1')
+
+    fecha.focus()
+    await user.keyboard('{ArrowRight}')
+    expect(codigo).toBeChecked()
+    expect(codigo).toHaveFocus()
+    expect(screen.getByLabelText(/código dactilar/i)).toBeInTheDocument()
+  })
+})
+
 describe('género de una cédula nueva', () => {
   beforeEach(() => {
     vi.resetAllMocks()

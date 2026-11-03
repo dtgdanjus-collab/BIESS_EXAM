@@ -1,29 +1,27 @@
 import { useState } from 'react'
+import { useReportarCedula } from '../../components/layout/LecturaCedula'
 import { Icon, Input } from '../../components/ui'
+import { useTituloPagina } from '../../hooks/useTituloPagina'
 import { cedulaValida } from '../../utils/cedula'
+import { hoyIso } from '../../utils/fechas'
 import { conFiltro, dactilar, soloDigitos } from '../../utils/filtros'
 import { PERSONAS_PRUEBA } from './personasPrueba'
 import { REGLAS_PASSWORD } from './schemas'
 
-export function AuthCard({ titulo, subtitulo, icono = 'lock', children, pie }) {
+export function AuthCard({ titulo, subtitulo, children, pie }) {
+  useTituloPagina(titulo)
   return (
-    <div className="overflow-hidden rounded-3xl bg-white shadow-lift ring-1 ring-slate-900/5">
-      <div className="px-6 pb-7 pt-8 sm:px-9">
-        <span className="flex size-12 items-center justify-center rounded-2xl bg-gradient-to-br from-brand-50 to-brand-100 text-brand-700 ring-1 ring-brand-200/70">
-          <Icon name={icono} className="size-6" />
-        </span>
-        <h1 className="mt-5 text-2xl font-extrabold tracking-tight text-slate-900">{titulo}</h1>
-        {subtitulo && <p className="mt-1.5 text-sm leading-relaxed text-slate-500">{subtitulo}</p>}
-        <div className="mt-7">{children}</div>
-      </div>
-      {pie && (
-        <div className="border-t border-slate-100 bg-slate-50/80 px-6 py-4 text-center text-sm text-slate-600 sm:px-9">
-          {pie}
-        </div>
-      )}
+    <div>
+      <h1 className="text-2xl font-medium tracking-tight lg:text-[32px] lg:leading-tight">{titulo}</h1>
+      {subtitulo && <p className="mt-2 text-sm leading-relaxed text-tenue">{subtitulo}</p>}
+      <div className="mt-6">{children}</div>
+      {pie && <div className="mt-6 text-sm text-tenue">{pie}</div>}
     </div>
   )
 }
+
+/** Enlace de texto de las pantallas de acceso: el relleno agranda el área táctil sin mover el texto. */
+export const claseEnlace = '-my-3 inline-block py-3 font-medium text-tinta underline underline-offset-4 hover:text-sello'
 
 export function PasswordInput({ ref, ...props }) {
   const [visible, setVisible] = useState(false)
@@ -31,15 +29,14 @@ export function PasswordInput({ ref, ...props }) {
     <Input
       ref={ref}
       type={visible ? 'text' : 'password'}
-      icono="lock"
       suffix={
         <button
           type="button"
           onClick={() => setVisible((v) => !v)}
-          className="flex size-9 items-center justify-center rounded-lg text-slate-400 transition-colors hover:bg-slate-100 hover:text-brand-700"
+          className="flex size-11 items-center justify-center rounded-md text-tenue transition-colors hover:bg-realce hover:text-tinta lg:size-9"
           aria-label={visible ? 'Ocultar la contraseña' : 'Mostrar la contraseña'}
         >
-          <Icon key={visible ? 'ocultar' : 'ver'} name={visible ? 'eyeOff' : 'eye'} className="size-[18px] animate-pop" />
+          <Icon key={visible ? 'ocultar' : 'ver'} name={visible ? 'eyeOff' : 'eye'} className="size-4 animate-pop" />
         </button>
       }
       {...props}
@@ -47,8 +44,9 @@ export function PasswordInput({ ref, ...props }) {
   )
 }
 
-/** Campo de cédula: solo dígitos y ✔ cuando el número es válido (módulo 10). */
+/** Campo de cédula: solo dígitos; lo escrito se lee en el panel de la pantalla. */
 export function CampoCedula({ register, error, valor, disabled }) {
+  useReportarCedula(valor)
   const valida = !error && cedulaValida(valor ?? '')
   return (
     <Input
@@ -57,15 +55,15 @@ export function CampoCedula({ register, error, valor, disabled }) {
       maxLength={10}
       autoComplete="username"
       placeholder="0102345675"
-      icono="id"
       required
       disabled={disabled}
       error={error}
       hint={valida ? 'Cédula válida' : '10 dígitos, sin guiones'}
+      className="[&_input]:tabular-nums"
       suffix={
         valida && (
-          <span className="mr-2 flex size-6 items-center justify-center rounded-full bg-emerald-500 text-white" aria-hidden="true">
-            <Icon name="check" className="size-3.5" strokeWidth={3} />
+          <span className="mr-2 text-sello" aria-hidden="true">
+            <Icon name="check" className="size-4 animate-pop" strokeWidth={2.6} />
           </span>
         )
       }
@@ -77,18 +75,12 @@ export function CampoCedula({ register, error, valor, disabled }) {
 /** Lista de requisitos de la contraseña que se marcan mientras el usuario escribe. */
 export function ReglasPassword({ valor = '' }) {
   return (
-    <ul className="grid gap-1.5 rounded-xl bg-slate-50 px-4 py-3 sm:grid-cols-3" aria-label="Requisitos de la contraseña">
+    <ul className="grid gap-1 sm:grid-cols-3" aria-label="Requisitos de la contraseña">
       {REGLAS_PASSWORD.map((r) => {
         const ok = r.cumple(valor)
         return (
-          <li key={r.texto} className={`flex items-center gap-1.5 text-xs font-medium ${ok ? 'text-emerald-700' : 'text-slate-500'}`}>
-            <span
-              className={`flex size-4 shrink-0 items-center justify-center rounded-full transition-colors ${
-                ok ? 'bg-emerald-500 text-white' : 'border border-slate-300'
-              }`}
-            >
-              {ok && <Icon name="check" className="size-2.5" strokeWidth={4} />}
-            </span>
+          <li key={r.texto} className={`flex items-center gap-1.5 text-xs transition-colors ${ok ? 'text-emerald-800' : 'text-tenue'}`}>
+            <Icon name={ok ? 'check' : 'x'} className={`size-3 ${ok ? 'animate-pop' : 'opacity-40'}`} strokeWidth={3} />
             {r.texto}
           </li>
         )
@@ -103,31 +95,30 @@ export function ReglasPassword({ valor = '' }) {
  */
 export function PersonasPrueba({ onUsar }) {
   return (
-    <details className="group rounded-2xl border border-gold-200 bg-gold-100/50 text-sm">
-      <summary className="flex cursor-pointer list-none items-center gap-2 px-4 py-3 font-semibold text-gold-600 [&::-webkit-details-marker]:hidden">
-        <Icon name="sparkles" className="size-4" />
-        <span className="rounded-md bg-gold-300 px-1.5 py-0.5 text-[10px] font-extrabold uppercase tracking-wider text-brand-950">Demo</span>
-        Personas de prueba
-        <Icon name="chevronRight" className="ml-auto size-4 transition-transform group-open:rotate-90" strokeWidth={2.2} />
+    <details className="group rounded-md bg-fondo text-sm">
+      <summary className="flex min-h-11 cursor-pointer list-none items-center gap-2 px-3 font-medium [&::-webkit-details-marker]:hidden">
+        Demo · Personas de prueba
+        <Icon name="chevronRight" className="ml-auto size-4 text-tenue transition-transform group-open:rotate-90" strokeWidth={2} />
       </summary>
-      <div className="space-y-2 border-t border-gold-200 px-4 py-3">
-        <p className="text-xs leading-relaxed text-slate-600">
-          El Registro Civil está simulado. Puede usar <strong>cualquier cédula válida</strong>: la primera vez se crea una
-          persona ficticia con la fecha o el código que ingrese, y después esos datos deben coincidir. Estas personas traen escenarios preparados:
+      <div className="px-3 pb-3">
+        <p className="text-[13px] leading-relaxed text-tenue">
+          El Registro Civil está simulado. Puede usar <strong className="font-medium text-tinta">cualquier cédula válida</strong>: la
+          primera vez se crea una persona ficticia con la fecha o el código que ingrese, y después esos datos deben coincidir. Estas
+          personas traen escenarios preparados:
         </p>
-        <ul className="divide-y divide-gold-200/70">
+        <ul className="mt-2 divide-y divide-realce">
           {PERSONAS_PRUEBA.map((p) => (
-            <li key={p.cedula} className="flex items-center justify-between gap-3 py-2">
+            <li key={p.cedula} className="flex items-center justify-between gap-3 py-1.5">
               <div className="min-w-0">
-                <p className="font-mono text-[13px] font-bold text-slate-800">{p.cedula}</p>
-                <p className="truncate text-xs text-slate-500">
+                <p className="font-mono text-[13px]">{p.cedula}</p>
+                <p className="text-[13px] text-tenue">
                   {p.escenario} · exp. {p.fecha.split('-').reverse().join('/')}
                 </p>
               </div>
               <button
                 type="button"
                 onClick={() => onUsar(p)}
-                className="shrink-0 rounded-lg bg-white px-3 py-1.5 text-xs font-bold text-brand-700 shadow-xs ring-1 ring-slate-200 transition-colors hover:bg-brand-600 hover:text-white"
+                className="min-h-11 shrink-0 rounded-md px-2.5 text-[13px] lg:min-h-9 font-medium underline underline-offset-4 transition-colors hover:bg-realce"
                 aria-label={`Usar la persona de prueba ${p.cedula}`}
               >
                 Usar
@@ -154,36 +145,43 @@ export const usarPersona = (setValue, clearErrors) => (p) => {
  * Se usa en el registro y en la recuperación de contraseña.
  */
 export function IdentidadFields({ register, errors, metodo, setValue, disabled, cedula }) {
-  const opcion = (valor, texto, icono) => (
+  const elegir = (valor) => setValue('metodo', valor, { shouldValidate: false })
+  // Grupo de radios: las flechas cambian la opción y el tabulador solo se detiene en la activa.
+  const conFlechas = (e) => {
+    if (!['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'].includes(e.key)) return
+    e.preventDefault()
+    const otra = metodo === 'fecha' ? 'dactilar' : 'fecha'
+    elegir(otra)
+    e.currentTarget.parentElement.querySelector(`[data-metodo="${otra}"]`)?.focus()
+  }
+  const opcion = (valor, texto) => (
     <button
       type="button"
       role="radio"
+      data-metodo={valor}
       aria-checked={metodo === valor}
+      tabIndex={metodo === valor ? 0 : -1}
       disabled={disabled}
-      onClick={() => setValue('metodo', valor, { shouldValidate: false })}
-      className={`relative z-10 flex flex-1 items-center justify-center gap-2 whitespace-nowrap rounded-lg px-2 py-2 text-[13px] font-semibold transition-colors duration-200 active:scale-[0.98] sm:px-3 ${
-        metodo === valor ? 'text-brand-800' : 'text-slate-500 hover:text-slate-800'
+      onClick={() => elegir(valor)}
+      onKeyDown={conFlechas}
+      className={`min-h-11 flex-1 whitespace-nowrap px-2 text-sm font-medium transition-colors first:rounded-l-md last:rounded-r-md lg:min-h-9 ${
+        metodo === valor ? 'bg-tinta text-white' : 'bg-realce text-tinta hover:bg-control'
       }`}
     >
-      <Icon name={icono} className="hidden size-4 min-[420px]:block" />
       {texto}
     </button>
   )
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-4">
       <CampoCedula register={register} error={errors.cedula?.message} valor={cedula} disabled={disabled} />
       <div>
-        <p className="mb-1.5 text-[13px] font-semibold text-slate-700">Validar con</p>
-        <div role="radiogroup" className="relative flex gap-1 rounded-xl bg-slate-100 p-1">
-          <span
-            aria-hidden="true"
-            className={`absolute inset-y-1 left-1 w-[calc(50%-0.375rem)] rounded-lg bg-white shadow-sm ring-1 ring-slate-900/5 transition-transform duration-300 ease-out ${
-              metodo === 'dactilar' ? 'translate-x-[calc(100%+0.25rem)]' : ''
-            }`}
-          />
-          {opcion('fecha', 'Fecha de expedición', 'calendar')}
-          {opcion('dactilar', 'Código dactilar', 'fingerprint')}
+        <p id="etiqueta-metodo" className="mb-1.5 text-sm font-medium">
+          Validar con
+        </p>
+        <div role="radiogroup" aria-labelledby="etiqueta-metodo" className="flex gap-px">
+          {opcion('fecha', 'Fecha de expedición')}
+          {opcion('dactilar', 'Código dactilar')}
         </div>
       </div>
       {metodo === 'fecha' ? (
@@ -193,7 +191,7 @@ export function IdentidadFields({ register, errors, metodo, setValue, disabled, 
           required
           disabled={disabled}
           min="1950-01-01"
-          max={new Date().toISOString().slice(0, 10)}
+          max={hoyIso()}
           hint="Está impresa en el anverso de su cédula"
           error={errors.fechaExpedicion?.message}
           {...register('fechaExpedicion')}
@@ -204,8 +202,7 @@ export function IdentidadFields({ register, errors, metodo, setValue, disabled, 
           placeholder="V4443V4442"
           maxLength={10}
           autoCapitalize="characters"
-          icono="fingerprint"
-          className="[&_input]:font-mono [&_input]:uppercase [&_input]:tracking-widest"
+          className="[&_input]:font-mono [&_input]:uppercase"
           hint="Está en el reverso de la cédula: letra, 4 dígitos, letra y 4 dígitos"
           required
           disabled={disabled}
@@ -221,21 +218,13 @@ export function IdentidadFields({ register, errors, metodo, setValue, disabled, 
 export function BloqueoAviso({ bloqueo, mensajeBloqueo, maxIntentos = 3 }) {
   if (bloqueo.bloqueado) {
     return (
-      <div
-        role="alert"
-        className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-red-600 to-red-800 p-5 text-white shadow-lg animate-fade-in"
-      >
-        <div aria-hidden="true" className="absolute inset-0 bg-dots opacity-40" />
-        <div className="relative flex items-center gap-4">
-          <span className="flex size-12 shrink-0 items-center justify-center rounded-2xl bg-white/15 ring-1 ring-white/25">
-            <Icon name="lock" className="size-6 animate-stamp" />
-          </span>
-          <div className="min-w-0">
-            <p className="text-sm font-semibold leading-snug">{mensajeBloqueo}</p>
-            <p className="mt-1 text-xs text-red-100">Podrá intentarlo de nuevo en</p>
-          </div>
+      <div role="alert" className="flex items-center justify-between gap-4 rounded-md bg-mal-fondo px-3 py-3 text-mal-tinta animate-slide-down">
+        <div className="min-w-0">
+          <p className="text-sm font-medium leading-snug">{mensajeBloqueo}</p>
+          <p className="mt-0.5 text-xs">Podrá intentarlo de nuevo en</p>
         </div>
-        <p className="relative mt-3 text-center font-mono text-4xl font-bold tabular-nums tracking-wider" aria-live="polite">
+        {/* Sin aria-live: un lector de pantalla leería el tiempo cada segundo. */}
+        <p className="shrink-0 text-3xl font-medium tabular-nums">
           {bloqueo.tiempo}
         </p>
       </div>
@@ -244,13 +233,13 @@ export function BloqueoAviso({ bloqueo, mensajeBloqueo, maxIntentos = 3 }) {
   if (bloqueo.intentosRestantes !== null) {
     const usados = maxIntentos - bloqueo.intentosRestantes
     return (
-      <div role="alert" className="flex items-center gap-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 animate-fade-in">
-        <div className="flex gap-1.5" aria-hidden="true">
+      <div role="alert" className="flex items-center gap-3 rounded-md bg-aviso-fondo px-3 py-2.5 text-aviso-tinta animate-slide-down">
+        <div className="flex gap-1" aria-hidden="true">
           {Array.from({ length: maxIntentos }, (_, i) => (
-            <span key={i} className={`h-2 w-5 rounded-full ${i < usados ? 'bg-amber-500' : 'bg-amber-200'}`} />
+            <span key={i} className={`h-2 w-4 ${i < usados ? 'bg-aviso-tinta' : 'bg-control'}`} />
           ))}
         </div>
-        <p className="text-sm font-medium text-amber-900">
+        <p className="text-sm">
           {bloqueo.intentosRestantes === 1
             ? 'Le queda 1 intento antes del bloqueo temporal.'
             : `Le quedan ${bloqueo.intentosRestantes} intentos antes del bloqueo temporal.`}

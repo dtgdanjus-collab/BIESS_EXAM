@@ -6,7 +6,7 @@ import { Alert, Button, ErrorAlert } from '../../components/ui'
 import { useAsync } from '../../hooks/useAsync'
 import { useBloqueo } from '../../hooks/useBloqueo'
 import { aplicarErroresCampos } from '../../utils/formErrors'
-import { AuthCard, BloqueoAviso, IdentidadFields, PersonasPrueba, usarPersona } from './components'
+import { AuthCard, BloqueoAviso, claseEnlace, IdentidadFields, PersonasPrueba, usarPersona } from './components'
 import { identidadPayload, identidadSchema } from './schemas'
 
 export function RecuperarPage() {
@@ -35,18 +35,18 @@ export function RecuperarPage() {
   }
 
   const volver = (
-    <Link to="/login" className="font-semibold text-brand-700 hover:underline">
+    <Link to="/login" className={claseEnlace}>
       Volver a iniciar sesión
     </Link>
   )
 
   if (peticion.success) {
     return (
-      <AuthCard titulo="Revise su correo" icono="send" pie={volver}>
+      <AuthCard titulo="Revise su correo" pie={volver}>
         <Alert type="success" title="Enlace enviado">
           {peticion.data.message}. El enlace es válido por 15 minutos.
         </Alert>
-        <p className="mt-4 text-xs text-slate-500">
+        <p className="mt-4 text-xs text-tenue">
           Entorno de demostración: el correo se simula y el enlace aparece en el log del backend.
         </p>
       </AuthCard>
@@ -57,14 +57,13 @@ export function RecuperarPage() {
   return (
     <AuthCard
       titulo="Recuperar contraseña"
-      icono="mail"
       subtitulo="Valide su identidad y le enviaremos un enlace a su correo registrado."
       pie={volver}
     >
       <form onSubmit={handleSubmit(onSubmit)} noValidate className="space-y-4">
         {error?.status === 404 ? (
           <Alert type="warning" title={error.message}>
-            <Link to="/registro" className="font-semibold underline">
+            <Link to="/registro" className="font-medium underline underline-offset-4">
               Regístrese aquí
             </Link>
           </Alert>

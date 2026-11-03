@@ -5,7 +5,7 @@ import { restablecer } from '../../api/auth'
 import { Alert, Button, ErrorAlert } from '../../components/ui'
 import { useAsync } from '../../hooks/useAsync'
 import { aplicarErroresCampos } from '../../utils/formErrors'
-import { AuthCard, PasswordInput, ReglasPassword } from './components'
+import { AuthCard, claseEnlace, PasswordInput, ReglasPassword } from './components'
 import { restablecerSchema } from './schemas'
 
 export function RestablecerPage() {
@@ -32,21 +32,21 @@ export function RestablecerPage() {
   }
 
   const pedirOtro = (
-    <Link to="/recuperar" className="font-semibold text-brand-700 hover:underline">
+    <Link to="/recuperar" className={claseEnlace}>
       Solicitar un nuevo enlace
     </Link>
   )
 
   if (!token) {
     return (
-      <AuthCard titulo="Enlace inválido" icono="alert" pie={pedirOtro}>
+      <AuthCard titulo="Enlace inválido" pie={pedirOtro}>
         <Alert type="error">El enlace de recuperación no es válido o está incompleto.</Alert>
       </AuthCard>
     )
   }
 
   return (
-    <AuthCard titulo="Nueva contraseña" icono="shield" subtitulo="Defina la contraseña con la que ingresará al sistema." pie={pedirOtro}>
+    <AuthCard titulo="Nueva contraseña" subtitulo="Defina la contraseña con la que ingresará al sistema." pie={pedirOtro}>
       <form onSubmit={handleSubmit(onSubmit)} noValidate className="space-y-4">
         <ErrorAlert error={peticion.error} />
         <PasswordInput

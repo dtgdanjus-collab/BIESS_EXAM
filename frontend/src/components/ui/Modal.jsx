@@ -1,8 +1,9 @@
-import { useEffect, useRef } from 'react'
+import { useEffect, useId, useRef } from 'react'
 
 // Diálogo modal nativo (<dialog>): gestiona foco, Escape y fondo automáticamente.
 export function Modal({ open, onClose, title, children, footer }) {
   const ref = useRef(null)
+  const idTitulo = useId()
 
   useEffect(() => {
     const d = ref.current
@@ -17,15 +18,18 @@ export function Modal({ open, onClose, title, children, footer }) {
       ref={ref}
       onClose={onClose}
       onCancel={onClose}
-      className="m-auto w-[calc(100%-2rem)] max-w-lg rounded-2xl border-0 p-0 shadow-lift ring-1 ring-slate-900/5 backdrop:bg-brand-950/50 backdrop:backdrop-blur-sm"
+      aria-labelledby={idTitulo}
+      className="m-auto w-[calc(100%-2rem)] max-w-lg rounded-lg border-0 bg-papel p-0 text-tinta shadow-flota backdrop:bg-black/50"
     >
       {open && (
         <div>
-          <header className="border-b border-slate-100 px-6 py-5">
-            <h2 className="text-lg font-bold tracking-tight text-slate-900">{title}</h2>
+          <header className="px-6 pt-5">
+            <h2 id={idTitulo} className="text-base font-medium">
+              {title}
+            </h2>
           </header>
-          <div className="max-h-[70vh] overflow-y-auto px-6 py-5 text-sm leading-relaxed text-slate-600">{children}</div>
-          {footer && <footer className="flex justify-end gap-2 border-t border-slate-100 bg-slate-50/70 px-6 py-4">{footer}</footer>}
+          <div className="max-h-[70vh] overflow-y-auto px-6 py-3 text-sm leading-relaxed text-tenue">{children}</div>
+          {footer && <footer className="flex justify-end gap-2 px-6 pb-5 pt-2">{footer}</footer>}
         </div>
       )}
     </dialog>

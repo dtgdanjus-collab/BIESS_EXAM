@@ -3,32 +3,35 @@ import { Icon } from './Icon'
 import { Spinner } from './Spinner'
 
 const base =
-  'block w-full rounded-xl border bg-white px-3.5 py-2.5 text-sm text-slate-900 shadow-xs transition-[border-color,box-shadow,background-color] duration-200 placeholder:text-slate-400 focus:outline-none focus:ring-4 disabled:cursor-not-allowed disabled:bg-slate-50 disabled:text-slate-500'
+  'block min-h-11 w-full rounded-md border bg-papel px-3 py-2 text-sm text-tinta transition-colors duration-150 placeholder:text-tenue focus:outline-none focus:ring-1 disabled:cursor-not-allowed disabled:bg-fondo disabled:text-tenue lg:min-h-10'
 
 const borde = (error) =>
   error
-    ? 'border-red-300 focus:border-red-500 focus:ring-red-100'
-    : 'border-slate-200 hover:border-slate-300 focus:border-brand-500 focus:ring-brand-100'
+    ? 'border-mal focus:border-mal focus:ring-mal'
+    : 'border-control hover:border-[#a3a3a3] focus:border-tinta focus:ring-tinta'
+
+const ErrorCampo = ({ id, children }) => (
+  <p id={id} className="mt-1.5 flex items-center gap-1 text-xs text-mal animate-slide-down" role="alert">
+    <Icon name="alert" className="size-3.5" strokeWidth={2} />
+    {children}
+  </p>
+)
+
+// El campo se describe con su error o, si no lo hay, con su ayuda.
+const describir = (id, error, hint) => (error ? `${id}-error` : hint ? `${id}-ayuda` : undefined)
 
 // Envoltura común: etiqueta, ayuda y mensaje de error accesibles.
 function Campo({ id, label, error, hint, required, children, className = '' }) {
   return (
     <div className={className}>
       {label && (
-        <label htmlFor={id} className="mb-1.5 block text-[13px] font-semibold text-slate-700">
+        <label htmlFor={id} className="mb-1.5 block text-sm font-medium">
           {label}
-          {required && <span className="text-red-500"> *</span>}
+          {required && <span className="text-mal"> *</span>}
         </label>
       )}
       {children}
-      {error ? (
-        <p id={`${id}-error`} className="mt-1.5 flex items-center gap-1 text-xs font-medium text-red-600 animate-slide-down" role="alert">
-          <Icon name="alert" className="size-3.5" strokeWidth={2} />
-          {error}
-        </p>
-      ) : (
-        hint && <p className="mt-1.5 text-xs text-slate-500">{hint}</p>
-      )}
+      {error ? <ErrorCampo id={`${id}-error`}>{error}</ErrorCampo> : hint && <p id={`${id}-ayuda`} className="mt-1.5 text-xs text-tenue">{hint}</p>}
     </div>
   )
 }
@@ -41,21 +44,21 @@ export function Input({ label, error, hint, required, className, ref, icono, suf
   const id = useId()
   return (
     <Campo id={id} label={label} error={error} hint={hint} required={required} className={className}>
-      <div className={`group/campo relative ${error ? 'animate-shake' : ''}`}>
+      <div className={`relative ${error ? 'animate-shake' : ''}`}>
         {icono && (
-          <span className="pointer-events-none absolute inset-y-0 left-3.5 flex items-center text-slate-400 transition-colors group-focus-within/campo:text-brand-600">
-            <Icon name={icono} className="size-[18px]" />
+          <span className="pointer-events-none absolute inset-y-0 left-3 flex items-center text-tenue">
+            <Icon name={icono} className="size-4" />
           </span>
         )}
         <input
           id={id}
           ref={ref}
           aria-invalid={Boolean(error)}
-          aria-describedby={error ? `${id}-error` : undefined}
-          className={`${base} ${borde(error)} ${icono ? 'pl-10' : ''} ${suffix ? 'pr-12' : ''}`}
+          aria-describedby={describir(id, error, hint)}
+          className={`${base} ${borde(error)} ${icono ? 'pl-9' : ''} ${suffix ? 'pr-12' : ''}`}
           {...props}
         />
-        {suffix && <span className="absolute inset-y-0 right-1.5 flex items-center">{suffix}</span>}
+        {suffix && <span className="absolute inset-y-0 right-1 flex items-center">{suffix}</span>}
       </div>
     </Campo>
   )
@@ -73,6 +76,7 @@ export function Textarea({ label, error, hint, required, className, ref, maxLeng
         value={value}
         rows={4}
         aria-invalid={Boolean(error)}
+        aria-describedby={describir(id, error, hint ?? contador)}
         className={`${base} ${borde(error)} resize-y`}
         {...props}
       />
@@ -99,14 +103,15 @@ export function Select({
   const id = useId()
   return (
     <Campo id={id} label={label} error={error} hint={hint} required={required} className={className}>
-      <div className={`group/campo relative ${error ? 'animate-shake' : ''}`}>
+      <div className={`relative ${error ? 'animate-shake' : ''}`}>
         <select
           id={id}
           ref={ref}
           disabled={disabled || loading}
           aria-invalid={Boolean(error)}
+          aria-describedby={describir(id, error, hint)}
           aria-busy={loading}
-          className={`${base} ${borde(error)} appearance-none pr-10`}
+          className={`${base} ${borde(error)} appearance-none pr-9`}
           {...props}
         >
           <option value="">{loading ? 'Cargando…' : placeholder}</option>
@@ -116,12 +121,8 @@ export function Select({
             </option>
           ))}
         </select>
-        <span className="pointer-events-none absolute inset-y-0 right-3.5 flex items-center text-slate-400">
-          {loading ? (
-            <Spinner className="size-4 text-brand-600" />
-          ) : (
-            <Icon name="chevronRight" className="size-4 rotate-90" strokeWidth={2} />
-          )}
+        <span className="pointer-events-none absolute inset-y-0 right-3 flex items-center text-tenue">
+          {loading ? <Spinner className="size-4" /> : <Icon name="chevronRight" className="size-4 rotate-90" strokeWidth={2} />}
         </span>
       </div>
     </Campo>
@@ -134,40 +135,26 @@ export function Checkbox({ label, error, className = '', ref, ...props }) {
     <div className={className}>
       <label
         htmlFor={id}
-        className="flex cursor-pointer items-start gap-3 rounded-xl border border-slate-200 bg-white p-4 text-sm text-slate-700 transition-colors hover:border-brand-300 has-checked:border-brand-500 has-checked:bg-brand-50/60"
+        className="flex cursor-pointer items-start gap-3 rounded-md bg-fondo p-3 text-sm transition-colors hover:bg-realce"
       >
-        <input
-          id={id}
-          ref={ref}
-          type="checkbox"
-          className="mt-0.5 size-[18px] shrink-0 rounded border-slate-300 accent-brand-700"
-          {...props}
-        />
+        <input id={id} ref={ref} type="checkbox" className="mt-0.5 size-4 shrink-0 accent-tinta" {...props} />
         <span className="leading-relaxed">{label}</span>
       </label>
-      {error && (
-        <p className="mt-1 text-xs text-red-600" role="alert">
-          {error}
-        </p>
-      )}
+      {error && <ErrorCampo>{error}</ErrorCampo>}
     </div>
   )
 }
 
-/** Pregunta Sí/No con botones de opción. value: true | false | null. */
+/** Pregunta Sí/No con dos marcas contiguas. value: true | false | null. */
 export function SiNo({ label, value, onChange, error, name, disabled }) {
   const id = useId()
   const opcion = (v, texto) => {
     const activo = value === v
     return (
       <label
-        className={`flex min-h-11 flex-1 cursor-pointer items-center justify-center gap-2 rounded-xl border px-5 text-sm font-semibold transition-all active:scale-95 sm:min-w-28 sm:flex-none ${
-          activo
-            ? v
-              ? 'border-brand-600 bg-brand-600 text-white shadow-glow'
-              : 'border-slate-700 bg-slate-800 text-white'
-            : 'border-slate-200 bg-white text-slate-600 hover:border-slate-300 hover:bg-slate-50'
-        } ${disabled ? 'cursor-not-allowed opacity-60' : ''}`}
+        className={`flex min-h-11 flex-1 cursor-pointer items-center justify-center px-5 text-sm font-medium transition-colors first:rounded-l-md last:rounded-r-md has-focus-visible:outline-2 has-focus-visible:outline-offset-2 has-focus-visible:outline-tinta sm:min-w-20 sm:flex-none lg:min-h-9 ${
+          activo ? 'bg-tinta text-white' : 'bg-realce text-tinta hover:bg-control'
+        } ${disabled ? 'cursor-not-allowed opacity-70' : ''}`}
       >
         <input
           type="radio"
@@ -177,24 +164,18 @@ export function SiNo({ label, value, onChange, error, name, disabled }) {
           onChange={() => onChange(v)}
           disabled={disabled}
         />
-        {activo && <Icon name="check" className="size-4 animate-pop" strokeWidth={2.5} />}
         {texto}
       </label>
     )
   }
   return (
-    <fieldset>
-      <legend className="mb-2.5 text-sm font-semibold leading-relaxed text-slate-800">{label}</legend>
-      <div className="flex gap-2">
+    <fieldset aria-describedby={error ? `${id}-error` : undefined}>
+      <legend className="mb-2 text-sm font-medium leading-relaxed">{label}</legend>
+      <div className="flex gap-px">
         {opcion(true, 'Sí')}
         {opcion(false, 'No')}
       </div>
-      {error && (
-        <p className="mt-1.5 flex items-center gap-1 text-xs font-medium text-red-600" role="alert">
-          <Icon name="alert" className="size-3.5" strokeWidth={2} />
-          {error}
-        </p>
-      )}
+      {error && <ErrorCampo id={`${id}-error`}>{error}</ErrorCampo>}
     </fieldset>
   )
 }

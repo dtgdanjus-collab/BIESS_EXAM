@@ -1,39 +1,196 @@
-import { Icon } from '../../../components/ui'
-import { formatoFecha } from '../../../utils/fechas'
-import { Dato, Seccion, useFormulario } from '../components'
+import { zodResolver } from '@hookform/resolvers/zod'
+import { useState } from 'react'
+import { useForm } from 'react-hook-form'
+import { postulacionApi } from '../../../api/postulacion'
+import { Alert, Button, Card, ErrorAlert, Input, Modal, Select } from '../../../components/ui'
+import { useAuthStore } from '../../../store/authStore'
+import { formatoFecha, hoyIso } from '../../../utils/fechas'
+import { conFiltro, soloDigitos } from '../../../utils/filtros'
+import { Dato, Seccion, opcional, useFormulario, useGuardarSeccion } from '../components'
+import { CON_CONYUGE, datosPersonalesSchema } from '../schemas'
 
-const CON_CONYUGE = ['CASADO/A', 'UNION DE HECHO']
+const GENEROS = [
+  { id: 'FEMENINO', nombre: 'Femenino' },
+  { id: 'MASCULINO', nombre: 'Masculino' },
+]
+const ESTADOS_CIVILES = [
+  { id: 'SOLTERO/A', nombre: 'Soltero/a' },
+  { id: 'CASADO/A', nombre: 'Casado/a' },
+  { id: 'DIVORCIADO/A', nombre: 'Divorciado/a' },
+  { id: 'VIUDO/A', nombre: 'Viudo/a' },
+  { id: 'UNION DE HECHO', nombre: 'Unión de hecho' },
+]
 
-// 1.1 — Solo lectura: los datos provienen del Registro Civil.
+const etiquetaConyuge = (estadoCivil) => (estadoCivil === 'UNION DE HECHO' ? 'conviviente' : 'cónyuge')
+
+/** Antes de confirmar: los datos se revisan y se corrigen aquí mismo, una sola vez. */
+function FormularioDatos({ d }) {
+  const peticion = useGuardarSeccion()
+  const usuario = useAuthStore((s) => s.usuario)
+  const setUsuario = useAuthStore((s) => s.setUsuario)
+  const [revisados, setRevisados] = useState(null)
+  const {
+    register,
+    handleSubmit,
+    watch,
+    setError,
+    formState: { errors },
+  } = useForm({
+    resolver: zodResolver(datosPersonalesSchema),
+    mode: 'onTouched',
+    defaultValues: {
+      nombres: d.nombres,
+      apellidos: d.apellidos,
+      genero: d.genero,
+      fechaNacimiento: d.fechaNacimiento,
+      estadoCivil: d.estadoCivil,
+      conyugeNombres: d.conyugeNombres ?? '',
+      conyugeCedula: d.conyugeCedula ?? '',
+    },
+  })
+  const estadoCivil = watch('estadoCivil')
+
+  const confirmar = async () => {
+    const v = revisados
+    setRevisados(null)
+    const conConyuge = CON_CONYUGE.includes(v.estadoCivil)
+    const r = await peticion.guardar(
+      () =>
+        postulacionApi.datosPersonales({
+          ...v,
+          conyugeNombres: conConyuge ? opcional(v.conyugeNombres) : null,
+          conyugeCedula: conConyuge ? opcional(v.conyugeCedula) : null,
+        }),
+      setError,
+    )
+    // El perfil de la barra lateral muestra estos mismos nombres.
+    if (r.ok && usuario) setUsuario({ ...usuario, nombres: v.nombres.trim(), apellidos: v.apellidos.trim() })
+  }
+
+  return (
+    <form onSubmit={handleSubmit(setRevisados)} noValidate>
+      <Card
+        numeral="1.1"
+        title="Información personal"
+        description="Estos datos vienen de un Registro Civil simulado y pueden no ser los suyos. Revíselos y corrija lo que haga falta."
+        pie={
+          <>
+            {peticion.error && !peticion.error.details?.campos && <ErrorAlert error={peticion.error} />}
+            {peticion.error?.details?.campos && <Alert type="error">Revise los campos marcados en rojo.</Alert>}
+            <div className="flex justify-end">
+              <Button type="submit" loading={peticion.loading} className="w-full sm:w-auto">
+                Confirmar mis datos
+              </Button>
+            </div>
+          </>
+        }
+      >
+        <fieldset disabled={peticion.loading} className="space-y-6">
+          <Alert type="warning" title="Solo podrá hacerlo una vez">
+            Al confirmar, estos datos quedan fijos y ya no se podrán cambiar.
+          </Alert>
+
+          <dl className="grid gap-4 sm:grid-cols-2">
+            <Dato etiqueta="Cédula" valor={<span className="font-mono">{d.cedula}</span>} />
+            <Dato etiqueta="Nacionalidad" valor={d.nacionalidad} />
+          </dl>
+
+          <div className="grid gap-4 sm:grid-cols-2">
+            <Input label="Nombres" autoComplete="given-name" maxLength={100} required error={errors.nombres?.message} {...register('nombres')} />
+            <Input label="Apellidos" autoComplete="family-name" maxLength={100} required error={errors.apellidos?.message} {...register('apellidos')} />
+            <Input
+              label="Fecha de nacimiento"
+              type="date"
+              autoComplete="bday"
+              min="1900-01-01"
+              max={hoyIso()}
+              required
+              error={errors.fechaNacimiento?.message}
+              {...register('fechaNacimiento')}
+            />
+            <Select label="Género" required options={GENEROS} error={errors.genero?.message} {...register('genero')} />
+            <Select label="Estado civil" required options={ESTADOS_CIVILES} error={errors.estadoCivil?.message} {...register('estadoCivil')} />
+          </div>
+
+          {CON_CONYUGE.includes(estadoCivil) && (
+            <div className="grid gap-4 rounded-md bg-fondo p-4 sm:grid-cols-2 animate-slide-down">
+              <Input
+                label={`Nombres completos del ${etiquetaConyuge(estadoCivil)}`}
+                maxLength={200}
+                required
+                error={errors.conyugeNombres?.message}
+                {...register('conyugeNombres')}
+              />
+              <Input
+                label={`Cédula del ${etiquetaConyuge(estadoCivil)}`}
+                inputMode="numeric"
+                maxLength={10}
+                required
+                error={errors.conyugeCedula?.message}
+                {...conFiltro(register('conyugeCedula'), soloDigitos(10))}
+              />
+            </div>
+          )}
+        </fieldset>
+      </Card>
+
+      <Modal
+        open={revisados !== null}
+        onClose={() => setRevisados(null)}
+        title="¿Confirmar sus datos personales?"
+        footer={
+          <>
+            <Button variant="secondary" onClick={() => setRevisados(null)}>
+              Revisar de nuevo
+            </Button>
+            <Button onClick={confirmar}>Sí, confirmar</Button>
+          </>
+        }
+      >
+        {revisados && (
+          <>
+            <strong className="font-medium text-tinta">
+              {revisados.nombres} {revisados.apellidos}
+            </strong>
+            , nacimiento el <strong className="font-medium text-tinta">{formatoFecha(revisados.fechaNacimiento)}</strong>. Después de confirmar
+            no podrá cambiar estos datos.
+          </>
+        )}
+      </Modal>
+    </form>
+  )
+}
+
+// 1.1 — Se corrige una sola vez; después es de solo lectura.
 export function PersonalSection() {
-  const { postulacion } = useFormulario()
+  const { postulacion, soloLectura } = useFormulario()
   const d = postulacion.datosPersonales
-  const iniciales = `${d.nombres[0] ?? ''}${d.apellidos[0] ?? ''}`.toUpperCase()
+  const confirmados = Boolean(postulacion.datosConfirmadosEn)
+
+  if (!confirmados && !soloLectura) return <FormularioDatos d={d} />
+
   return (
     <Seccion
       id="personal"
       numeral="1.1"
       titulo="Información personal"
-      descripcion="Datos obtenidos automáticamente del Registro Civil. No son editables."
+      descripcion="Sus datos quedaron fijos al confirmarlos y ya no se pueden modificar."
     >
-      {/* Ficha del postulante */}
-      <div className="flex flex-col gap-4 rounded-2xl bg-gradient-to-br from-brand-50 via-white to-gold-100/40 p-5 ring-1 ring-brand-100 sm:flex-row sm:items-center">
-        <span className="flex size-16 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-brand-600 to-brand-900 text-xl font-extrabold text-gold-200 shadow-glow">
-          {iniciales}
-        </span>
-        <div className="min-w-0 flex-1">
-          <p className="text-lg font-extrabold leading-tight tracking-tight text-slate-900">
+      <div className="flex flex-wrap items-start justify-between gap-x-4 gap-y-2">
+        <div className="min-w-0">
+          <p className="text-2xl font-medium leading-tight tracking-tight">
             {d.nombres} {d.apellidos}
           </p>
-          <p className="mt-0.5 font-mono text-sm text-slate-500">C.I. {d.cedula}</p>
+          <p className="mt-1 font-mono text-sm text-tenue">{d.cedula}</p>
         </div>
-        <span className="inline-flex w-fit items-center gap-1.5 rounded-full bg-emerald-100 px-3 py-1 text-xs font-bold text-emerald-800 ring-1 ring-inset ring-emerald-200">
-          <Icon name="check" className="size-3.5" strokeWidth={3} />
-          Verificado en el Registro Civil
-        </span>
+        {confirmados && (
+          <span className="inline-flex h-6 flex-none items-center whitespace-nowrap rounded bg-ok-fondo px-2 text-xs font-medium text-ok-tinta">
+            Datos confirmados
+          </span>
+        )}
       </div>
 
-      <dl className="grid gap-x-6 gap-y-5 sm:grid-cols-2 lg:grid-cols-3">
+      <dl className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <Dato etiqueta="Nacionalidad" valor={d.nacionalidad} />
         <Dato etiqueta="Género" valor={d.genero} />
         <Dato etiqueta="Fecha de nacimiento" valor={formatoFecha(d.fechaNacimiento)} />
@@ -41,22 +198,14 @@ export function PersonalSection() {
       </dl>
 
       {CON_CONYUGE.includes(d.estadoCivil) && (
-        <div className="rounded-2xl border border-slate-200 p-5">
-          <p className="mb-4 flex items-center gap-2 text-sm font-bold text-slate-800">
-            <Icon name="users" className="size-[18px] text-brand-600" />
-            {d.estadoCivil === 'UNION DE HECHO' ? 'Conviviente' : 'Cónyuge'}
-          </p>
-          <dl className="grid gap-5 sm:grid-cols-2">
+        <div className="rounded-md bg-fondo p-4">
+          <p className="mb-3 text-sm font-medium">{d.estadoCivil === 'UNION DE HECHO' ? 'Conviviente' : 'Cónyuge'}</p>
+          <dl className="grid gap-4 sm:grid-cols-2">
             <Dato etiqueta="Nombres completos" valor={d.conyugeNombres} />
             <Dato etiqueta="Cédula" valor={d.conyugeCedula} />
           </dl>
         </div>
       )}
-
-      <p className="flex items-start gap-2 text-xs leading-relaxed text-slate-500">
-        <Icon name="info" className="mt-px size-4 text-slate-400" />
-        Si algún dato es incorrecto, debe actualizarlo en el Registro Civil antes de enviar su postulación.
-      </p>
     </Seccion>
   )
 }

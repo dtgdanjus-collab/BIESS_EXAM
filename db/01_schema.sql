@@ -157,6 +157,7 @@ CREATE TABLE postulaciones (
     consentimiento_aceptado BOOLEAN      NOT NULL DEFAULT FALSE,
     consentimiento_fecha    TIMESTAMPTZ,
     fecha_envio             TIMESTAMPTZ,
+    datos_confirmados_en    TIMESTAMPTZ,            -- el postulante corrigió y confirmó sus datos (1.1)
     creado_en               TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
     actualizado_en          TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
     CONSTRAINT ck_cierre_con_motivo CHECK (estado <> 'CERRADA' OR motivo_cierre IS NOT NULL),

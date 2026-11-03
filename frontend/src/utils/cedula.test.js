@@ -1,5 +1,19 @@
 import { describe, expect, it } from 'vitest'
-import { cedulaValida, errorCedula } from './cedula'
+import { cedulaValida, errorCedula, leerCedula } from './cedula'
+
+describe('leerCedula', () => {
+  it('lee cada parte solo cuando ya tiene sus dígitos', () => {
+    expect(leerCedula('0')).toEqual({ provincia: null, tercero: null, verificador: null })
+    expect(leerCedula('09').provincia).toEqual({ codigo: '09', nombre: 'Guayas' })
+    expect(leerCedula('017').tercero).toEqual({ valor: 7, valido: false })
+    expect(leerCedula('2502').provincia.nombre).toBeNull()
+  })
+
+  it('compara el último dígito con el que da el módulo 10', () => {
+    expect(leerCedula('0102345675').verificador).toEqual({ valor: 5, esperado: 5, valido: true })
+    expect(leerCedula('0102345674').verificador).toEqual({ valor: 4, esperado: 5, valido: false })
+  })
+})
 
 describe('cedulaValida', () => {
   it('acepta las cédulas de las personas mock', () => {
