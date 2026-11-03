@@ -49,7 +49,7 @@ function Formulario({ preguntas }) {
       peticion={peticion}
       onSubmit={onSubmit}
     >
-      <ol className="divide-y divide-slate-100">
+      <ol className="divide-y divide-regla">
         {preguntas.map((q, i) => {
           const respuesta = watch(`respuestas.${i}.respuesta`)
           const muestraDetalle = q.requiereDetalle && respuesta !== null && respuesta !== q.respuestaEsperada
@@ -64,7 +64,7 @@ function Formulario({ preguntas }) {
                     name={`pregunta-${q.id}`}
                     label={
                       <span className="font-normal">
-                        <span className="mr-1 font-semibold text-brand-700">{q.numeral}</span>
+                        <span className="mr-1 tabular-nums text-tenue">{q.numeral}</span>
                         {q.texto}
                       </span>
                     }
@@ -75,8 +75,8 @@ function Formulario({ preguntas }) {
                 )}
               />
               {muestraDetalle && (
-                <div className="mt-3 grid gap-4 rounded-lg border border-slate-200 bg-slate-50 p-4 sm:grid-cols-2">
-                  <p className="text-sm font-medium text-slate-700 sm:col-span-2">Detalle de la remoción</p>
+                <div className="mt-3 grid gap-4 rounded-md bg-fondo p-4 sm:grid-cols-2 animate-slide-down">
+                  <p className="text-sm font-medium sm:col-span-2">Detalle de la remoción</p>
                   <Input label="Institución" required error={e.institucion?.message} {...register(`respuestas.${i}.detalle.institucion`)} />
                   <Input label="Cargo" required error={e.cargo?.message} {...register(`respuestas.${i}.detalle.cargo`)} />
                   <Input

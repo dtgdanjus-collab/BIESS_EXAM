@@ -1,215 +1,104 @@
 @import "tailwindcss";
 
 /* ---------------------------------------------------------------
-   Sistema visual: verde institucional profundo + acento dorado
+   El expediente: libro mayor en tinta negra sobre gris azulado.
+   El único color es el azul de sello, sobre lo que ya quedó asentado.
    --------------------------------------------------------------- */
 @theme {
-  --color-brand-50: #eef8f4;
-  --color-brand-100: #d5eee3;
-  --color-brand-200: #aedccb;
-  --color-brand-300: #7cc3ab;
-  --color-brand-400: #4aa488;
-  --color-brand-500: #2a876d;
-  --color-brand-600: #1c6d57;
-  --color-brand-700: #0f5f4a;
-  --color-brand-800: #0c4a3a;
-  --color-brand-900: #093a2e;
-  --color-brand-950: #05241c;
+  --color-fondo: #f2f4f7;
+  --color-papel: #ffffff;
+  --color-realce: #e9ebee;
+  --color-borde: #e6e6e6;
+  --color-regla: #f0f0f0;
+  --color-control: #d4d4d4;
+  --color-tinta: #0a0a0a;
+  --color-tenue: #5f6368;
+  --color-sello: #1d5fbf;
+  --color-sello-claro: #8db8f5;
 
-  --color-gold-100: #faf1dc;
-  --color-gold-200: #f2dfae;
-  --color-gold-300: #e6c77f;
-  --color-gold-400: #d6ab55;
-  --color-gold-500: #c39a3f;
-  --color-gold-600: #9c7a2e;
+  --color-noche: #0a0a0a;
+  --color-noche-celda: #1e1e1e;
+  --color-noche-tenue: #b4b4b4;
 
-  --font-sans: "Plus Jakarta Sans", "Segoe UI", system-ui, -apple-system, Roboto, Arial, sans-serif;
+  --color-ok-fondo: #dcfae5;
+  --color-ok-tinta: #04250e;
+  --color-mal-fondo: #ffedea;
+  --color-mal-tinta: #831c1e;
+  --color-mal: #c4242a;
+  --color-aviso-fondo: #fffbeb;
+  --color-aviso-tinta: #92400e;
 
-  --shadow-card: 0 1px 2px rgb(15 23 42 / 0.04), 0 12px 32px -16px rgb(15 23 42 / 0.18);
-  --shadow-lift: 0 2px 4px rgb(15 23 42 / 0.06), 0 24px 48px -20px rgb(9 58 46 / 0.35);
-  --shadow-glow: 0 10px 30px -10px rgb(15 95 74 / 0.55);
+  --font-sans: "Geist", Inter, system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+  --font-mono: "Geist Mono", ui-monospace, Consolas, monospace;
 
-  --animate-fade-up: fade-up 0.55s cubic-bezier(0.2, 0.7, 0.2, 1) both;
-  --animate-fade-in: fade-in 0.4s ease-out both;
-  --animate-float: float 9s ease-in-out infinite;
+  --shadow-flota: 0 12px 32px rgb(0 0 0 / 0.14);
+
   --animate-shake: shake 0.4s cubic-bezier(0.36, 0.07, 0.19, 0.97) both;
-  --animate-slide-down: slide-down 0.25s ease-out both;
-  --animate-slide-right: slide-right 0.35s cubic-bezier(0.2, 0.7, 0.2, 1) both;
-  --animate-slide-left: slide-left 0.35s cubic-bezier(0.2, 0.7, 0.2, 1) both;
-  --animate-pop: pop 0.35s cubic-bezier(0.34, 1.56, 0.64, 1) both;
-  --animate-stamp: stamp 0.55s cubic-bezier(0.34, 1.56, 0.64, 1) both;
-  --animate-dropdown: dropdown 0.2s cubic-bezier(0.2, 0.7, 0.2, 1) both;
-  --animate-scale-in: scale-in 0.3s cubic-bezier(0.2, 0.7, 0.2, 1) both;
-  --animate-ring-pulse: ring-pulse 0.9s ease-out both;
-
-  @keyframes shake {
-    20%,
-    60% {
-      transform: translateX(-5px);
-    }
-    40%,
-    80% {
-      transform: translateX(5px);
-    }
-  }
-  @keyframes slide-down {
-    from {
-      opacity: 0;
-      transform: translateY(-6px);
-    }
-    to {
-      opacity: 1;
-      transform: none;
-    }
-  }
-  @keyframes slide-right {
-    from {
-      opacity: 0;
-      transform: translateX(22px);
-    }
-    to {
-      opacity: 1;
-      transform: none;
-    }
-  }
-  @keyframes slide-left {
-    from {
-      opacity: 0;
-      transform: translateX(-22px);
-    }
-    to {
-      opacity: 1;
-      transform: none;
-    }
-  }
-  @keyframes pop {
-    from {
-      opacity: 0;
-      transform: scale(0.4);
-    }
-    to {
-      opacity: 1;
-      transform: none;
-    }
-  }
-  @keyframes stamp {
-    from {
-      opacity: 0;
-      transform: scale(2.2) rotate(-14deg);
-    }
-    to {
-      opacity: 1;
-      transform: none;
-    }
-  }
-  @keyframes dropdown {
-    from {
-      opacity: 0;
-      transform: translateY(-8px) scale(0.97);
-    }
-    to {
-      opacity: 1;
-      transform: none;
-    }
-  }
-  @keyframes scale-in {
-    from {
-      opacity: 0;
-      transform: scale(0.97);
-    }
-    to {
-      opacity: 1;
-      transform: none;
-    }
-  }
-  @keyframes ring-pulse {
-    from {
-      opacity: 0.7;
-      transform: scale(0.85);
-    }
-    to {
-      opacity: 0;
-      transform: scale(1.35);
-    }
-  }
-
-  @keyframes fade-up {
-    from {
-      opacity: 0;
-      transform: translateY(12px);
-    }
-    to {
-      opacity: 1;
-      transform: none;
-    }
-  }
-  @keyframes fade-in {
-    from {
-      opacity: 0;
-    }
-    to {
-      opacity: 1;
-    }
-  }
-  @keyframes float {
-    0%,
-    100% {
-      transform: translate3d(0, 0, 0) scale(1);
-    }
-    50% {
-      transform: translate3d(0, -18px, 0) scale(1.05);
-    }
-  }
+  --animate-slide-down: slide-down 0.2s ease-out both;
+  --animate-slide-right: slide-right 0.25s cubic-bezier(0.2, 0.7, 0.2, 1) both;
+  --animate-slide-left: slide-left 0.25s cubic-bezier(0.2, 0.7, 0.2, 1) both;
+  --animate-pop: pop 0.16s ease-out both;
+  --animate-stamp: stamp 0.5s cubic-bezier(0.3, 1.5, 0.6, 1) both;
+  --animate-dropdown: dropdown 0.16s ease-out both;
 }
 
-/* Trama de puntos para los paneles oscuros */
-@utility bg-dots {
-  background-image: radial-gradient(rgb(255 255 255 / 0.13) 1px, transparent 1px);
-  background-size: 22px 22px;
-}
-
-/* Confeti: es una utilidad y no un --animate del tema porque cada pieza define sus
-   propias variables; en el tema, var() se resolvería en :root y todas caerían a la vez. */
-@keyframes confetti {
-  from {
-    opacity: 1;
-    transform: translate3d(0, -10vh, 0) rotate(0deg);
+@keyframes shake {
+  20%,
+  60% {
+    transform: translateX(-4px);
   }
+  40%,
   80% {
-    opacity: 1;
+    transform: translateX(4px);
   }
-  to {
+}
+@keyframes slide-down {
+  from {
     opacity: 0;
-    transform: translate3d(var(--deriva, 0), 105vh, 0) rotate(var(--giro, 540deg));
+    transform: translateY(-4px);
   }
 }
-
-@utility animate-confetti {
-  animation: confetti var(--duracion, 2.4s) cubic-bezier(0.2, 0.6, 0.4, 1) var(--retraso, 0s) both;
-}
-
-/* Destello que cruza el botón al pasar el cursor */
-@utility btn-shine {
-  position: relative;
-  overflow: hidden;
-  &::after {
-    content: "";
-    position: absolute;
-    inset: 0;
-    background: linear-gradient(105deg, transparent 35%, rgb(255 255 255 / 0.28) 50%, transparent 65%);
-    transform: translateX(-120%);
-    transition: transform 0.6s ease;
-    pointer-events: none;
-  }
-  &:hover:not(:disabled)::after {
-    transform: translateX(120%);
+@keyframes slide-right {
+  from {
+    opacity: 0;
+    transform: translateX(14px);
   }
 }
-
-/* Trama sutil para fondos claros */
-@utility bg-dots-light {
-  background-image: radial-gradient(rgb(15 95 74 / 0.09) 1px, transparent 1px);
-  background-size: 24px 24px;
+@keyframes slide-left {
+  from {
+    opacity: 0;
+    transform: translateX(-14px);
+  }
+}
+@keyframes pop {
+  from {
+    opacity: 0.2;
+    transform: scale(0.8);
+  }
+}
+/* El sello cae sobre el comprobante con el giro con el que queda asentado. */
+@keyframes stamp {
+  from {
+    opacity: 0;
+    transform: scale(2.1) rotate(-22deg);
+  }
+}
+@keyframes dropdown {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+}
+@keyframes dialogo {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+}
+@keyframes velo {
+  from {
+    opacity: 0;
+  }
 }
 
 @layer base {
@@ -217,24 +106,19 @@
     -webkit-text-size-adjust: 100%;
   }
   body {
-    @apply bg-slate-50 text-slate-800 antialiased;
-    background-image:
-      radial-gradient(1100px 520px at 105% -8%, rgb(213 238 227 / 0.75), transparent 60%),
-      radial-gradient(900px 480px at -12% -6%, rgb(250 241 220 / 0.8), transparent 55%);
-    background-attachment: fixed;
+    @apply bg-fondo text-sm text-tinta antialiased;
   }
   :focus-visible {
-    @apply outline-2 outline-offset-2 outline-brand-500;
+    @apply outline-2 outline-offset-2 outline-tinta;
   }
   ::selection {
-    @apply bg-brand-200 text-brand-900;
+    @apply bg-tinta text-white;
   }
-  /* Modal: el contenido aparece con un pequeño rebote y el fondo se desvanece */
   dialog[open] {
-    animation: scale-in 0.25s cubic-bezier(0.2, 0.7, 0.2, 1) both;
+    animation: dialogo 0.18s ease-out both;
   }
   dialog[open]::backdrop {
-    animation: fade-in 0.25s ease-out both;
+    animation: velo 0.18s ease-out both;
   }
   /* Edge agrega su propio botón para revelar la contraseña; usamos el nuestro */
   input::-ms-reveal,

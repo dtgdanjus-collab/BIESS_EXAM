@@ -26,6 +26,7 @@ type Postulacion struct {
 	ConsentimientoAceptado bool              `json:"consentimientoAceptado"`
 	ConsentimientoFecha    *time.Time        `json:"consentimientoFecha"`
 	FechaEnvio             *time.Time        `json:"fechaEnvio"`
+	DatosConfirmadosEn     *time.Time        `json:"datosConfirmadosEn"`
 	CreadoEn               time.Time         `json:"creadoEn"`
 	ActualizadoEn          time.Time         `json:"actualizadoEn"`
 
@@ -106,7 +107,7 @@ type DetalleRemocion struct {
 	Motivo      string `json:"motivo"`
 }
 
-// DatosPersonales (1.1): copia de solo lectura del Registro Civil.
+// DatosPersonales (1.1): copia del Registro Civil que el postulante corrige una sola vez.
 type DatosPersonales struct {
 	Cedula          string  `json:"cedula"`
 	Nombres         string  `json:"nombres"`

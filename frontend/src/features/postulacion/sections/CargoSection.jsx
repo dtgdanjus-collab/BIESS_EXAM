@@ -11,32 +11,18 @@ import { cargoSchema } from '../schemas'
 function ResultadoValidacion({ resultado }) {
   if (!resultado) return null
   return resultado.cumple ? (
-    <div className="flex items-center gap-4 rounded-2xl border border-emerald-200 bg-gradient-to-r from-emerald-50 to-white px-4 py-4 animate-scale-in" role="status">
-      <span className="flex size-10 shrink-0 items-center justify-center rounded-full bg-emerald-500 text-white shadow-lg shadow-emerald-500/30">
-        <Icon name="check" className="size-5" strokeWidth={3} />
-      </span>
-      <div>
-        <p className="text-[11px] font-bold uppercase tracking-wider text-emerald-600">Validado en el Historial Laboral</p>
-        <p className="text-sm font-bold text-emerald-900">{resultado.etiqueta}</p>
-      </div>
+    <div className="rounded-md bg-ok-fondo px-3 py-2.5 text-ok-tinta animate-slide-down" role="status">
+      <p className="text-xs">Validado en el Historial Laboral</p>
+      <p className="text-sm font-medium">{resultado.etiqueta}</p>
     </div>
   ) : (
-    <div className="rounded-2xl border border-red-200 bg-gradient-to-r from-red-50 to-white px-4 py-4 animate-shake" role="alert">
-      <div className="flex items-center gap-4">
-        <span className="flex size-10 shrink-0 items-center justify-center rounded-full bg-red-500 text-white shadow-lg shadow-red-500/30">
-          <Icon name="x" className="size-5" strokeWidth={3} />
-        </span>
-        <div>
-          <p className="text-[11px] font-bold uppercase tracking-wider text-red-500">No cumple el requisito</p>
-          <p className="text-sm font-bold text-red-900">{resultado.etiqueta}</p>
-        </div>
-      </div>
-      <p className="mt-3 text-sm leading-relaxed text-red-800">{resultado.mensaje}</p>
+    <div className="rounded-md bg-mal-fondo px-3 py-2.5 text-mal-tinta animate-shake" role="alert">
+      <p className="text-xs">No cumple el requisito</p>
+      <p className="text-sm font-medium">{resultado.etiqueta}</p>
+      <p className="mt-1 text-sm leading-relaxed">{resultado.mensaje}</p>
     </div>
   )
 }
-
-const ICONO_SECTOR = { AFILIADOS: 'users', JUBILADOS: 'clock', EMPLEADORES: 'building' }
 
 // 1.4 — Cargo al que postula; se valida la calidad de afiliado/jubilado/empleador.
 export function CargoSection() {
@@ -94,19 +80,17 @@ export function CargoSection() {
       {sectores.error && <Alert type="error">No se pudo cargar el catálogo de cargos.</Alert>}
 
       <fieldset>
-        <legend className="mb-3 text-sm font-semibold text-slate-800">
-          Cargo al que postula <span className="text-red-500">*</span>
+        <legend className="mb-2 text-sm font-medium">
+          Cargo al que postula <span className="text-mal">*</span>
         </legend>
-        <div className="grid gap-3">
+        <div className="grid gap-1">
           {sectores.data.map((s) => {
             const activo = codigo === s.codigo
             return (
               <label
                 key={s.codigo}
-                className={`group relative flex cursor-pointer items-start gap-4 rounded-2xl border p-4 transition-all duration-200 active:scale-[0.99] sm:p-5 ${
-                  activo
-                    ? 'border-brand-500 bg-gradient-to-br from-brand-50 to-white shadow-card ring-2 ring-brand-500/20'
-                    : 'border-slate-200 bg-white hover:-translate-y-0.5 hover:border-brand-300 hover:shadow-card'
+                className={`flex cursor-pointer items-start gap-3 rounded-md px-3 py-3 transition-colors has-focus-visible:outline-2 has-focus-visible:outline-offset-2 has-focus-visible:outline-tinta ${
+                  activo ? 'bg-tinta text-white' : 'bg-fondo hover:bg-realce'
                 }`}
               >
                 <input
@@ -115,31 +99,17 @@ export function CargoSection() {
                   className="sr-only"
                   {...register('sector', { onChange: () => setResultado(null) })}
                 />
-                <span
-                  className={`flex size-11 shrink-0 items-center justify-center rounded-xl transition-colors ${
-                    activo ? 'bg-brand-600 text-white' : 'bg-slate-100 text-slate-500 group-hover:text-brand-700'
-                  }`}
-                >
-                  <Icon name={ICONO_SECTOR[s.codigo] ?? 'briefcase'} className="size-5" />
-                </span>
                 <span className="min-w-0 flex-1">
-                  <span className="block text-sm font-bold capitalize text-slate-900">{s.codigo.toLowerCase()}</span>
-                  <span className="mt-0.5 block text-sm leading-relaxed text-slate-600">{s.cargo}</span>
+                  <span className="block text-sm font-medium capitalize">{s.codigo.toLowerCase()}</span>
+                  <span className="mt-0.5 block text-sm leading-relaxed opacity-80">{s.cargo}</span>
                 </span>
-                <span
-                  className={`mt-0.5 flex size-5 shrink-0 items-center justify-center rounded-full border-2 transition-colors ${
-                    activo ? 'border-brand-600 bg-brand-600 text-white' : 'border-slate-300'
-                  }`}
-                  aria-hidden="true"
-                >
-                  {activo && <Icon name="check" className="size-3 animate-pop" strokeWidth={3.5} />}
-                </span>
+                {activo && <Icon name="check" className="mt-0.5 size-4 animate-pop" strokeWidth={2.6} />}
               </label>
             )
           })}
         </div>
         {errors.sector && (
-          <p className="mt-1 text-xs text-red-600" role="alert">
+          <p className="mt-1 text-xs text-mal" role="alert">
             {errors.sector.message}
           </p>
         )}

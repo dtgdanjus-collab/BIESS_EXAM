@@ -12,6 +12,7 @@ import (
 type PostulacionService interface {
 	Obtener(ctx context.Context, usuarioID int64) (*domain.Postulacion, error)
 	Crear(ctx context.Context, usuarioID int64) (*domain.Postulacion, bool, error)
+	ConfirmarDatos(ctx context.Context, usuarioID int64, d domain.DatosPersonales) (*domain.Postulacion, error)
 	GuardarContacto(ctx context.Context, usuarioID int64, c domain.Contacto) (*domain.Postulacion, error)
 	GuardarFamiliares(ctx context.Context, usuarioID int64, tiene bool, items []domain.Familiar) (*domain.Postulacion, error)
 }
@@ -44,6 +45,19 @@ func (h *PostulacionHandler) Crear(c *fiber.Ctx) error {
 		status = fiber.StatusCreated
 	}
 	return c.Status(status).JSON(p)
+}
+
+// DatosPersonales atiende PUT /postulacion/datos-personales: corrige y confirma, una sola vez.
+func (h *PostulacionHandler) DatosPersonales(c *fiber.Ctx) error {
+	var req domain.DatosPersonales
+	if err := parseBody(c, &req); err != nil {
+		return err
+	}
+	p, err := h.svc.ConfirmarDatos(c.UserContext(), middleware.UsuarioID(c), req)
+	if err != nil {
+		return err
+	}
+	return c.JSON(p)
 }
 
 // Contacto atiende PUT /postulacion/contacto.

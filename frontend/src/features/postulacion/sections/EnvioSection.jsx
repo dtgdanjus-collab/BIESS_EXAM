@@ -1,13 +1,13 @@
 import { useState } from 'react'
 import { postulacionApi } from '../../../api/postulacion'
-import { Alert, Button, Card, Checkbox, ErrorAlert, Icon, Modal } from '../../../components/ui'
+import { Alert, Button, Card, Checkbox, ErrorAlert, Modal } from '../../../components/ui'
 import { Comprobante } from '../Comprobante'
 import { useFormulario, useGuardarSeccion } from '../components'
 import { PUNTOS_CONSENTIMIENTO } from '../consentimiento'
 import { SECCIONES } from '../secciones'
 
 // Secciones que el backend exige antes de enviar (la capacitación es opcional).
-const OBLIGATORIAS = ['contacto', 'familiares', 'cargo', 'formacion', 'experiencia', 'publicaciones', 'inhabilidades']
+const OBLIGATORIAS = ['personal', 'contacto', 'familiares', 'cargo', 'formacion', 'experiencia', 'publicaciones', 'inhabilidades']
 
 // 1.10 — Consentimiento y envío (transacción principal en el backend).
 export function EnvioSection() {
@@ -30,8 +30,7 @@ export function EnvioSection() {
 
   return (
     <Card
-      icono="send"
-      eyebrow="Sección 1.10"
+      numeral="1.10"
       title="Consentimiento y envío"
       description="Revise su postulación, acepte la declaración y envíela. Después no podrá modificarla."
     >
@@ -52,19 +51,11 @@ export function EnvioSection() {
           <Alert type="success">Todas las secciones obligatorias están completas.</Alert>
         )}
 
-        <div className="rounded-2xl border border-slate-200 bg-gradient-to-b from-slate-50 to-white p-5 sm:p-6">
-          <p className="mb-4 flex items-center gap-2 text-sm font-bold text-slate-900">
-            <Icon name="shield" className="size-5 text-brand-600" />
-            Declaración y consentimiento
-          </p>
-          <ol className="space-y-3">
-            {PUNTOS_CONSENTIMIENTO.map((p, i) => (
-              <li key={p} className="flex gap-3 text-sm leading-relaxed text-slate-700">
-                <span className="flex size-6 shrink-0 items-center justify-center rounded-full bg-brand-100 text-xs font-bold text-brand-800">
-                  {i + 1}
-                </span>
-                {p}
-              </li>
+        <div>
+          <p className="mb-2 text-sm font-medium">Declaración y consentimiento</p>
+          <ol className="list-decimal space-y-2 pl-5 text-sm leading-relaxed marker:tabular-nums marker:text-tenue">
+            {PUNTOS_CONSENTIMIENTO.map((p) => (
+              <li key={p}>{p}</li>
             ))}
           </ol>
         </div>
@@ -83,14 +74,13 @@ export function EnvioSection() {
           <ErrorAlert error={peticion.error} />
         )}
 
-        <div className="flex justify-end border-t border-slate-100 pt-6">
+        <div className="flex justify-end">
           <Button
             onClick={() => setConfirmar(true)}
             disabled={!acepta || faltantes.length > 0}
             loading={peticion.loading}
             className="w-full sm:w-auto"
           >
-            {!peticion.loading && <Icon name="send" className="size-4" />}
             Enviar postulación
           </Button>
         </div>
@@ -109,7 +99,7 @@ export function EnvioSection() {
           </>
         }
       >
-        Una vez enviada, la postulación <strong>{postulacion.codigo}</strong> ya no podrá modificarse.
+        Una vez enviada, la postulación <strong className="font-mono font-medium">{postulacion.codigo}</strong> ya no podrá modificarse.
       </Modal>
     </Card>
   )

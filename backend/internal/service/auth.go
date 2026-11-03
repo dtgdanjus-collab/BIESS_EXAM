@@ -267,8 +267,10 @@ func validarIdentidadInput(in IdentidadInput) error {
 		campos["fechaExpedicion"] = "Ingrese la fecha de expedición o el código dactilar"
 	}
 	if in.FechaExpedicion != "" {
-		if _, err := time.Parse(time.DateOnly, in.FechaExpedicion); err != nil {
+		if f, err := time.Parse(time.DateOnly, in.FechaExpedicion); err != nil {
 			campos["fechaExpedicion"] = "Formato de fecha inválido (YYYY-MM-DD)"
+		} else if f.After(time.Now()) {
+			campos["fechaExpedicion"] = "La fecha de expedición no puede ser futura"
 		}
 	}
 	if in.Genero != "" && in.Genero != "MASCULINO" && in.Genero != "FEMENINO" {

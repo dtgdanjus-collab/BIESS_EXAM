@@ -1,10 +1,10 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { postulacionApi } from '../../api/postulacion'
-import { Alert, Button, ErrorAlert, Icon, PageLoader, ProgressRing, Stepper } from '../../components/ui'
-import { useAnimatedNumber } from '../../hooks/useAnimatedNumber'
+import { EnBarra } from '../../components/layout/Layouts'
+import { Alert, Button, ErrorAlert, Icon, Modal, PageLoader, Pliego, SelectorFolios, Stepper } from '../../components/ui'
 import { useAsync } from '../../hooks/useAsync'
-import { useAuthStore } from '../../store/authStore'
+import { useTituloPagina } from '../../hooks/useTituloPagina'
 import { EstadoBadge, FormularioContext } from './components'
 import { PostulacionCerrada } from './PostulacionCerrada'
 import { SECCIONES, anteriorSeccion, siguienteSeccion } from './secciones'
@@ -32,158 +32,111 @@ const COMPONENTES = {
   envio: EnvioSection,
 }
 
-const primerNombre = (u) => u?.nombres?.split(' ')[0] ?? ''
-
-const VENTAJAS = [
-  { icono: 'id', titulo: 'Datos precargados', texto: 'Sus datos personales llegan directo del Registro Civil.' },
-  { icono: 'save', titulo: 'Guarde su avance', texto: 'Complete las secciones a su ritmo y continúe cuando quiera.' },
-  { icono: 'file', titulo: 'Código único', texto: 'Al enviar recibirá un comprobante con su código de postulación.' },
-]
+// De dónde sale el contenido de cada folio antes de abrir el expediente.
+const origenFolio = (id) => {
+  if (id === 'personal') return 'Llega del Registro Civil'
+  if (id === 'capacitacion') return 'Opcional'
+  if (id === 'envio') return 'Queda sellado'
+  return 'Lo completa usted'
+}
 
 /** Pantalla inicial cuando el usuario todavía no tiene postulación. */
 function IniciarPostulacion({ onIniciar, peticion }) {
-  const usuario = useAuthStore((s) => s.usuario)
   return (
-    <div className="mx-auto max-w-4xl animate-fade-up">
-      <div className="overflow-hidden rounded-3xl bg-white shadow-lift ring-1 ring-slate-900/5 lg:grid lg:grid-cols-[1.1fr_1fr]">
-        <div className="relative overflow-hidden bg-brand-950 px-7 py-10 text-white sm:px-10">
-          <div aria-hidden="true" className="absolute inset-0 bg-dots opacity-50" />
-          <div aria-hidden="true" className="absolute -right-24 -top-24 size-80 rounded-full bg-gold-500/25 blur-3xl animate-float" />
-          <div aria-hidden="true" className="absolute -bottom-28 -left-16 size-72 rounded-full bg-brand-500/40 blur-3xl" />
-          <div className="relative">
-            <span className="inline-flex items-center gap-2 rounded-full bg-white/10 px-3 py-1 text-xs font-semibold text-gold-200 ring-1 ring-inset ring-white/15">
-              <Icon name="sparkles" className="size-3.5" />
-              Convocatoria 2026
-            </span>
-            <h1 className="mt-5 text-3xl font-extrabold leading-tight tracking-tight sm:text-4xl">
-              Hola{primerNombre(usuario) && `, ${primerNombre(usuario)}`} 👋
-            </h1>
-            <p className="mt-3 max-w-sm text-base leading-relaxed text-brand-100/80">
-              Está a un paso de postularse al Directorio del BIESS mediante el Concurso Público de Méritos y Oposición.
-            </p>
-            <div className="mt-8 flex items-center gap-3 rounded-2xl bg-white/5 p-4 ring-1 ring-inset ring-white/10">
-              <Icon name="info" className="size-5 text-gold-300" />
-              <p className="text-sm text-brand-100/90">Solo pueden postular personas de nacionalidad ecuatoriana.</p>
-            </div>
-          </div>
-        </div>
-
-        <div className="flex flex-col justify-center px-7 py-10 sm:px-10">
-          <p className="text-[11px] font-bold uppercase tracking-[0.14em] text-gold-600">Antes de empezar</p>
-          <ul className="mt-5 space-y-5">
-            {VENTAJAS.map((v) => (
-              <li key={v.titulo} className="flex gap-4">
-                <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-brand-50 text-brand-700 ring-1 ring-brand-100">
-                  <Icon name={v.icono} className="size-5" />
-                </span>
-                <div>
-                  <p className="text-sm font-bold text-slate-900">{v.titulo}</p>
-                  <p className="text-sm text-slate-500">{v.texto}</p>
-                </div>
-              </li>
-            ))}
-          </ul>
-          <ErrorAlert error={peticion.error} className="mt-6" />
-          <Button onClick={onIniciar} loading={peticion.loading} className="mt-8 w-full">
-            Iniciar mi postulación
-            {!peticion.loading && <Icon name="arrowRight" className="size-4" strokeWidth={2.4} />}
-          </Button>
-          <p className="mt-3 text-center text-xs text-slate-400">
-            Una vez enviada, la postulación ya no podrá modificarse.
-          </p>
-        </div>
+    <div className="grid gap-6 xl:grid-cols-[17rem_minmax(0,1fr)] xl:gap-8">
+      <div>
+        <h1 className="text-2xl font-medium tracking-tight">Su expediente aún no está abierto</h1>
+        <p className="mt-2 text-sm leading-relaxed text-tenue">
+          Al abrirlo recibirá un código único y sus datos llegarán del Registro Civil. Solo pueden postular personas de nacionalidad
+          ecuatoriana.
+        </p>
+        <ErrorAlert error={peticion.error} className="mt-4" />
+        <Button onClick={onIniciar} loading={peticion.loading} className="mt-5 w-full sm:w-auto xl:w-full">
+          Iniciar mi postulación
+        </Button>
+        <p className="mt-3 text-xs leading-relaxed text-tenue">Una vez enviada, la postulación ya no podrá modificarse.</p>
       </div>
+      <ol className="rounded-lg border border-borde bg-papel px-4 sm:px-6">
+        {SECCIONES.map((s) => (
+          <li key={s.id} className="flex min-h-11 items-center gap-3 border-b border-regla py-2 text-sm last:border-b-0">
+            <span className="w-8 shrink-0 tabular-nums text-tenue">{s.numeral}</span>
+            <span className="min-w-0 flex-1">{s.titulo}</span>
+            <span className="shrink-0 text-right text-xs text-tenue">{origenFolio(s.id)}</span>
+          </li>
+        ))}
+      </ol>
     </div>
   )
 }
 
-/** Cabecera con el código, el estado y el anillo de avance. */
-function Cabecera({ postulacion, completas, total, pendiente, irA }) {
-  const usuario = useAuthStore((s) => s.usuario)
+/** Título del expediente, qué le falta y el pliego con una marca por folio. */
+function Cabecera({ postulacion, pasos, actual, pendiente, faltan, irA }) {
   const enviada = postulacion.estado === 'ENVIADA'
-  const pct = useAnimatedNumber(Math.round((completas / total) * 100))
+  const completas = pasos.filter((p) => p.completo).length
   return (
-    <section className="no-print relative mb-6 overflow-hidden rounded-3xl bg-brand-950 px-6 py-7 text-white shadow-lift sm:px-9 sm:py-8 animate-fade-up">
-      <div aria-hidden="true" className="absolute inset-0 bg-dots opacity-40" />
-      <div aria-hidden="true" className="absolute -right-16 -top-28 size-80 rounded-full bg-gold-500/20 blur-3xl animate-float" />
-      <div aria-hidden="true" className="absolute -bottom-32 left-1/4 size-80 rounded-full bg-brand-500/35 blur-3xl" />
-
-      <div className="relative flex flex-col gap-6 sm:flex-row sm:items-center sm:justify-between">
+    <section className="no-print mb-8">
+      <div className="flex flex-wrap items-start justify-between gap-x-6 gap-y-3">
         <div className="min-w-0">
-          <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-gold-300/90">
-            {primerNombre(usuario) ? `Bienvenido/a, ${primerNombre(usuario)}` : 'Concurso Público de Méritos y Oposición'}
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+            <h1 className="text-xl font-medium tracking-tight sm:text-2xl">{enviada ? 'Postulación enviada' : 'Expediente de postulación'}</h1>
+            <EstadoBadge estado={postulacion.estado} />
+          </div>
+          <p className="mt-1 text-sm text-tenue">
+            <span className="font-mono text-tinta">{postulacion.codigo}</span>
+            <span aria-hidden="true"> · </span>
+            {enviada
+              ? 'Sellado, ya no admite cambios'
+              : faltan === 0
+                ? 'Todo listo para enviar'
+                : faltan === 1
+                  ? 'Falta 1 folio obligatorio'
+                  : `Faltan ${faltan} folios obligatorios`}
           </p>
-          <h1 className="mt-2 text-2xl font-extrabold tracking-tight sm:text-3xl">
-            {enviada ? 'Postulación enviada' : 'Formulario de postulación'}
-          </h1>
-          <div className="mt-4 flex flex-wrap items-center gap-2.5">
-            <span className="inline-flex items-center gap-2 rounded-xl bg-white/10 px-3 py-1.5 ring-1 ring-inset ring-white/15 backdrop-blur">
-              <Icon name="file" className="size-4 text-gold-300" />
-              <span className="font-mono text-sm font-bold tracking-wide">{postulacion.codigo}</span>
-            </span>
-            <EstadoBadge estado={postulacion.estado} className="ring-white/30" />
-          </div>
-          {pendiente && (
-            <button
-              type="button"
-              onClick={() => irA(pendiente.id)}
-              className="group mt-4 inline-flex items-center gap-2 rounded-xl bg-gold-300 px-4 py-2 text-sm font-bold text-brand-950 transition-all hover:-translate-y-0.5 hover:bg-gold-200 active:scale-[0.98] animate-slide-down"
-            >
-              Continuar: {pendiente.titulo}
-              <Icon name="arrowRight" className="size-4 transition-transform group-hover:translate-x-1" strokeWidth={2.4} />
-            </button>
-          )}
         </div>
+        {pendiente && (
+          // En el teléfono ya está el selector de folios: la cabecera no debe empujar el formulario.
+          <div className="hidden animate-slide-down sm:block">
+            <Button variant="secondary" onClick={() => irA(pendiente.id)}>
+              Continuar: {pendiente.titulo}
+              <Icon name="arrowRight" className="size-4" strokeWidth={2} />
+            </Button>
+          </div>
+        )}
+      </div>
 
-        <div className="flex items-center gap-4 rounded-2xl bg-white/5 p-3 pr-5 ring-1 ring-inset ring-white/10 backdrop-blur sm:shrink-0">
-          <div className="relative">
-            {/* key: el pulso se repite cada vez que se completa una sección */}
-            <span key={completas} aria-hidden="true" className="absolute inset-0 rounded-full ring-2 ring-gold-300 animate-ring-pulse" />
-            <ProgressRing value={completas / total} size={76} stroke={7}>
-              <span className="text-lg font-extrabold leading-none tabular-nums">{pct}%</span>
-            </ProgressRing>
-          </div>
-          <div>
-            <p className="text-sm font-bold">
-              {completas} de {total} secciones
-            </p>
-            <p className="text-xs text-brand-100/70">{enviada ? 'Proceso finalizado' : 'completas hasta ahora'}</p>
-          </div>
+      <div className="mt-5 flex items-center gap-4">
+        <p className="shrink-0 tabular-nums" aria-live="polite">
+          <span className="text-[30px] font-medium leading-none tracking-tight">{completas}</span>
+          <span className="text-sm text-tenue"> de {pasos.length}</span>
+        </p>
+        <div className="min-w-0 flex-1">
+          <Pliego steps={pasos} actual={actual} onSelect={irA} />
         </div>
       </div>
     </section>
   )
 }
 
-/** Botones para moverse entre secciones sin volver al menú. */
-function NavegacionSecciones({ actual, irA }) {
+/** Enlaces para moverse entre secciones sin volver al índice. */
+function NavegacionSecciones({ actual, irA, anchoCompleto }) {
   const anterior = anteriorSeccion(actual)
   const siguiente = siguienteSeccion(actual)
-  const boton = (s, dir) =>
+  const enlace = (s, dir) =>
     s && (
       <button
         type="button"
         onClick={() => irA(s.id)}
-        className={`group flex min-w-0 flex-1 items-center gap-3 rounded-2xl bg-white px-4 py-3 text-left shadow-card ring-1 ring-slate-900/5 transition-all hover:-translate-y-0.5 hover:ring-brand-200 ${
-          dir === 'sig' ? 'flex-row-reverse text-right' : ''
-        }`}
+        className={`group flex min-h-11 min-w-0 items-center gap-2 text-sm text-tenue transition-colors hover:text-tinta ${dir === 'sig' ? 'ml-auto text-right' : ''}`}
       >
-        <span className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-slate-100 text-slate-500 transition-colors group-hover:bg-brand-600 group-hover:text-white">
-          <Icon name={dir === 'sig' ? 'arrowRight' : 'arrowLeft'} className="size-4" strokeWidth={2.2} />
-        </span>
-        <span className="min-w-0">
-          <span className="block text-[11px] font-semibold uppercase tracking-wider text-slate-400">
-            {dir === 'sig' ? 'Siguiente' : 'Anterior'}
-          </span>
-          <span className="block truncate text-sm font-bold text-slate-800">{s.titulo}</span>
-        </span>
+        {dir === 'ant' && <Icon name="arrowLeft" className="size-4 transition-transform group-hover:-translate-x-0.5" />}
+        <span>{s.titulo}</span>
+        {dir === 'sig' && <Icon name="arrowRight" className="size-4 transition-transform group-hover:translate-x-0.5" />}
       </button>
     )
   return (
-    <div className="no-print mt-5 flex gap-3">
-      {/* En móvil, si solo hay un botón, ocupa todo el ancho */}
-      {boton(anterior, 'ant') ?? <span className="hidden flex-1 sm:block" />}
-      {boton(siguiente, 'sig') ?? <span className="hidden flex-1 sm:block" />}
+    <div className={`no-print mt-4 flex gap-4 ${anchoCompleto ? '' : 'xl:pl-[19rem]'}`}>
+      {enlace(anterior, 'ant')}
+      {enlace(siguiente, 'sig')}
     </div>
   )
 }
@@ -226,12 +179,12 @@ export function FormularioPage() {
   // Dirección de la transición: avanzar entra por la derecha, retroceder por la izquierda.
   const indiceActual = SECCIONES.findIndex((s) => s.id === seccionActual)
   const indicePrevio = useRef(indiceActual)
-  const direccion = useRef('animate-fade-up')
+  const direccion = useRef('')
   if (indicePrevio.current !== indiceActual) {
     direccion.current = indiceActual > indicePrevio.current ? 'animate-slide-right' : 'animate-slide-left'
     indicePrevio.current = indiceActual
   }
-  const irA = useCallback(
+  const navegar = useCallback(
     (id) => {
       setParams({ seccion: id })
       window.scrollTo({ top: 0, behavior: 'smooth' })
@@ -239,11 +192,53 @@ export function FormularioPage() {
     [setParams],
   )
 
+  // Lo escrito vive en el formulario del folio: si no se guardó, se pierde al cambiar de folio.
+  const cambios = useRef(false)
+  const [destino, setDestino] = useState(null)
+  const irA = useCallback(
+    (id) => {
+      if (id !== seccionActual && cambios.current) setDestino(id)
+      else navegar(id)
+    },
+    [seccionActual, navegar],
+  )
+
+  useEffect(() => {
+    const alSalir = (e) => {
+      if (cambios.current) e.preventDefault()
+    }
+    window.addEventListener('beforeunload', alSalir)
+    return () => window.removeEventListener('beforeunload', alSalir)
+  }, [])
+
+  // Al cambiar de folio el foco acompaña al contenido, y lo descartado deja de contar como pendiente.
+  const contenido = useRef(null)
+  const seccionPrevia = useRef(seccionActual)
+  useEffect(() => {
+    if (seccionPrevia.current === seccionActual) return
+    seccionPrevia.current = seccionActual
+    cambios.current = false
+    contenido.current?.focus({ preventScroll: true })
+  }, [seccionActual])
+
+  useTituloPagina(
+    noIniciada
+      ? 'Iniciar postulación'
+      : postulacion?.estado === 'CERRADA'
+        ? 'Postulación cerrada'
+        : postulacion
+          ? SECCIONES[indiceActual].titulo
+          : 'Expediente',
+  )
+
   const contexto = useMemo(
     () =>
       postulacion && {
         postulacion,
-        actualizar: setPostulacion,
+        actualizar: (p) => {
+          cambios.current = false
+          setPostulacion(p)
+        },
         irA,
         soloLectura: postulacion.estado !== 'BORRADOR',
       },
@@ -254,7 +249,7 @@ export function FormularioPage() {
   if (noIniciada) return <IniciarPostulacion onIniciar={iniciar} peticion={creacion} />
   if (carga.error && !postulacion) {
     return (
-      <div className="mx-auto max-w-xl space-y-4">
+      <div className="max-w-xl space-y-4">
         <ErrorAlert error={carga.error} title="No se pudo cargar la postulación" />
         <Button variant="secondary" onClick={cargar}>
           Reintentar
@@ -269,20 +264,31 @@ export function FormularioPage() {
     id: s.id,
     titulo: s.titulo,
     numeral: s.numeral,
-    icono: s.icono,
     completo: s.completa(postulacion),
   }))
-  const completas = pasos.filter((p) => p.completo).length
   const Componente = COMPONENTES[seccionActual]
-  // Primera sección obligatoria sin completar (distinta de la visible), para el botón "Continuar".
-  const pendiente =
-    postulacion.estado === 'BORRADOR'
-      ? SECCIONES.find((s) => s.id !== seccionActual && s.id !== 'capacitacion' && !s.completa(postulacion))
-      : null
+  // Folios obligatorios sin completar; el botón "Continuar" lleva al primero distinto del visible.
+  const obligatorios = SECCIONES.filter((s) => s.id !== 'capacitacion' && s.id !== 'envio' && !s.completa(postulacion))
+  const pendiente = postulacion.estado === 'BORRADOR' ? obligatorios.find((s) => s.id !== seccionActual) : null
 
   return (
     <FormularioContext value={contexto}>
-      <Cabecera postulacion={postulacion} completas={completas} total={pasos.length} pendiente={pendiente} irA={irA} />
+      <EnBarra>
+        <Stepper steps={pasos} actual={seccionActual} onSelect={irA} />
+      </EnBarra>
+
+      <Cabecera
+        postulacion={postulacion}
+        pasos={pasos}
+        actual={seccionActual}
+        pendiente={pendiente}
+        faltan={obligatorios.length}
+        irA={irA}
+      />
+
+      <div className="no-print mb-5">
+        <SelectorFolios steps={pasos} actual={seccionActual} onSelect={irA} />
+      </div>
 
       {postulacion.estado === 'ENVIADA' && seccionActual !== 'envio' && (
         <Alert type="success" className="no-print mb-6">
@@ -290,24 +296,46 @@ export function FormularioPage() {
         </Alert>
       )}
 
-      <div className="grid gap-6 lg:grid-cols-[17.5rem_1fr]">
-        <aside className="no-print lg:sticky lg:top-24 lg:self-start">
-          <div className="rounded-2xl bg-white p-3 shadow-card ring-1 ring-slate-900/5">
-            <p className="hidden px-3 pb-2 pt-1 text-[11px] font-bold uppercase tracking-[0.14em] text-slate-400 lg:block">
-              Secciones
-            </p>
-            <Stepper steps={pasos} actual={seccionActual} onSelect={irA} />
-          </div>
-        </aside>
-
-        <div className="min-w-0">
-          {/* key: al cambiar de sección el formulario se monta de nuevo con los datos guardados */}
-          <div key={seccionActual} className={direccion.current}>
-            <Componente />
-          </div>
-          <NavegacionSecciones actual={seccionActual} irA={irA} />
+      <div
+        ref={contenido}
+        tabIndex={-1}
+        className="outline-none"
+        onChange={() => {
+          // Marcar el consentimiento no es un dato del expediente que se pueda perder.
+          if (seccionActual !== 'envio') cambios.current = true
+        }}
+      >
+        {/* key: al cambiar de sección el formulario se monta de nuevo con los datos guardados */}
+        <div key={seccionActual} className={direccion.current}>
+          <Componente />
         </div>
       </div>
+      {/* El comprobante ocupa todo el ancho: no tiene la columna del título del folio. */}
+      <NavegacionSecciones actual={seccionActual} irA={irA} anchoCompleto={postulacion.estado === 'ENVIADA' && seccionActual === 'envio'} />
+
+      <Modal
+        open={destino !== null}
+        onClose={() => setDestino(null)}
+        title="Tiene cambios sin guardar"
+        footer={
+          <>
+            <Button variant="secondary" onClick={() => setDestino(null)}>
+              Seguir editando
+            </Button>
+            <Button
+              onClick={() => {
+                cambios.current = false
+                navegar(destino)
+                setDestino(null)
+              }}
+            >
+              Salir sin guardar
+            </Button>
+          </>
+        }
+      >
+        Si sale de este folio se perderá lo que escribió. Para conservarlo, siga editando y pulse «Guardar progreso».
+      </Modal>
     </FormularioContext>
   )
 }

@@ -53,4 +53,6 @@ export function textoDuracion(d) {
   return `${plural(d.anios, 'año', 'años')}, ${plural(d.meses, 'mes', 'meses')} y ${plural(d.dias, 'día', 'días')}`
 }
 
-export const hoyIso = () => new Date().toISOString().slice(0, 10)
+/** Hoy en la hora del usuario. toISOString daría mañana desde las 19:00 en Ecuador (UTC-5). */
+export const hoyIso = (d = new Date()) =>
+  `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`

@@ -37,6 +37,7 @@ func RegisterRoutes(app *fiber.App, h Handlers, requireAuth fiber.Handler) {
 	post := api.Group("/postulacion", requireAuth)
 	post.Get("/", h.Postulacion.Obtener)
 	post.Post("/", h.Postulacion.Crear)
+	post.Put("/datos-personales", h.Postulacion.DatosPersonales)
 	post.Put("/contacto", h.Postulacion.Contacto)
 	post.Put("/familiares", h.Postulacion.Familiares)
 	post.Post("/cargo", h.Secciones.Cargo)

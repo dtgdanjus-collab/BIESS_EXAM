@@ -60,6 +60,9 @@ func (s *PostulacionService) GuardarCargo(ctx context.Context, usuarioID int64, 
 func (s *PostulacionService) GuardarFormacion(ctx context.Context, usuarioID int64, items []domain.Formacion) (*domain.Postulacion, error) {
 	return s.editarBorrador(ctx, usuarioID, "ACTUALIZAR_FORMACION", func(ctx context.Context, p *domain.Postulacion) error {
 		errs := campos{}
+		if len(items) == 0 {
+			errs["items"] = "Registre al menos un título"
+		}
 		validarCantidad(errs, len(items))
 		for i := range items {
 			f, k := &items[i], fmt.Sprintf("items[%d].", i)
@@ -85,6 +88,9 @@ func (s *PostulacionService) GuardarFormacion(ctx context.Context, usuarioID int
 func (s *PostulacionService) GuardarExperiencia(ctx context.Context, usuarioID int64, items []domain.Experiencia) (*domain.Postulacion, error) {
 	return s.editarBorrador(ctx, usuarioID, "ACTUALIZAR_EXPERIENCIA", func(ctx context.Context, p *domain.Postulacion) error {
 		errs := campos{}
+		if len(items) == 0 {
+			errs["items"] = "Registre al menos una experiencia"
+		}
 		validarCantidad(errs, len(items))
 		for i := range items {
 			e, k := &items[i], fmt.Sprintf("items[%d].", i)
@@ -250,6 +256,9 @@ func (s *PostulacionService) Enviar(ctx context.Context, usuarioID int64, acepta
 
 func seccionesFaltantes(p *domain.Postulacion) []string {
 	faltan := []string{}
+	if p.DatosConfirmadosEn == nil {
+		faltan = append(faltan, "personal")
+	}
 	if p.Contacto == nil {
 		faltan = append(faltan, "contacto")
 	}
