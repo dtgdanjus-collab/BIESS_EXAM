@@ -93,7 +93,7 @@ export function MenuPerfil() {
                     <span className="flex size-7 shrink-0 items-center justify-center rounded-full bg-realce text-xs font-medium">
                       {inicialesDe(nombre)}
                     </span>
-                    <span className="min-w-0 truncate text-sm">{nombre}</span>
+                    <span className="min-w-0 text-sm">{nombre}</span>
                   </li>
                 ))}
               </ul>
