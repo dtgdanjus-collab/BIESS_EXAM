@@ -53,19 +53,26 @@ export function AuthLayout() {
   )
 }
 
-const RanuraBarra = createContext(null)
+const Ranuras = createContext({ barra: null, cabecera: null })
 
 /** Coloca su contenido en la barra lateral del área privada. */
 export function EnBarra({ children }) {
-  const ranura = use(RanuraBarra)
-  return ranura ? createPortal(children, ranura) : null
+  const { barra } = use(Ranuras)
+  return barra ? createPortal(children, barra) : null
 }
 
-/** Área privada: barra lateral sobre el mismo fondo; en el teléfono se pliega a una barra superior. */
+/** Coloca su contenido en la cabecera negra, a todo el ancho sobre el contenido. */
+export function EnCabecera({ children }) {
+  const { cabecera } = use(Ranuras)
+  return cabecera ? createPortal(children, cabecera) : null
+}
+
+/** Área privada: barra y cabecera negras, como el panel del acceso; en el teléfono la barra se pliega. */
 export function AppLayout() {
   const logout = useAuthStore((s) => s.logout)
   const navigate = useNavigate()
-  const [ranura, setRanura] = useState(null)
+  const [barra, setBarra] = useState(null)
+  const [cabecera, setCabecera] = useState(null)
 
   const salir = () => {
     logout()
@@ -73,20 +80,20 @@ export function AppLayout() {
   }
 
   return (
-    <RanuraBarra value={ranura}>
+    <Ranuras value={{ barra, cabecera }}>
       <a
         href="#contenido"
-        className="no-print sr-only rounded-md bg-tinta px-4 py-3 text-sm font-medium text-white focus:not-sr-only focus:fixed focus:left-2 focus:top-2 focus:z-50"
+        className="no-print sr-only rounded-md bg-white px-4 py-3 text-sm font-medium text-tinta focus:not-sr-only focus:fixed focus:left-2 focus:top-2 focus:z-50"
       >
         Saltar al contenido
       </a>
       {/* Al imprimir la barra no existe: sin print:block su columna vacía aplastaría el documento. */}
       <div className="min-h-dvh lg:grid lg:grid-cols-[17.5rem_minmax(0,1fr)] print:block">
-        <aside className="no-print sticky top-0 z-20 flex h-14 items-center justify-between gap-3 border-b border-borde bg-fondo px-4 lg:h-dvh lg:flex-col lg:items-stretch lg:border-b-0 lg:border-r lg:p-3">
-          <div className="lg:px-3 lg:pt-3">
-            <Marca compacta />
+        <aside className="no-print sticky top-0 z-20 flex h-14 items-center justify-between gap-3 bg-noche px-4 text-white [&_:focus-visible]:outline-white lg:h-dvh lg:flex-col lg:items-stretch lg:p-3">
+          <div className="lg:px-2 lg:pt-3">
+            <Marca claro compacta />
           </div>
-          <div ref={setRanura} className="hidden min-h-0 flex-1 overflow-y-auto lg:mt-6 lg:block" />
+          <div ref={setBarra} className="hidden min-h-0 flex-1 overflow-y-auto lg:mt-6 lg:block" />
           <div className="flex min-w-0 items-center gap-1 lg:justify-between">
             <MenuPerfil />
             <button
@@ -94,18 +101,21 @@ export function AppLayout() {
               onClick={salir}
               aria-label="Cerrar sesión"
               title="Cerrar sesión"
-              className="flex size-11 shrink-0 items-center justify-center rounded-md text-tenue transition-colors hover:bg-realce hover:text-tinta lg:size-9"
+              className="flex size-11 shrink-0 items-center justify-center rounded-md text-noche-tenue transition-colors hover:bg-white/10 hover:text-white lg:size-9"
             >
               <Icon name="logout" className="size-4" />
             </button>
           </div>
         </aside>
-        <main id="contenido" tabIndex={-1} className="min-w-0 px-4 py-5 outline-none sm:px-6 lg:px-8 lg:py-8">
-          <div className="mx-auto max-w-[76rem]">
-            <Outlet />
-          </div>
-        </main>
+        <div className="flex min-w-0 flex-col">
+          <div ref={setCabecera} className="no-print" />
+          <main id="contenido" tabIndex={-1} className="min-w-0 flex-1 px-4 py-5 outline-none sm:px-6 lg:px-8 lg:py-8">
+            <div className="mx-auto max-w-[76rem]">
+              <Outlet />
+            </div>
+          </main>
+        </div>
       </div>
-    </RanuraBarra>
+    </Ranuras>
   )
 }

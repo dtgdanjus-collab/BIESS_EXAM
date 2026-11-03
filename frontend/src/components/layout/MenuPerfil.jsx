@@ -51,15 +51,15 @@ export function MenuPerfil() {
         aria-haspopup="dialog"
         aria-label={`Ver perfil de ${usuario?.nombres ?? ''} ${usuario?.apellidos ?? ''}`}
         className={`flex min-h-11 w-full min-w-0 items-center gap-2 rounded-md px-2 text-left transition-colors lg:min-h-10 ${
-          abierto ? 'bg-realce' : 'hover:bg-realce/60'
+          abierto ? 'bg-white/15' : 'hover:bg-white/10'
         }`}
       >
-        <span className="flex size-7 shrink-0 items-center justify-center rounded-full bg-realce text-xs font-medium">{iniciales}</span>
+        <span className="flex size-7 shrink-0 items-center justify-center rounded-full bg-white text-xs font-medium text-tinta">{iniciales}</span>
         <span className="hidden min-w-0 sm:block">
           <span className="block truncate text-sm leading-tight" title={`${usuario?.nombres ?? ''} ${usuario?.apellidos ?? ''}`}>
             {usuario?.nombres} {usuario?.apellidos}
           </span>
-          <span className="block font-mono text-xs text-tenue">{usuario?.cedula}</span>
+          <span className="block font-mono text-xs text-noche-tenue">{usuario?.cedula}</span>
         </span>
       </button>
 
@@ -67,7 +67,7 @@ export function MenuPerfil() {
         <div
           role="dialog"
           aria-label="Perfil del usuario"
-          className="absolute inset-x-4 top-[calc(100%+0.25rem)] z-30 rounded-lg border border-borde bg-papel shadow-flota animate-dropdown lg:inset-x-auto lg:bottom-[calc(100%+0.5rem)] lg:left-0 lg:top-auto lg:w-[23rem]"
+          className="absolute inset-x-4 top-[calc(100%+0.25rem)] z-30 rounded-lg border border-borde bg-papel text-tinta shadow-flota animate-dropdown lg:inset-x-auto lg:bottom-[calc(100%+0.5rem)] lg:left-0 lg:top-auto lg:w-[23rem]"
         >
           <div className="px-4 py-4">
             <p className="truncate text-base font-medium leading-tight">

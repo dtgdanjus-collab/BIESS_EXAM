@@ -55,6 +55,9 @@ func NewPostulacionService(
 func (s *PostulacionService) Obtener(ctx context.Context, usuarioID int64) (*domain.Postulacion, error) {
 	p, err := s.repo.FindByUsuario(ctx, usuarioID, false)
 	if errors.Is(err, repository.ErrNotFound) {
+		if err := s.exigirCuenta(ctx, usuarioID); err != nil {
+			return nil, err
+		}
 		return nil, domain.NewError(domain.ErrNoEncontrado, "Aún no ha iniciado su postulación")
 	}
 	if err != nil {
@@ -64,6 +67,16 @@ func (s *PostulacionService) Obtener(ctx context.Context, usuarioID int64) (*dom
 		return nil, err
 	}
 	return p, nil
+}
+
+// exigirCuenta responde 401 si la cuenta del JWT ya no existe (se borró con la sesión abierta):
+// el frontend cierra la sesión y lleva al inicio en vez de mostrar un error interno.
+func (s *PostulacionService) exigirCuenta(ctx context.Context, usuarioID int64) error {
+	_, err := s.usuarios.FindByID(ctx, usuarioID)
+	if errors.Is(err, repository.ErrNotFound) {
+		return domain.NewError(domain.ErrNoAutorizado, "La sesión ya no es válida")
+	}
+	return err
 }
 
 func (s *PostulacionService) cargarDetalle(ctx context.Context, p *domain.Postulacion) error {
@@ -112,6 +125,9 @@ func (s *PostulacionService) Crear(ctx context.Context, usuarioID int64) (p *dom
 		return p, false, err
 	}
 
+	if err := s.exigirCuenta(ctx, usuarioID); err != nil {
+		return nil, false, err
+	}
 	u, err := s.usuarios.FindByID(ctx, usuarioID)
 	if err != nil {
 		return nil, false, err

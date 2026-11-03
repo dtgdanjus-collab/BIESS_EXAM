@@ -13,6 +13,49 @@ const TIPOS = [
   { id: 'DIRECCION', nombre: 'Experiencia en dirección' },
 ]
 
+const anioDe = (iso) => Number(iso.slice(0, 4)) + (Number(iso.slice(5, 7)) - 1) / 12
+
+/** La carrera en una línea de tiempo: cada registro con fechas es una barra. */
+function LineaTiempo({ items }) {
+  const filas = items
+    .map((it, i) => ({ ...it, i }))
+    .filter((it) => it.fechaInicio && it.fechaFin && it.fechaFin >= it.fechaInicio)
+  if (filas.length === 0) {
+    return <p className="rounded-md border border-dashed border-control px-3 py-3 text-sm text-tenue">Su línea de tiempo aparecerá al escribir las fechas.</p>
+  }
+  const desde = Math.floor(Math.min(...filas.map((f) => anioDe(f.fechaInicio))))
+  const hasta = Math.ceil(Math.max(...filas.map((f) => anioDe(f.fechaFin)) )) || desde + 1
+  const tramo = Math.max(hasta - desde, 1)
+  return (
+    <figure>
+      <figcaption className="mb-2 flex flex-wrap items-center justify-between gap-x-4 gap-y-1 text-sm font-medium">
+        Línea de tiempo
+        <span className="flex gap-3 text-xs font-normal text-tenue">
+          <span className="inline-flex items-center gap-1.5"><span className="size-2.5 bg-tinta" aria-hidden="true" />General</span>
+          <span className="inline-flex items-center gap-1.5"><span className="size-2.5 bg-sello" aria-hidden="true" />En dirección</span>
+        </span>
+      </figcaption>
+      <div className="space-y-1.5 rounded-md bg-fondo p-3">
+        {filas.map((f) => (
+          <div key={f.i}>
+            <p className="mb-0.5 truncate text-xs">{f.cargo || `Registro ${f.i + 1}`}</p>
+            <div className="relative h-4 bg-realce">
+              <span
+                className={`absolute inset-y-0 min-w-1 transition-[left,width] duration-300 ${f.tipo === 'DIRECCION' ? 'bg-sello' : 'bg-tinta'}`}
+                style={{ left: `${((anioDe(f.fechaInicio) - desde) / tramo) * 100}%`, width: `${((anioDe(f.fechaFin) - anioDe(f.fechaInicio)) / tramo) * 100}%` }}
+              />
+            </div>
+          </div>
+        ))}
+        <p className="flex justify-between pt-0.5 text-xs tabular-nums text-tenue">
+          <span>{desde}</span>
+          <span>{hasta}</span>
+        </p>
+      </div>
+    </figure>
+  )
+}
+
 /** Totales calculados en vivo (mismo algoritmo que el backend). */
 function Totales({ items }) {
   const dur = items.map((it) => ({ tipo: it.tipo, d: calcularDuracion(it.fechaInicio, it.fechaFin) }))
@@ -20,15 +63,15 @@ function Totales({ items }) {
   const direccion = sumarDuraciones(dur.filter((x) => x.tipo === 'DIRECCION').map((x) => x.d))
   const total = sumarDuraciones(dur.map((x) => x.d))
   const fila = (etiqueta, d, fuerte) => (
-    <div className="px-3 py-2.5">
-      <dt className="text-xs text-tenue">{etiqueta}</dt>
-      <dd className={`mt-0.5 text-sm tabular-nums ${fuerte ? 'font-medium text-sello' : ''}`}>{textoDuracion(d)}</dd>
+    <div className={`px-4 py-3 ${fuerte ? 'bg-noche text-white' : ''}`}>
+      <dt className={`text-xs ${fuerte ? 'text-noche-tenue' : 'text-tenue'}`}>{etiqueta}</dt>
+      <dd className={`mt-0.5 text-sm tabular-nums ${fuerte ? 'text-base font-medium' : ''}`}>{textoDuracion(d)}</dd>
     </div>
   )
   return (
     <div aria-live="polite">
-      <p className="mb-1.5 text-sm font-medium">Experiencia acumulada</p>
-      <dl className="grid divide-y divide-regla rounded-md border border-borde sm:grid-cols-3 sm:divide-x sm:divide-y-0">
+      <p className="mb-2 text-sm font-medium">Experiencia acumulada</p>
+      <dl className="grid divide-y divide-regla overflow-hidden rounded-md border border-borde sm:grid-cols-3 sm:divide-x sm:divide-y-0">
         {fila('General', general)}
         {fila('En dirección', direccion)}
         {fila('Total', total, true)}
@@ -100,6 +143,7 @@ export function ExperienciaSection() {
         )
       })}
       <AgregarItem onClick={() => append(vacio)}>Agregar experiencia</AgregarItem>
+      <LineaTiempo items={items} />
       <Totales items={items} />
     </Seccion>
   )

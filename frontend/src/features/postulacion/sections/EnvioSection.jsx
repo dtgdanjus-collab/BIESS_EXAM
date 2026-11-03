@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { postulacionApi } from '../../../api/postulacion'
-import { Alert, Button, Card, Checkbox, ErrorAlert, Modal } from '../../../components/ui'
+import { Alert, Button, Card, Checkbox, ErrorAlert, Icon, Modal } from '../../../components/ui'
 import { Comprobante } from '../Comprobante'
 import { useFormulario, useGuardarSeccion } from '../components'
 import { PUNTOS_CONSENTIMIENTO } from '../consentimiento'
@@ -36,23 +36,31 @@ export function EnvioSection() {
     >
       <div className="space-y-6">
         {faltantes.length > 0 ? (
-          <Alert type="warning" title="Complete las siguientes secciones antes de enviar">
-            <ul className="mt-1 space-y-0.5">
-              {faltantes.map((s) => (
-                <li key={s.id}>
-                  <button type="button" className="font-medium underline" onClick={() => irA(s.id)}>
-                    {s.numeral} {s.titulo}
-                  </button>
-                </li>
-              ))}
-            </ul>
-          </Alert>
+          <Alert type="warning" title="Complete las siguientes secciones antes de enviar" />
         ) : (
           <Alert type="success">Todas las secciones obligatorias están completas.</Alert>
         )}
 
-        <div>
-          <p className="mb-2 text-sm font-medium">Declaración y consentimiento</p>
+        <ul className="grid gap-x-6 sm:grid-cols-2">
+          {SECCIONES.filter((s) => s.id !== 'envio').map((s) => {
+            const lista = s.completa(postulacion)
+            const falta = !lista && OBLIGATORIAS.includes(s.id)
+            return (
+              <li key={s.id} className="border-b border-regla">
+                <button type="button" onClick={() => irA(s.id)} className="group flex min-h-12 w-full items-center gap-3 py-1.5 text-left text-sm">
+                  <span className={`flex h-7 w-10 shrink-0 items-center justify-center text-xs font-medium tabular-nums ${lista ? 'bg-sello text-white' : falta ? 'bg-tinta text-white' : 'bg-realce text-tinta'}`}>
+                    {lista ? <Icon name="check" className="size-4" strokeWidth={2.6} /> : s.numeral}
+                  </span>
+                  <span className="min-w-0 flex-1 group-hover:underline">{s.titulo}</span>
+                  <span className={`shrink-0 text-xs ${falta ? 'font-medium text-mal' : 'text-tenue'}`}>{lista ? 'Listo' : falta ? 'Falta' : 'Opcional'}</span>
+                </button>
+              </li>
+            )
+          })}
+        </ul>
+
+        <div className="rounded-md bg-fondo p-4 sm:p-5">
+          <h3 className="mb-3 text-base font-medium">Declaración y consentimiento</h3>
           <ol className="list-decimal space-y-2 pl-5 text-sm leading-relaxed marker:tabular-nums marker:text-tenue">
             {PUNTOS_CONSENTIMIENTO.map((p) => (
               <li key={p}>{p}</li>

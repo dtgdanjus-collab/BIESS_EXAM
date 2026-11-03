@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { postulacionApi } from '../../api/postulacion'
-import { EnBarra } from '../../components/layout/Layouts'
+import { EnBarra, EnCabecera } from '../../components/layout/Layouts'
 import { Alert, Button, ErrorAlert, Icon, Modal, PageLoader, Pliego, SelectorFolios, Stepper } from '../../components/ui'
 import { useAsync } from '../../hooks/useAsync'
 import { useTituloPagina } from '../../hooks/useTituloPagina'
@@ -43,77 +43,83 @@ const origenFolio = (id) => {
 /** Pantalla inicial cuando el usuario todavía no tiene postulación. */
 function IniciarPostulacion({ onIniciar, peticion }) {
   return (
-    <div className="grid gap-6 xl:grid-cols-[17rem_minmax(0,1fr)] xl:gap-8">
-      <div>
-        <h1 className="text-2xl font-medium tracking-tight">Su expediente aún no está abierto</h1>
-        <p className="mt-2 text-sm leading-relaxed text-tenue">
+    <div className="grid gap-5 xl:grid-cols-[23rem_minmax(0,1fr)] xl:gap-8">
+      <div className="flex flex-col rounded-lg bg-noche p-6 text-white [&_:focus-visible]:outline-white sm:p-8 xl:self-start">
+        <h1 className="text-[28px] font-medium leading-tight tracking-tight">Su expediente aún no está abierto</h1>
+        <p className="mt-3 text-sm leading-relaxed text-noche-tenue">
           Al abrirlo recibirá un código único y sus datos llegarán del Registro Civil. Solo pueden postular personas de nacionalidad
           ecuatoriana.
         </p>
         <ErrorAlert error={peticion.error} className="mt-4" />
-        <Button onClick={onIniciar} loading={peticion.loading} className="mt-5 w-full sm:w-auto xl:w-full">
+        <Button variant="secondary" onClick={onIniciar} loading={peticion.loading} className="mt-8 w-full">
           Iniciar mi postulación
+          {!peticion.loading && <Icon name="arrowRight" className="size-4" strokeWidth={2} />}
         </Button>
-        <p className="mt-3 text-xs leading-relaxed text-tenue">Una vez enviada, la postulación ya no podrá modificarse.</p>
+        <p className="mt-3 text-xs leading-relaxed text-noche-tenue">Una vez enviada, la postulación ya no podrá modificarse.</p>
       </div>
-      <ol className="rounded-lg border border-borde bg-papel px-4 sm:px-6">
-        {SECCIONES.map((s) => (
-          <li key={s.id} className="flex min-h-11 items-center gap-3 border-b border-regla py-2 text-sm last:border-b-0">
-            <span className="w-8 shrink-0 tabular-nums text-tenue">{s.numeral}</span>
-            <span className="min-w-0 flex-1">{s.titulo}</span>
-            <span className="shrink-0 text-right text-xs text-tenue">{origenFolio(s.id)}</span>
-          </li>
-        ))}
-      </ol>
+      <div className="rounded-lg border border-borde bg-papel p-4 sm:p-7">
+        <h2 className="mb-2 text-base font-medium">Los diez folios de su postulación</h2>
+        <ol>
+          {SECCIONES.map((s) => (
+            <li key={s.id} className="flex min-h-12 items-center gap-3 border-b border-regla py-2 text-sm last:border-b-0">
+              <span className="flex h-7 w-10 shrink-0 items-center justify-center bg-tinta text-xs font-medium tabular-nums text-white">{s.numeral}</span>
+              <span className="min-w-0 flex-1">{s.titulo}</span>
+              <span className="shrink-0 text-right text-xs text-tenue">{origenFolio(s.id)}</span>
+            </li>
+          ))}
+        </ol>
+      </div>
     </div>
   )
 }
 
-/** Título del expediente, qué le falta y el pliego con una marca por folio. */
+/** Cabecera negra: título del expediente, qué le falta y el pliego con una marca por folio. */
 function Cabecera({ postulacion, pasos, actual, pendiente, faltan, irA }) {
   const enviada = postulacion.estado === 'ENVIADA'
   const completas = pasos.filter((p) => p.completo).length
   return (
-    <section className="no-print mb-8">
-      <div className="flex flex-wrap items-start justify-between gap-x-6 gap-y-3">
-        <div className="min-w-0">
-          <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
-            <h1 className="text-xl font-medium tracking-tight sm:text-2xl">{enviada ? 'Postulación enviada' : 'Expediente de postulación'}</h1>
-            <EstadoBadge estado={postulacion.estado} />
+    <header className="bg-noche px-4 pb-4 pt-5 text-white [&_:focus-visible]:outline-white sm:px-6 lg:px-8 lg:pb-5 lg:pt-7">
+      <div className="mx-auto max-w-[76rem]">
+        <div className="flex flex-wrap items-start justify-between gap-x-6 gap-y-3">
+          <div className="min-w-0">
+            <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+              <h1 className="text-[22px] font-medium tracking-tight sm:text-[28px]">{enviada ? 'Postulación enviada' : 'Expediente de postulación'}</h1>
+              <EstadoBadge estado={postulacion.estado} />
+            </div>
+            <p className="mt-1 text-sm text-noche-tenue">
+              <span className="font-mono text-white">{postulacion.codigo}</span>
+              <span aria-hidden="true"> · </span>
+              {enviada
+                ? 'Sellado, ya no admite cambios'
+                : faltan === 0
+                  ? 'Todo listo para enviar'
+                  : faltan === 1
+                    ? 'Falta 1 folio obligatorio'
+                    : `Faltan ${faltan} folios obligatorios`}
+            </p>
           </div>
-          <p className="mt-1 text-sm text-tenue">
-            <span className="font-mono text-tinta">{postulacion.codigo}</span>
-            <span aria-hidden="true"> · </span>
-            {enviada
-              ? 'Sellado, ya no admite cambios'
-              : faltan === 0
-                ? 'Todo listo para enviar'
-                : faltan === 1
-                  ? 'Falta 1 folio obligatorio'
-                  : `Faltan ${faltan} folios obligatorios`}
-          </p>
+          {pendiente && (
+            // En el teléfono ya está el selector de folios: la cabecera no debe empujar el formulario.
+            <div className="hidden animate-slide-down sm:block">
+              <Button variant="secondary" onClick={() => irA(pendiente.id)}>
+                Continuar: {pendiente.titulo}
+                <Icon name="arrowRight" className="size-4" strokeWidth={2} />
+              </Button>
+            </div>
+          )}
         </div>
-        {pendiente && (
-          // En el teléfono ya está el selector de folios: la cabecera no debe empujar el formulario.
-          <div className="hidden animate-slide-down sm:block">
-            <Button variant="secondary" onClick={() => irA(pendiente.id)}>
-              Continuar: {pendiente.titulo}
-              <Icon name="arrowRight" className="size-4" strokeWidth={2} />
-            </Button>
-          </div>
-        )}
-      </div>
 
-      <div className="mt-5 flex items-center gap-4">
-        <p className="shrink-0 tabular-nums" aria-live="polite">
-          <span className="text-[30px] font-medium leading-none tracking-tight">{completas}</span>
-          <span className="text-sm text-tenue"> de {pasos.length}</span>
-        </p>
-        <div className="min-w-0 flex-1">
-          <Pliego steps={pasos} actual={actual} onSelect={irA} />
+        <div className="mt-4 flex items-center gap-4 lg:mt-6 lg:gap-6">
+          <p className="shrink-0 tabular-nums" aria-live="polite">
+            <span className="text-[34px] font-medium leading-none tracking-tight lg:text-[40px]">{completas}</span>
+            <span className="text-sm text-noche-tenue"> de {pasos.length}</span>
+          </p>
+          <div className="min-w-0 flex-1">
+            <Pliego steps={pasos} actual={actual} onSelect={irA} />
+          </div>
         </div>
       </div>
-    </section>
+    </header>
   )
 }
 
@@ -126,10 +132,13 @@ function NavegacionSecciones({ actual, irA, anchoCompleto }) {
       <button
         type="button"
         onClick={() => irA(s.id)}
-        className={`group flex min-h-11 min-w-0 items-center gap-2 text-sm text-tenue transition-colors hover:text-tinta ${dir === 'sig' ? 'ml-auto text-right' : ''}`}
+        className={`group flex min-h-14 min-w-0 flex-1 items-center gap-3 rounded-md border border-borde bg-papel px-4 py-2 text-left text-sm transition-colors hover:border-tinta hover:bg-tinta hover:text-white ${dir === 'sig' ? 'justify-end text-right' : ''}`}
       >
         {dir === 'ant' && <Icon name="arrowLeft" className="size-4 transition-transform group-hover:-translate-x-0.5" />}
-        <span>{s.titulo}</span>
+        <span className="min-w-0">
+          <span className="block text-xs text-tenue transition-colors group-hover:text-noche-tenue">{dir === 'sig' ? 'Siguiente' : 'Anterior'}</span>
+          <span className="block font-medium">{s.titulo}</span>
+        </span>
         {dir === 'sig' && <Icon name="arrowRight" className="size-4 transition-transform group-hover:translate-x-0.5" />}
       </button>
     )
@@ -277,14 +286,16 @@ export function FormularioPage() {
         <Stepper steps={pasos} actual={seccionActual} onSelect={irA} />
       </EnBarra>
 
-      <Cabecera
-        postulacion={postulacion}
-        pasos={pasos}
-        actual={seccionActual}
-        pendiente={pendiente}
-        faltan={obligatorios.length}
-        irA={irA}
-      />
+      <EnCabecera>
+        <Cabecera
+          postulacion={postulacion}
+          pasos={pasos}
+          actual={seccionActual}
+          pendiente={pendiente}
+          faltan={obligatorios.length}
+          irA={irA}
+        />
+      </EnCabecera>
 
       <div className="no-print mb-5">
         <SelectorFolios steps={pasos} actual={seccionActual} onSelect={irA} />
