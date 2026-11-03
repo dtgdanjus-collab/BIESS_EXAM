@@ -91,7 +91,7 @@ function FormularioDatos({ d }) {
           </Alert>
 
           <div className="flex flex-wrap items-end justify-between gap-x-8 gap-y-3">
-            <div className="min-w-0 flex-1">
+            <div className="min-w-60 flex-1">
               <p className="mb-1.5 text-xs text-tenue">Cédula, no se puede cambiar</p>
               <CeldasCedula cedula={d.cedula} />
             </div>
