@@ -24,7 +24,7 @@ export function Stepper({ steps, actual, onSelect }) {
                 type="button"
                 onClick={() => onSelect(s.id)}
                 aria-current={activo ? 'step' : undefined}
-                className={`flex min-h-10 w-full items-center gap-2.5 rounded-md px-2 py-1 text-left text-sm transition-colors ${
+                className={`flex min-h-11 w-full items-center gap-2.5 pointer-fine:min-h-10 rounded-md px-2 py-1 text-left text-sm transition-colors ${
                   activo ? 'bg-noche-celda text-white' : 'text-[#dcdcdc] hover:bg-white/10 hover:text-white'
                 }`}
               >
@@ -56,11 +56,11 @@ export function SelectorFolios({ steps, actual, onSelect }) {
         id="selector-folios"
         value={actual}
         onChange={(e) => onSelect(e.target.value)}
-        className="block min-h-11 w-full rounded-md border border-control bg-papel px-3 text-sm font-medium"
+        className="block min-h-11 w-full rounded-md border border-control bg-papel px-3 text-base font-medium pointer-fine:text-sm"
       >
         {steps.map((s) => (
           <option key={s.id} value={s.id}>
-            {s.numeral} {s.titulo} {s.completo ? '(completa)' : ''}
+            {s.completo ? '✓ ' : ''}{s.numeral} {s.titulo}
           </option>
         ))}
       </select>
@@ -84,7 +84,7 @@ export function Pliego({ steps, actual, onSelect }) {
               onClick={() => onSelect(s.id)}
               aria-label={`Ir al folio ${s.numeral} ${s.titulo}`}
               title={`${s.numeral} ${s.titulo}`}
-              className="group flex h-11 w-full flex-col justify-center gap-1.5 lg:h-10"
+              className="group flex h-11 w-full flex-col justify-center gap-1.5 pointer-fine:lg:h-10"
             >
               <span
                 className={`block h-3 w-full transition-colors duration-200 ${
