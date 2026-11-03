@@ -72,7 +72,7 @@ function FormularioDatos({ d }) {
       <Card
         numeral="1.1"
         title="Información personal"
-        description="Estos datos vienen de un Registro Civil simulado y pueden no ser los suyos. Revíselos y corrija lo que haga falta."
+        description="Estos datos vienen del Registro Civil y pueden no coincidir con los suyos. Revíselos y corrija lo que haga falta."
         pie={
           <>
             {peticion.error && !peticion.error.details?.campos && <ErrorAlert error={peticion.error} />}
