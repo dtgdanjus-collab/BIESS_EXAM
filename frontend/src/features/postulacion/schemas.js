@@ -12,6 +12,10 @@ const telefono = z.string().trim().regex(/^\+?\d{7,15}$/, 'Teléfono inválido (
 const opcion = (valores, msg) => z.string().refine((v) => valores.includes(v), msg)
 const siNo = z.boolean().nullable().refine((v) => v !== null, 'Seleccione Sí o No')
 
+// Documentos de respaldo: id del PDF ya subido. Los que llevan asterisco en el requerimiento son obligatorios.
+const documentoOpcional = z.number().nullish()
+const documentoObligatorio = z.number().nullish().refine((v) => v != null, 'Adjunte el documento de respaldo')
+
 export const fecha = (msg = 'Es obligatoria') =>
   z.string().min(1, msg).refine((v) => v <= hoyIso(), 'No puede ser una fecha futura')
 
@@ -114,6 +118,7 @@ export const formacionSchema = z.object({
         areaId: seleccion(),
         registroSenescyt: texto(40),
         fechaRegistro: fecha(),
+        documentoId: documentoOpcional,
       }),
     )
     .superRefine(alMenosUno('Agregue al menos un título')),
@@ -132,6 +137,7 @@ export const experienciaSchema = z.object({
           fechaFin: fecha(),
           areaId: seleccion(),
           descripcion: texto(1000),
+          documentoId: documentoObligatorio,
         })
         .superRefine(rangoFechas),
     )
@@ -149,6 +155,7 @@ export const publicacionesSchema = z
         medio: texto(200),
         fecha: fecha(),
         relacionada: siNo,
+        documentoId: documentoObligatorio,
       }),
     ),
   })
@@ -169,6 +176,7 @@ export const capacitacionesSchema = z.object({
         fechaInicio: fecha(),
         fechaFin: fecha(),
         horas: z.coerce.number({ message: 'Ingrese las horas' }).int('Debe ser un número entero').min(1, 'Debe ser mayor a 0'),
+        documentoId: documentoOpcional,
       })
       .superRefine(rangoFechas),
   ),
@@ -214,9 +222,13 @@ export const cargoSchema = z
     sector: seleccion('Seleccione el cargo al que postula'),
     tieneRespaldo: siNo,
     organizacionNombre: textoOpcional(200),
+    organizacionDocumentoId: z.number().nullish(),
   })
   .superRefine((v, ctx) => {
     if (v.tieneRespaldo && !v.organizacionNombre) {
       ctx.addIssue({ code: 'custom', path: ['organizacionNombre'], message: 'Indique el nombre de la organización' })
+    }
+    if (v.tieneRespaldo && v.organizacionDocumentoId == null) {
+      ctx.addIssue({ code: 'custom', path: ['organizacionDocumentoId'], message: 'Adjunte el documento de respaldo' })
     }
   })

@@ -20,6 +20,7 @@ type Postulacion struct {
 	SectorCodigo           *string           `json:"sectorCodigo"`
 	TieneRespaldo          *bool             `json:"tieneRespaldo"`
 	OrganizacionNombre     *string           `json:"organizacionNombre"`
+	OrganizacionDocumento  *Documento        `json:"organizacionDocumento"`
 	TieneFamiliares        *bool             `json:"tieneFamiliares"`
 	TienePublicaciones     *bool             `json:"tienePublicaciones"`
 	PosibleInhabilidad     bool              `json:"posibleInhabilidad"`
@@ -41,6 +42,30 @@ type Postulacion struct {
 	Inhabilidades    []RespuestaInhabilidad `json:"inhabilidades"`
 }
 
+// Categorías de los documentos de respaldo.
+const (
+	DocRespaldoOrganizacion = "RESPALDO_ORG"
+	DocFormacion            = "FORMACION"
+	DocExperiencia          = "EXPERIENCIA"
+	DocPublicacion          = "PUBLICACION"
+	DocCapacitacion         = "CAPACITACION"
+)
+
+// Documento son los datos de un PDF de respaldo, sin su contenido.
+type Documento struct {
+	ID          int64  `json:"id"`
+	Categoria   string `json:"categoria"`
+	Nombre      string `json:"nombre"`
+	TamanoBytes int64  `json:"tamanoBytes"`
+}
+
+// DocumentoAdjunto es el PDF de un registro. Se recibe solo DocumentoID; nombre y tamaño son de lectura.
+type DocumentoAdjunto struct {
+	DocumentoID     *int64  `json:"documentoId"`
+	DocumentoNombre *string `json:"documentoNombre"`
+	DocumentoTamano *int64  `json:"documentoTamano"`
+}
+
 // Formacion (1.5): títulos académicos.
 type Formacion struct {
 	ID               int64  `json:"id"`
@@ -51,6 +76,7 @@ type Formacion struct {
 	AreaID           int    `json:"areaId"`
 	RegistroSenescyt string `json:"registroSenescyt"`
 	FechaRegistro    Fecha  `json:"fechaRegistro"`
+	DocumentoAdjunto
 }
 
 // Experiencia (1.6). Duracion se calcula, no se guarda.
@@ -64,6 +90,7 @@ type Experiencia struct {
 	AreaID      int      `json:"areaId"`
 	Descripcion string   `json:"descripcion"`
 	Duracion    Duracion `json:"duracion" db:"-"`
+	DocumentoAdjunto
 }
 
 type ExperienciaTotal struct {
@@ -80,6 +107,7 @@ type Publicacion struct {
 	Medio       string `json:"medio"`
 	Fecha       Fecha  `json:"fecha"`
 	Relacionada bool   `json:"relacionada"`
+	DocumentoAdjunto
 }
 
 // Capacitacion (1.8).
@@ -91,6 +119,7 @@ type Capacitacion struct {
 	FechaInicio Fecha  `json:"fechaInicio"`
 	FechaFin    Fecha  `json:"fechaFin"`
 	Horas       int    `json:"horas"`
+	DocumentoAdjunto
 }
 
 // RespuestaInhabilidad (1.9). Detalle solo aplica a la pregunta 1.9.7 cuando la respuesta es Sí.

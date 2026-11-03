@@ -39,13 +39,18 @@ func NewPostulacionRepository(pool *pgxpool.Pool) PostulacionRepository {
 }
 
 const columnasPostulacion = `id, usuario_id, codigo, estado, motivo_cierre, sector_codigo, tiene_respaldo,
-	organizacion_nombre, tiene_familiares, tiene_publicaciones, posible_inhabilidad,
+	organizacion_nombre, (SELECT d.id FROM documentos d WHERE d.id = organizacion_documento_id),
+	(SELECT d.nombre_original FROM documentos d WHERE d.id = organizacion_documento_id),
+	(SELECT d.tamano_bytes FROM documentos d WHERE d.id = organizacion_documento_id),
+	tiene_familiares, tiene_publicaciones, posible_inhabilidad,
 	consentimiento_aceptado, consentimiento_fecha, fecha_envio, datos_confirmados_en, creado_en, actualizado_en`
 
 func scanPostulacion(row pgx.Row) (*domain.Postulacion, error) {
 	var p domain.Postulacion
+	var orgDoc domain.DocumentoAdjunto
 	err := row.Scan(&p.ID, &p.UsuarioID, &p.Codigo, &p.Estado, &p.MotivoCierre, &p.SectorCodigo,
-		&p.TieneRespaldo, &p.OrganizacionNombre, &p.TieneFamiliares, &p.TienePublicaciones,
+		&p.TieneRespaldo, &p.OrganizacionNombre, &orgDoc.DocumentoID, &orgDoc.DocumentoNombre, &orgDoc.DocumentoTamano,
+		&p.TieneFamiliares, &p.TienePublicaciones,
 		&p.PosibleInhabilidad, &p.ConsentimientoAceptado, &p.ConsentimientoFecha, &p.FechaEnvio,
 		&p.DatosConfirmadosEn, &p.CreadoEn, &p.ActualizadoEn)
 	if errors.Is(err, pgx.ErrNoRows) {
@@ -53,6 +58,10 @@ func scanPostulacion(row pgx.Row) (*domain.Postulacion, error) {
 	}
 	if err != nil {
 		return nil, traducir(err, "leyendo postulación")
+	}
+	if orgDoc.DocumentoID != nil {
+		p.OrganizacionDocumento = &domain.Documento{ID: *orgDoc.DocumentoID, Categoria: domain.DocRespaldoOrganizacion,
+			Nombre: *orgDoc.DocumentoNombre, TamanoBytes: *orgDoc.DocumentoTamano}
 	}
 	return &p, nil
 }

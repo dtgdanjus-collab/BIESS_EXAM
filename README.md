@@ -153,6 +153,5 @@ Ramas `main` (entregas) y `develop` (integración). Cada fase se desarrolló en 
 
 - **EF-13 Administración:** panel de Talento Humano para revisar postulaciones, incluidas las marcadas con `posible_inhabilidad`.
 - **EF-14 Evaluación teórica.**
-- **Documentos PDF de respaldo:** la tabla `documentos` ya existe; falta el endpoint multipart (solo PDF, 4 MB para el respaldo de la organización, 2 MB para el resto, 50 MB por postulante).
 - **Integraciones reales** con el Registro Civil y el Historial Laboral del IESS (hoy simuladas con tablas mock) y envío real de correos.
 - **Despliegue** en un VPS con Docker Compose (backend + frontend en Nginx), dominio y HTTPS.

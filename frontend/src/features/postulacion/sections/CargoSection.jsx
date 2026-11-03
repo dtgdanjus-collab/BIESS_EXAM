@@ -1,10 +1,11 @@
 import { zodResolver } from '@hookform/resolvers/zod'
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { Controller, useForm } from 'react-hook-form'
 import { postulacionApi } from '../../../api/postulacion'
-import { Alert, Icon, Input, PageLoader, SiNo } from '../../../components/ui'
+import { Alert, Button, ErrorAlert, Icon, Input, Modal, PageLoader, SiNo, Spinner } from '../../../components/ui'
+import { useAsync } from '../../../hooks/useAsync'
 import { useCatalogo } from '../../../hooks/useCatalogo'
-import { Seccion, opcional, useFormulario, useGuardarSeccion } from '../components'
+import { CampoDocumento, Dato, EnlaceDocumento, Seccion, opcional, useFormulario, useGuardarSeccion } from '../components'
 import { cargoSchema } from '../schemas'
 
 /** Resultado de la validación contra el Historial Laboral del IESS: ✔ o ✖. */
@@ -24,20 +25,28 @@ function ResultadoValidacion({ resultado }) {
   )
 }
 
-// 1.4 — Cargo al que postula; se valida la calidad de afiliado/jubilado/empleador.
+const valoresDe = (p) => ({
+  sector: p.sectorCodigo ?? '',
+  tieneRespaldo: p.tieneRespaldo,
+  organizacionNombre: p.organizacionNombre ?? '',
+  organizacionDocumentoId: p.organizacionDocumento?.id ?? null,
+})
+
+// 1.4 — Cargo al que postula: al elegirlo se valida la calidad de afiliado/jubilado/empleador
+// y solo si la acredita se despliega la pregunta del respaldo.
 export function CargoSection() {
-  const { postulacion } = useFormulario()
+  const { postulacion, soloLectura } = useFormulario()
   const sectores = useCatalogo('sectores')
   const peticion = useGuardarSeccion()
+  const validacion = useAsync()
   const [resultado, setResultado] = useState(null)
+  const [editando, setEditando] = useState(!postulacion.sectorCodigo)
+  const [confirmarEliminar, setConfirmarEliminar] = useState(false)
+  const ultimaConsulta = useRef(null)
 
-  const { register, control, handleSubmit, watch, setError, formState: { errors } } = useForm({
+  const { register, control, handleSubmit, watch, setError, reset, formState: { errors } } = useForm({
     resolver: zodResolver(cargoSchema),
-    defaultValues: {
-      sector: postulacion.sectorCodigo ?? '',
-      tieneRespaldo: postulacion.tieneRespaldo,
-      organizacionNombre: postulacion.organizacionNombre ?? '',
-    },
+    defaultValues: valoresDe(postulacion),
   })
 
   const codigo = watch('sector')
@@ -49,6 +58,13 @@ export function CargoSection() {
   const mostrado =
     resultado ?? (guardado && codigo === guardado.codigo ? { cumple: true, etiqueta: guardado.etiquetaCumple } : null)
 
+  const validar = async (elegido) => {
+    setResultado(null)
+    ultimaConsulta.current = elegido
+    const r = await validacion.run(() => postulacionApi.validarCargo(elegido))
+    if (r.ok && ultimaConsulta.current === elegido) setResultado(r.data)
+  }
+
   const onSubmit = handleSubmit(async (v) => {
     const r = await peticion.guardar(
       () =>
@@ -56,27 +72,89 @@ export function CargoSection() {
           sector: v.sector,
           tieneRespaldo: v.tieneRespaldo,
           organizacionNombre: v.tieneRespaldo ? opcional(v.organizacionNombre) : null,
+          organizacionDocumentoId: v.tieneRespaldo ? v.organizacionDocumentoId : null,
         }),
       setError,
     )
-    if (r.ok) setResultado({ cumple: true, etiqueta: sector?.etiquetaCumple })
-    else if (r.error.status === 422)
+    if (r.ok) {
+      reset(valoresDe(r.data))
+      setResultado(null)
+      setEditando(false)
+    } else if (r.error.status === 422) {
       setResultado({ cumple: false, etiqueta: r.error.details?.etiqueta, mensaje: r.error.message })
+    }
   })
+
+  const eliminar = async () => {
+    setConfirmarEliminar(false)
+    const r = await peticion.guardar(postulacionApi.eliminarCargo)
+    if (r.ok) {
+      reset(valoresDe(r.data))
+      setResultado(null)
+      setEditando(true)
+      peticion.reset()
+    }
+  }
 
   if (sectores.loading) return <PageLoader texto="Cargando cargos…" />
 
+  const base = {
+    id: 'cargo',
+    numeral: '1.4',
+    titulo: 'Selección del cargo',
+    descripcion: 'Su calidad de afiliado, jubilado o empleador se verifica en el Historial Laboral del IESS.',
+    peticion,
+    onSubmit,
+    mostrarError: peticion.error?.status !== 422,
+    pie: <ResultadoValidacion resultado={mostrado} />,
+  }
+
+  if (postulacion.sectorCodigo && !editando) {
+    return (
+      <Seccion {...base} ocultarGuardar>
+        <dl className="grid gap-4 sm:grid-cols-2">
+          <Dato etiqueta="Cargo al que postula" valor={guardado?.cargo ?? postulacion.sectorCodigo} className="sm:col-span-2" />
+          <Dato etiqueta="Respaldo de una organización" valor={postulacion.tieneRespaldo ? 'Sí' : 'No'} />
+          {postulacion.tieneRespaldo && <Dato etiqueta="Nombre de Organización" valor={postulacion.organizacionNombre} />}
+          {postulacion.tieneRespaldo && (
+            <Dato
+              etiqueta="Documento de respaldo"
+              valor={
+                postulacion.organizacionDocumento ? (
+                  <EnlaceDocumento documento={postulacion.organizacionDocumento} />
+                ) : (
+                  <span className="text-mal">Falta adjuntar el PDF: pulse Editar</span>
+                )
+              }
+              className="sm:col-span-2"
+            />
+          )}
+        </dl>
+        {!soloLectura && (
+          <div className="flex flex-wrap gap-2">
+            <Button variant="secondary" onClick={() => { peticion.reset(); setEditando(true) }}>Editar</Button>
+            <Button variant="danger" onClick={() => setConfirmarEliminar(true)}>Eliminar</Button>
+          </div>
+        )}
+        <Modal
+          open={confirmarEliminar}
+          onClose={() => setConfirmarEliminar(false)}
+          title="¿Eliminar el cargo seleccionado?"
+          footer={
+            <>
+              <Button variant="secondary" onClick={() => setConfirmarEliminar(false)}>Cancelar</Button>
+              <Button onClick={eliminar}>Sí, eliminar</Button>
+            </>
+          }
+        >
+          <p className="text-sm leading-relaxed">Se borrarán el cargo, la organización y su documento de respaldo. Podrá seleccionarlo otra vez.</p>
+        </Modal>
+      </Seccion>
+    )
+  }
+
   return (
-    <Seccion
-      id="cargo"
-      numeral="1.4"
-      titulo="Selección del cargo"
-      descripcion="Su calidad de afiliado, jubilado o empleador se verifica en el Historial Laboral del IESS."
-      peticion={peticion}
-      onSubmit={onSubmit}
-      mostrarError={peticion.error?.status !== 422}
-      pie={<ResultadoValidacion resultado={mostrado} />}
-    >
+    <Seccion {...base} textoGuardar="Guardar postulación" ocultarGuardar={!mostrado?.cumple}>
       {sectores.error && <Alert type="error">No se pudo cargar el catálogo de cargos.</Alert>}
 
       <fieldset>
@@ -97,7 +175,7 @@ export function CargoSection() {
                   type="radio"
                   value={s.codigo}
                   className="sr-only"
-                  {...register('sector', { onChange: () => setResultado(null) })}
+                  {...register('sector', { onChange: (e) => validar(e.target.value) })}
                 />
                 <span className="flex items-start justify-between gap-2">
                   <span className="text-lg font-medium capitalize leading-tight">{s.codigo.toLowerCase()}</span>
@@ -108,7 +186,7 @@ export function CargoSection() {
                 <span className="min-w-0 flex-1">
                   <span className="mt-0.5 block text-sm leading-relaxed opacity-80">{s.cargo}</span>
                 </span>
-                              </label>
+              </label>
             )
           })}
         </div>
@@ -119,7 +197,15 @@ export function CargoSection() {
         )}
       </fieldset>
 
-      {sector && (
+      {validacion.loading && (
+        <p className="flex items-center gap-2 text-sm text-tenue" role="status">
+          <Spinner className="size-4" label="" />
+          Consultando el Historial Laboral…
+        </p>
+      )}
+      {validacion.error && <ErrorAlert error={validacion.error} />}
+
+      {sector && mostrado?.cumple && (
         <Controller
           control={control}
           name="tieneRespaldo"
@@ -134,14 +220,22 @@ export function CargoSection() {
         />
       )}
 
-      {sector && tieneRespaldo && (
+      {/* Oculto, no desmontado: al cambiar Sí/No el documento ya subido sigue ahí. */}
+      <div className={sector && mostrado?.cumple && tieneRespaldo ? 'grid gap-4' : 'hidden'}>
         <Input
-          label="Nombre de la organización que lo respalda"
+          label="Nombre de Organización"
           required
           error={errors.organizacionNombre?.message}
           {...register('organizacionNombre')}
         />
-      )}
+        <CampoDocumento
+          control={control}
+          name="organizacionDocumentoId"
+          categoria="RESPALDO_ORG"
+          inicial={postulacion.organizacionDocumento}
+          required
+        />
+      </div>
     </Seccion>
   )
 }

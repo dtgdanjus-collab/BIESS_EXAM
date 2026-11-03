@@ -1,7 +1,7 @@
 import { Button, Icon, Sello } from '../../components/ui'
 import { useCatalogo } from '../../hooks/useCatalogo'
 import { formatoFecha, textoDuracion } from '../../utils/fechas'
-import { Dato } from './components'
+import { Dato, EnlaceDocumento, adjuntoDe } from './components'
 
 const fechaHora = (iso) =>
   iso ? new Date(iso).toLocaleString('es-EC', { dateStyle: 'long', timeStyle: 'short' }) : '—'
@@ -45,6 +45,9 @@ export function Comprobante({ postulacion, celebrar = false }) {
           {postulacion.tieneRespaldo && (
             <Dato etiqueta="Organización que respalda" valor={postulacion.organizacionNombre} className="sm:col-span-2" />
           )}
+          {postulacion.organizacionDocumento && (
+            <Dato etiqueta="Documento de respaldo" valor={<EnlaceDocumento documento={postulacion.organizacionDocumento} />} className="sm:col-span-2" />
+          )}
           {c && <Dato etiqueta="Correo de contacto" valor={c.correo1} />}
           {c && <Dato etiqueta="Teléfono" valor={c.telefonoCelular} />}
         </dl>
@@ -57,6 +60,7 @@ export function Comprobante({ postulacion, celebrar = false }) {
                 <p className="text-xs text-tenue">
                   {f.institucion} · Registro {f.registroSenescyt} · {formatoFecha(f.fechaRegistro)}
                 </p>
+                {f.documentoId && <p className="text-xs"><EnlaceDocumento documento={adjuntoDe(f)} /></p>}
               </li>
             ))}
           </ul>
@@ -71,6 +75,7 @@ export function Comprobante({ postulacion, celebrar = false }) {
                   <span className="text-tenue"> · {e.institucion}</span>
                 </span>
                 <span className="tabular-nums text-tenue">{textoDuracion(e.duracion)}</span>
+                {e.documentoId && <span className="w-full text-xs"><EnlaceDocumento documento={adjuntoDe(e)} /></span>}
               </li>
             ))}
           </ul>
@@ -80,11 +85,14 @@ export function Comprobante({ postulacion, celebrar = false }) {
           </p>
         </Bloque>
 
-        <dl className="grid gap-px overflow-hidden rounded-md bg-regla sm:grid-cols-3">
+        <dl className="grid gap-px overflow-hidden rounded-md bg-regla sm:grid-cols-2 lg:grid-cols-4">
           {[
             ['Familiares en IESS/BIESS', postulacion.tieneFamiliares ? `Sí (${postulacion.familiares.length})` : 'No'],
             ['Publicaciones', postulacion.tienePublicaciones ? `Sí (${postulacion.publicaciones.length})` : 'No'],
             ['Capacitaciones', String(postulacion.capacitaciones.length)],
+            ['Documentos adjuntos', String(
+              [postulacion.organizacionDocumento?.id, ...[...postulacion.formacion, ...postulacion.experiencia, ...postulacion.publicaciones, ...postulacion.capacitaciones].map((x) => x.documentoId)].filter(Boolean).length,
+            )],
           ].map(([etiqueta, valor]) => (
             <Dato key={etiqueta} etiqueta={etiqueta} valor={valor} className="bg-[#fafafa] p-3" />
           ))}
