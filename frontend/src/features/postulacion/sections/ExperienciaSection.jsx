@@ -4,13 +4,13 @@ import { postulacionApi } from '../../../api/postulacion'
 import { Alert, Input, Textarea } from '../../../components/ui'
 import { useCatalogo } from '../../../hooks/useCatalogo'
 import { calcularDuracion, hoyIso, sumarDuraciones, textoDuracion } from '../../../utils/fechas'
-import { AgregarItem, CampoSelect, ItemLista, Seccion, useFormulario, useGuardarSeccion } from '../components'
+import { AgregarItem, CampoDocumento, CampoSelect, ItemLista, Seccion, adjuntoDe, useFormulario, useGuardarSeccion, useItemsPlegables } from '../components'
 import { experienciaSchema } from '../schemas'
 
-const vacio = { tipo: '', cargo: '', institucion: '', fechaInicio: '', fechaFin: '', areaId: '', descripcion: '' }
+const vacio = { tipo: '', cargo: '', institucion: '', fechaInicio: '', fechaFin: '', areaId: '', descripcion: '', documentoId: null }
 const TIPOS = [
-  { id: 'GENERAL', nombre: 'Experiencia general' },
-  { id: 'DIRECCION', nombre: 'Experiencia en dirección' },
+  { id: 'GENERAL', nombre: 'General' },
+  { id: 'DIRECCION', nombre: 'Dirección' },
 ]
 
 const anioDe = (iso) => Number(iso.slice(0, 4)) + (Number(iso.slice(5, 7)) - 1) / 12
@@ -89,20 +89,20 @@ export function ExperienciaSection() {
   const { register, control, handleSubmit, setError, formState: { errors } } = useForm({
     resolver: zodResolver(experienciaSchema),
     defaultValues: {
-      items: postulacion.experiencia.length
-        ? postulacion.experiencia.map(({ duracion, ...e }) => ({ ...e, areaId: String(e.areaId) }))
-        : [vacio],
+      items: postulacion.experiencia.map(({ duracion, ...e }) => ({ ...e, areaId: String(e.areaId) })),
     },
   })
   const { fields, append, remove } = useFieldArray({ control, name: 'items' })
   const items = useWatch({ control, name: 'items' }) ?? []
+  const plegables = useItemsPlegables(fields, errors.items)
 
-  const onSubmit = handleSubmit((v) =>
-    peticion.guardar(
-      () => postulacionApi.experiencia(v.items.map(({ id, ...e }) => ({ ...e, areaId: Number(e.areaId) }))),
+  const onSubmit = handleSubmit(async (v) => {
+    const r = await peticion.guardar(
+      () => postulacionApi.experiencia(v.items.map((e) => ({ ...e, areaId: Number(e.areaId) }))),
       setError,
-    ),
-  )
+    )
+    if (r.ok) plegables.plegarTodos()
+  })
 
   return (
     <Seccion
@@ -114,18 +114,27 @@ export function ExperienciaSection() {
       onSubmit={onSubmit}
     >
       {errors.items?.root && <Alert type="error">{errors.items.root.message}</Alert>}
+      {fields.length === 0 && <p className="text-sm text-tenue">No ha registrado experiencia.</p>}
       {fields.map((f, i) => {
         const e = errors.items?.[i] ?? {}
         const actual = items[i] ?? {}
         const duracion = calcularDuracion(actual.fechaInicio, actual.fechaFin)
         return (
-          <ItemLista key={f.id} titulo={`Experiencia ${i + 1}`} onEliminar={fields.length > 1 ? () => remove(i) : null}>
+          <ItemLista
+            key={f.id}
+            titulo={`Experiencia ${i + 1}`}
+            resumen={[actual.cargo, actual.institucion].filter(Boolean).join(' · ')}
+            aviso={!actual.documentoId && 'Falta el documento de respaldo'}
+            plegado={plegables.plegado(f, i)}
+            onEditar={() => plegables.editar(f)}
+            onEliminar={() => remove(i)}
+          >
             <CampoSelect control={control} name={`items.${i}.tipo`} label="Tipo de experiencia" required options={TIPOS} />
-            <CampoSelect control={control} name={`items.${i}.areaId`} label="Área" required options={areas.data} loading={areas.loading} />
-            <Input label="Cargo" required error={e.cargo?.message} {...register(`items.${i}.cargo`)} />
-            <Input label="Institución / empresa" required error={e.institucion?.message} {...register(`items.${i}.institucion`)} />
-            <Input label="Fecha de inicio" type="date" max={hoyIso()} required error={e.fechaInicio?.message} {...register(`items.${i}.fechaInicio`)} />
-            <Input label="Fecha de fin" type="date" max={hoyIso()} required error={e.fechaFin?.message} {...register(`items.${i}.fechaFin`)} />
+            <CampoSelect control={control} name={`items.${i}.areaId`} label="Actividades relacionadas a" required options={areas.data} loading={areas.loading} />
+            <Input label="Cargo o puesto" required error={e.cargo?.message} {...register(`items.${i}.cargo`)} />
+            <Input label="Institución o empresa" required error={e.institucion?.message} {...register(`items.${i}.institucion`)} />
+            <Input label="Fecha inicio" type="date" max={hoyIso()} required error={e.fechaInicio?.message} {...register(`items.${i}.fechaInicio`)} />
+            <Input label="Fecha finalización" type="date" max={hoyIso()} required error={e.fechaFin?.message} {...register(`items.${i}.fechaFin`)} />
             <p className="text-sm sm:col-span-2">
               <span className="text-tenue">Tiempo: </span>
               <span className="font-medium tabular-nums">{duracion ? textoDuracion(duracion) : '—'}</span>
@@ -139,6 +148,7 @@ export function ExperienciaSection() {
               error={e.descripcion?.message}
               {...register(`items.${i}.descripcion`)}
             />
+            <CampoDocumento control={control} name={`items.${i}.documentoId`} categoria="EXPERIENCIA" inicial={adjuntoDe(f)} required className="sm:col-span-2" />
           </ItemLista>
         )
       })}

@@ -59,11 +59,15 @@ Toda escritura sobre una postulación `ENVIADA` o `CERRADA` responde **422**.
 | PUT | `/postulacion/datos-personales` | `{nombres, apellidos, genero, fechaNacimiento, estadoCivil, conyugeNombres?, conyugeCedula?}` (corrige y confirma; una sola vez, luego 422) |
 | PUT | `/postulacion/contacto` | `{paisId, provinciaId?, cantonId?, provinciaTexto?, ciudadTexto?, telefonoCelular, correo1, correo2?, callePrincipal, numero?, calleSecundaria?, sector?, referencia?, telefonoDomicilio?}` |
 | PUT | `/postulacion/familiares` | `{tieneFamiliares, items:[{nombresApellidos, parentescoId, institucion: "IESS"\|"BIESS", area, cargo}]}` |
-| POST | `/postulacion/cargo` | `{sector: "AFILIADOS"\|"JUBILADOS"\|"EMPLEADORES", tieneRespaldo, organizacionNombre?}` |
-| PUT | `/postulacion/formacion` | `{items:[{nivelId, institucion, tipo: "NACIONAL"\|"EXTRANJERA", titulo, areaId, registroSenescyt, fechaRegistro}]}` |
-| PUT | `/postulacion/experiencia` | `{items:[{tipo: "GENERAL"\|"DIRECCION", cargo, institucion, fechaInicio, fechaFin, areaId, descripcion}]}` |
-| PUT | `/postulacion/publicaciones` | `{tienePublicaciones, items:[{titulo, tipo: "PUBLICACION"\|"INVESTIGACION", medio, fecha, relacionada}]}` |
-| PUT | `/postulacion/capacitaciones` | `{items:[{tipo: "CURSO"\|"SEMINARIO"\|"TALLER", nombre, institucion, fechaInicio, fechaFin, horas}]}` |
+| POST | `/postulacion/cargo/validar` | `{sector}` → `{cumple, etiqueta, mensaje?}` (consulta el Historial Laboral sin guardar) |
+| POST | `/postulacion/cargo` | `{sector: "AFILIADOS"\|"JUBILADOS"\|"EMPLEADORES", tieneRespaldo, organizacionNombre?, organizacionDocumentoId?}` |
+| DELETE | `/postulacion/cargo` | — (borra el cargo, la organización y su documento) |
+| POST | `/postulacion/documentos` | multipart: `categoria` (`RESPALDO_ORG`\|`FORMACION`\|`EXPERIENCIA`\|`PUBLICACION`\|`CAPACITACION`) y `archivo` (PDF; 4 MB `RESPALDO_ORG`, 2 MB el resto, 50 MB por postulante) → 201 `{id, categoria, nombre, tamanoBytes}` |
+| GET | `/postulacion/documentos/:id` | el PDF, solo a su dueño (404 para cualquier otro) |
+| PUT | `/postulacion/formacion` | `{items:[{nivelId, institucion, tipo: "NACIONAL"\|"EXTRANJERA", titulo, areaId, registroSenescyt, fechaRegistro, documentoId?}]}` |
+| PUT | `/postulacion/experiencia` | `{items:[{tipo: "GENERAL"\|"DIRECCION", cargo, institucion, fechaInicio, fechaFin, areaId, descripcion, documentoId}]}` |
+| PUT | `/postulacion/publicaciones` | `{tienePublicaciones, items:[{titulo, tipo: "PUBLICACION"\|"INVESTIGACION", medio, fecha, relacionada, documentoId}]}` |
+| PUT | `/postulacion/capacitaciones` | `{items:[{tipo: "CURSO"\|"SEMINARIO"\|"TALLER", nombre, institucion, fechaInicio, fechaFin, horas, documentoId?}]}` |
 | PUT | `/postulacion/inhabilidades` | `{respuestas:[{preguntaId, respuesta, detalle?:{institucion, cargo, fechaFin, motivo}}]}` (las 13) |
 | POST | `/postulacion/enviar` | `{aceptaConsentimiento: true}` |
 

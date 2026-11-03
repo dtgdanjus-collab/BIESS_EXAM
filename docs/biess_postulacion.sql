@@ -225,18 +225,19 @@ CREATE TABLE familiares (
 );
 CREATE INDEX idx_familiares_post ON familiares(postulacion_id);
 
--- Documentos PDF de respaldo (metadatos; el archivo vive en disco)
+-- Documentos PDF de respaldo. El archivo se guarda en la base: el disco de Render y Railway se borra al desplegar
 CREATE TABLE documentos (
     id               BIGSERIAL    PRIMARY KEY,
     postulacion_id   BIGINT       NOT NULL REFERENCES postulaciones(id) ON DELETE CASCADE,
     categoria        VARCHAR(20)  NOT NULL
                      CHECK (categoria IN ('RESPALDO_ORG','FORMACION','EXPERIENCIA','PUBLICACION','CAPACITACION')),
     nombre_original  VARCHAR(255) NOT NULL,
-    ruta             VARCHAR(400) NOT NULL,
     tamano_bytes     BIGINT       NOT NULL CHECK (tamano_bytes > 0),
+    contenido        BYTEA        NOT NULL,
     creado_en        TIMESTAMPTZ  NOT NULL DEFAULT NOW()
 );
 CREATE INDEX idx_documentos_post ON documentos(postulacion_id);
+ALTER TABLE postulaciones ADD COLUMN organizacion_documento_id BIGINT REFERENCES documentos(id) ON DELETE SET NULL;
 
 -- 1.5 Formación académica
 CREATE TABLE formacion_academica (

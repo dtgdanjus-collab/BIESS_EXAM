@@ -2,6 +2,7 @@ import { screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { catalogos } from '../../api/catalogos'
+import { ApiError } from '../../api/client'
 import { postulacionApi } from '../../api/postulacion'
 import { abrirFormulario, mockCatalogos, postulacionBase } from './test-utils'
 
@@ -20,7 +21,7 @@ const completa = (cambios = {}) =>
     sectorCodigo: 'AFILIADOS',
     tieneRespaldo: false,
     formacion: [{ id: 1, nivelId: 3, institucion: 'U. de Cuenca', tipo: 'NACIONAL', titulo: 'Magíster', areaId: 1, registroSenescyt: '1031-1', fechaRegistro: '2015-08-20' }],
-    experiencia: [{ id: 1, tipo: 'GENERAL', cargo: 'Analista', institucion: 'Banco', fechaInicio: '2010-01-01', fechaFin: '2014-12-31', areaId: 1, descripcion: 'x', duracion: { anios: 5, meses: 0, dias: 0 } }],
+    experiencia: [{ id: 1, tipo: 'GENERAL', cargo: 'Analista', institucion: 'Banco', fechaInicio: '2010-01-01', fechaFin: '2014-12-31', areaId: 1, descripcion: 'x', documentoId: 5, documentoNombre: 'certificado.pdf', documentoTamano: 2048, duracion: { anios: 5, meses: 0, dias: 0 } }],
     experienciaTotal: { general: { anios: 5, meses: 0, dias: 0 }, direccion: { anios: 0, meses: 0, dias: 0 }, total: { anios: 5, meses: 0, dias: 0 } },
     tienePublicaciones: false,
     inhabilidades: [{ preguntaId: 1, respuesta: true, detalle: null }],
@@ -39,8 +40,9 @@ describe('experiencia', () => {
     const user = userEvent.setup()
     abrirFormulario('experiencia')
 
-    await user.type(await screen.findByLabelText(/fecha de inicio/i), '2020-01-01')
-    await user.type(screen.getByLabelText(/fecha de fin/i), '2021-02-01')
+    await user.click(await screen.findByRole('button', { name: /agregar experiencia/i }))
+    await user.type(screen.getByLabelText(/fecha inicio/i), '2020-01-01')
+    await user.type(screen.getByLabelText(/fecha finalización/i), '2021-02-01')
     // aparece en el registro y en el total (sin tipo elegido aún no suma a "General")
     expect(screen.getAllByText('1 año, 1 mes y 1 día')).toHaveLength(2)
     const totales = screen.getByText(/experiencia acumulada/i).parentElement
@@ -51,11 +53,83 @@ describe('experiencia', () => {
     postulacionApi.obtener.mockResolvedValue(postulacionBase())
     const user = userEvent.setup()
     abrirFormulario('experiencia')
-    await user.type(await screen.findByLabelText(/fecha de inicio/i), '2021-01-01')
-    await user.type(screen.getByLabelText(/fecha de fin/i), '2020-01-01')
+    await user.click(await screen.findByRole('button', { name: /agregar experiencia/i }))
+    await user.type(screen.getByLabelText(/fecha inicio/i), '2021-01-01')
+    await user.type(screen.getByLabelText(/fecha finalización/i), '2020-01-01')
     await user.click(screen.getByRole('button', { name: /guardar progreso/i }))
     expect(await screen.findByText(/posterior o igual a la fecha de inicio/i)).toBeInTheDocument()
     expect(postulacionApi.experiencia).not.toHaveBeenCalled()
+  })
+})
+
+describe('documentos de respaldo', () => {
+  const pdf = (bytes, nombre = 'doc.pdf') => {
+    const f = new File(['%PDF-'], nombre, { type: 'application/pdf' })
+    Object.defineProperty(f, 'size', { value: bytes })
+    return f
+  }
+
+  it('la experiencia exige su PDF al guardar', async () => {
+    postulacionApi.obtener.mockResolvedValue(postulacionBase())
+    const user = userEvent.setup()
+    abrirFormulario('experiencia')
+    await user.click(await screen.findByRole('button', { name: /agregar experiencia/i }))
+    await user.click(screen.getByRole('button', { name: /guardar progreso/i }))
+    expect(await screen.findByText(/adjunte el documento de respaldo/i)).toBeInTheDocument()
+    expect(postulacionApi.experiencia).not.toHaveBeenCalled()
+  })
+
+  it('en la formación el PDF es opcional y rechaza más de 2 MB sin subirlo', async () => {
+    postulacionApi.obtener.mockResolvedValue(postulacionBase())
+    const user = userEvent.setup()
+    abrirFormulario('formacion')
+    await user.click(await screen.findByRole('button', { name: /agregar título/i }))
+    await user.upload(screen.getByLabelText(/máximo 2 MB/i), pdf(2 * 1024 * 1024 + 1))
+    expect(await screen.findByText(/supera el máximo de 2 MB/i)).toBeInTheDocument()
+    expect(postulacionApi.subirDocumento).not.toHaveBeenCalled()
+  })
+
+  it('muestra el error del servidor si el archivo no es un PDF real', async () => {
+    postulacionApi.obtener.mockResolvedValue(postulacionBase())
+    postulacionApi.subirDocumento.mockRejectedValue(
+      new ApiError({ status: 400, code: 'VALIDACION', message: 'Revise', details: { campos: { archivo: 'El documento debe estar en formato PDF' } } }),
+    )
+    const user = userEvent.setup()
+    abrirFormulario('capacitacion')
+    await user.click(await screen.findByRole('button', { name: /agregar capacitación/i }))
+    await user.upload(screen.getByLabelText(/máximo 2 MB/i), pdf(100))
+    expect(await screen.findByText(/debe estar en formato PDF/i)).toBeInTheDocument()
+  })
+
+  it('un registro guardado se ve cerrado con Editar y Eliminar, y al editar conserva su PDF', async () => {
+    const p = completa()
+    postulacionApi.obtener.mockResolvedValue(p)
+    postulacionApi.experiencia.mockResolvedValue(p)
+    const user = userEvent.setup()
+    abrirFormulario('experiencia')
+
+    const editar = await screen.findByRole('button', { name: 'Editar Experiencia 1' })
+    expect(screen.getByRole('button', { name: 'Eliminar Experiencia 1' })).toBeInTheDocument()
+    expect(screen.getByText('Analista · Banco')).toBeInTheDocument()
+    // jsdom no carga Tailwind: lo plegado se comprueba por su clase.
+    expect(screen.getByLabelText(/cargo o puesto/i).closest('.hidden')).not.toBeNull()
+
+    await user.click(editar)
+    expect(screen.getByLabelText(/cargo o puesto/i).closest('.hidden')).toBeNull()
+    expect(screen.getByText('certificado.pdf')).toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: /guardar progreso/i }))
+    expect(await screen.findByText(/sección guardada/i)).toBeInTheDocument()
+    expect(postulacionApi.experiencia.mock.calls[0][0][0].documentoId).toBe(5)
+    expect(screen.getByRole('button', { name: 'Editar Experiencia 1' })).toBeInTheDocument()
+  })
+
+  it('una experiencia sin su PDF deja pendiente el envío', async () => {
+    const p = completa()
+    p.experiencia[0].documentoId = null
+    postulacionApi.obtener.mockResolvedValue(p)
+    abrirFormulario('envio')
+    expect(await screen.findByText(/complete las siguientes secciones/i)).toBeInTheDocument()
   })
 })
 
