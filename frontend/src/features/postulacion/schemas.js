@@ -1,4 +1,6 @@
 import { z } from 'zod'
+import { cedulaValida } from '../../utils/cedula'
+import { hoyIso } from '../../utils/fechas'
 
 const texto = (max, msg = 'Es obligatorio') =>
   z.string().trim().min(1, msg).max(max, `Máximo ${max} caracteres`)
@@ -10,9 +12,35 @@ const telefono = z.string().trim().regex(/^\+?\d{7,15}$/, 'Teléfono inválido (
 const opcion = (valores, msg) => z.string().refine((v) => valores.includes(v), msg)
 const siNo = z.boolean().nullable().refine((v) => v !== null, 'Seleccione Sí o No')
 
-const hoy = () => new Date().toISOString().slice(0, 10)
 export const fecha = (msg = 'Es obligatoria') =>
-  z.string().min(1, msg).refine((v) => v <= hoy(), 'No puede ser una fecha futura')
+  z.string().min(1, msg).refine((v) => v <= hoyIso(), 'No puede ser una fecha futura')
+
+export const CON_CONYUGE = ['CASADO/A', 'UNION DE HECHO']
+
+const haceAnios = (n) => {
+  const d = new Date()
+  d.setFullYear(d.getFullYear() - n)
+  return hoyIso(d)
+}
+
+// 1.1 — mismas reglas que el backend (validarDatos).
+export const datosPersonalesSchema = z
+  .object({
+    nombres: texto(100),
+    apellidos: texto(100),
+    genero: opcion(['MASCULINO', 'FEMENINO'], 'Seleccione una opción'),
+    fechaNacimiento: fecha()
+      .refine((v) => v >= '1900-01-01', 'La fecha de nacimiento no es válida')
+      .refine((v) => v > hoyIso() || v <= haceAnios(18), 'Debe ser mayor de edad'),
+    estadoCivil: opcion(['SOLTERO/A', 'CASADO/A', 'DIVORCIADO/A', 'VIUDO/A', 'UNION DE HECHO'], 'Seleccione una opción'),
+    conyugeNombres: textoOpcional(200),
+    conyugeCedula: z.string(),
+  })
+  .superRefine((v, ctx) => {
+    if (!CON_CONYUGE.includes(v.estadoCivil)) return
+    if (!v.conyugeNombres) ctx.addIssue({ code: 'custom', path: ['conyugeNombres'], message: 'Es obligatorio' })
+    if (!cedulaValida(v.conyugeCedula)) ctx.addIssue({ code: 'custom', path: ['conyugeCedula'], message: 'Cédula inválida' })
+  })
 
 // 1.2 — la cascada depende de si el país elegido es Ecuador.
 export const contactoSchema = (ecuadorId) =>
@@ -173,7 +201,7 @@ export const inhabilidadesSchema = (preguntas) =>
           req('cargo', 150)
           req('motivo', 500)
           req('fechaFin', 0, 'Es obligatoria')
-          if (r.detalle.fechaFin && r.detalle.fechaFin > hoy()) {
+          if (r.detalle.fechaFin && r.detalle.fechaFin > hoyIso()) {
             ctx.addIssue({ code: 'custom', path: ['detalle', 'fechaFin'], message: 'No puede ser una fecha futura' })
           }
         }),

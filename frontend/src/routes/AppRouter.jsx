@@ -1,11 +1,12 @@
 import { lazy, Suspense } from 'react'
 import { Link, Navigate, Route, Routes } from 'react-router-dom'
 import { AppLayout, AuthLayout } from '../components/layout/Layouts'
-import { Icon, PageLoader } from '../components/ui'
+import { PageLoader } from '../components/ui'
 import { LoginPage } from '../features/auth/LoginPage'
 import { RecuperarPage } from '../features/auth/RecuperarPage'
 import { RegistroPage } from '../features/auth/RegistroPage'
 import { RestablecerPage } from '../features/auth/RestablecerPage'
+import { useTituloPagina } from '../hooks/useTituloPagina'
 import { ProtectedRoute, PublicOnlyRoute } from './ProtectedRoute'
 
 // El formulario (la parte más pesada) se descarga solo cuando hay sesión.
@@ -14,18 +15,12 @@ const FormularioPage = lazy(() =>
 )
 
 function NoEncontrada() {
+  useTituloPagina('Página no encontrada')
   return (
-    <div className="flex min-h-dvh flex-col items-center justify-center px-6 text-center animate-fade-up">
-      <p className="bg-gradient-to-br from-brand-600 to-gold-400 bg-clip-text text-8xl font-extrabold tracking-tighter text-transparent">
-        404
-      </p>
-      <p className="mt-3 text-lg font-bold text-slate-800">Esta página no existe</p>
-      <p className="mt-1 text-sm text-slate-500">Verifique la dirección o vuelva al inicio para continuar.</p>
-      <Link
-        to="/"
-        className="mt-6 inline-flex items-center gap-2 rounded-xl bg-brand-700 px-5 py-2.5 text-sm font-semibold text-white shadow-glow transition-colors hover:bg-brand-800"
-      >
-        <Icon name="home" className="size-4" />
+    <div className="flex min-h-dvh flex-col justify-center px-6 sm:px-16">
+      <h1 className="text-2xl font-medium tracking-tight">Esta página no existe</h1>
+      <p className="mt-2 text-sm text-tenue">Error 404. Verifique la dirección o vuelva al inicio para continuar.</p>
+      <Link to="/" className="mt-6 inline-flex min-h-11 w-fit items-center rounded-md bg-tinta px-4 text-sm font-medium text-white transition-colors hover:bg-[#2b2b2b]">
         Volver al inicio
       </Link>
     </div>

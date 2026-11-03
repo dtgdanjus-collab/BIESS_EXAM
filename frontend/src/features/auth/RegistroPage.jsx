@@ -10,6 +10,7 @@ import { aplicarErroresCampos } from '../../utils/formErrors'
 import {
   AuthCard,
   BloqueoAviso,
+  claseEnlace,
   IdentidadFields,
   PasswordInput,
   PersonasPrueba,
@@ -21,19 +22,15 @@ import { cuentaSchema, identidadPayload, identidadSchema } from './schemas'
 function Pasos({ paso }) {
   const item = (n, texto) => (
     <li className="flex-1">
-      <div className={`h-1.5 rounded-full transition-colors duration-500 ${paso >= n ? 'bg-brand-600' : 'bg-slate-200'}`} />
-      <p className={`mt-2 flex items-center gap-1.5 text-xs font-semibold ${paso >= n ? 'text-brand-800' : 'text-slate-400'}`}>
-        {paso > n ? (
-          <Icon name="check" className="size-3.5" strokeWidth={3} />
-        ) : (
-          <span className="tabular-nums">{n}.</span>
-        )}
+      <div className={`h-2 transition-colors duration-300 ${paso > n ? 'bg-sello' : paso === n ? 'bg-tinta' : 'bg-control'}`} />
+      <p className={`mt-1.5 flex items-center gap-1 text-xs ${paso >= n ? 'text-tinta' : 'text-tenue'}`}>
+        {paso > n && <Icon name="check" className="size-3.5 text-sello animate-pop" strokeWidth={2.6} />}
         {texto}
       </p>
     </li>
   )
   return (
-    <ol className="mb-7 flex gap-3" aria-label={`Paso ${paso} de 2`}>
+    <ol className="mb-6 flex gap-1" aria-label={`Paso ${paso} de 2`}>
       {item(1, 'Validar identidad')}
       {item(2, 'Crear cuenta')}
     </ol>
@@ -82,11 +79,11 @@ function PasoIdentidad({ onValidado }) {
     <form onSubmit={handleSubmit(onSubmit)} noValidate className="space-y-4">
       {error?.status === 409 ? (
         <Alert type="warning" title={error.message}>
-          <Link to="/login" className="font-semibold underline">
+          <Link to="/login" className="font-medium underline underline-offset-4">
             Inicie sesión
           </Link>{' '}
           o{' '}
-          <Link to="/recuperar" className="font-semibold underline">
+          <Link to="/recuperar" className="font-medium underline underline-offset-4">
             recupere su contraseña
           </Link>
           .
@@ -107,8 +104,8 @@ function PasoIdentidad({ onValidado }) {
         />
       </fieldset>
       {pedirGenero && (
-        <div className="space-y-3 rounded-2xl border border-brand-200 bg-brand-50/50 p-4 animate-slide-down">
-          <p className="text-sm text-slate-700">
+        <div className="space-y-3 rounded-md bg-fondo p-3 animate-slide-down">
+          <p className="text-sm">
             Esta cédula aún no está en el Registro Civil simulado. Indique su género para crear su registro.
           </p>
           <Select label="Género" required options={GENEROS} error={errors.genero?.message} {...register('genero')} />
@@ -191,12 +188,11 @@ export function RegistroPage() {
   return (
     <AuthCard
       titulo="Registro de postulante"
-      icono="id"
       subtitulo="Valide su identidad con los datos de su cédula."
       pie={
         <>
           ¿Ya tiene cuenta?{' '}
-          <Link to="/login" className="font-semibold text-brand-700 hover:underline">
+          <Link to="/login" className={claseEnlace}>
             Inicie sesión
           </Link>
         </>

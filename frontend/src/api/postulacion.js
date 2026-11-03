@@ -5,6 +5,7 @@ const data = (r) => r.data
 export const postulacionApi = {
   obtener: () => api.get('/postulacion').then(data),
   crear: () => api.post('/postulacion').then(data),
+  datosPersonales: (body) => api.put('/postulacion/datos-personales', body).then(data),
   contacto: (body) => api.put('/postulacion/contacto', body).then(data),
   familiares: (body) => api.put('/postulacion/familiares', body).then(data),
   cargo: (body) => api.post('/postulacion/cargo', body).then(data),

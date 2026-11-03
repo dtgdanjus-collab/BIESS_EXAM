@@ -1,4 +1,5 @@
 import { z } from 'zod'
+import { hoyIso } from '../../utils/fechas'
 import { errorCedula } from '../../utils/cedula'
 
 // Cédula con el motivo exacto del error (longitud, provincia, dígito verificador).
@@ -24,7 +25,6 @@ export const password = z.string().superRefine((p, ctx) => {
 
 export const RE_DACTILAR = /^[A-Z]\d{4}[A-Z]\d{4}$/
 const FECHA_MINIMA = '1950-01-01'
-const hoy = () => new Date().toISOString().slice(0, 10)
 
 // Validación de identidad: cédula + fecha de expedición o código dactilar (EF-11).
 export const identidadSchema = z
@@ -39,7 +39,7 @@ export const identidadSchema = z
     const error = (path, message) => ctx.addIssue({ code: 'custom', path: [path], message })
     if (v.metodo === 'fecha') {
       if (!v.fechaExpedicion) error('fechaExpedicion', 'Ingrese la fecha de expedición')
-      else if (v.fechaExpedicion > hoy()) error('fechaExpedicion', 'La fecha no puede ser futura')
+      else if (v.fechaExpedicion > hoyIso()) error('fechaExpedicion', 'La fecha no puede ser futura')
       else if (v.fechaExpedicion < FECHA_MINIMA) error('fechaExpedicion', 'Revise el año de la fecha de expedición')
     } else if (!v.codigoDactilar) {
       error('codigoDactilar', 'Ingrese el código dactilar')

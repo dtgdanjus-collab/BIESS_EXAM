@@ -3,6 +3,7 @@ package middleware
 import (
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/cors"
+	"github.com/gofiber/fiber/v2/middleware/helmet"
 	"github.com/gofiber/fiber/v2/middleware/logger"
 	"github.com/gofiber/fiber/v2/middleware/recover"
 	"github.com/gofiber/fiber/v2/middleware/requestid"
@@ -13,6 +14,8 @@ import (
 func RegisterCommon(app *fiber.App, corsOrigins string) {
 	app.Use(recover.New(recover.Config{EnableStackTrace: true}))
 	app.Use(requestid.New())
+	// El SPA vive en otro dominio: la API debe poder leerse desde otro origen.
+	app.Use(helmet.New(helmet.Config{CrossOriginResourcePolicy: "cross-origin"}))
 	app.Use(logger.New(logger.Config{
 		Format:     "${time} | ${locals:requestid} | ${status} | ${latency} | ${method} ${path} ${error}\n",
 		TimeFormat: "2006-01-02 15:04:05",

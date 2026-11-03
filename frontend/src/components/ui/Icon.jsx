@@ -1,5 +1,3 @@
-import { useEffect, useState } from 'react'
-
 // Set de íconos propio (trazo de 24×24) para no depender de librerías externas.
 const PATHS = {
   user: (
@@ -197,34 +195,5 @@ export function Icon({ name, className = 'size-5', strokeWidth = 1.8, ...props }
     >
       {PATHS[name]}
     </svg>
-  )
-}
-
-/** Anillo de progreso (0–1) con contenido central. */
-export function ProgressRing({ value, size = 88, stroke = 8, children, trackClass = 'text-white/15', barClass = 'text-gold-300' }) {
-  // Parte de 0 para que el anillo crezca al aparecer.
-  const [mostrado, setMostrado] = useState(0)
-  useEffect(() => setMostrado(value), [value])
-  const r = (size - stroke) / 2
-  const c = 2 * Math.PI * r
-  return (
-    <div className="relative inline-flex items-center justify-center" style={{ width: size, height: size }}>
-      <svg width={size} height={size} className="-rotate-90" aria-hidden="true">
-        <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="currentColor" strokeWidth={stroke} className={trackClass} />
-        <circle
-          cx={size / 2}
-          cy={size / 2}
-          r={r}
-          fill="none"
-          stroke="currentColor"
-          strokeWidth={stroke}
-          strokeLinecap="round"
-          strokeDasharray={c}
-          strokeDashoffset={c * (1 - Math.min(1, Math.max(0, mostrado)))}
-          className={`${barClass} transition-[stroke-dashoffset] duration-700 ease-out`}
-        />
-      </svg>
-      <div className="absolute inset-0 flex flex-col items-center justify-center">{children}</div>
-    </div>
   )
 }

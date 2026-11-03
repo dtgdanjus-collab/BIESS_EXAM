@@ -41,6 +41,102 @@ describe('inicio y cierre de la postulación', () => {
   })
 })
 
+describe('datos personales: se corrigen una sola vez', () => {
+  const sinConfirmar = () => postulacionBase({ datosConfirmadosEn: null })
+
+  it('corrige la fecha, confirma y queda bloqueado', async () => {
+    postulacionApi.obtener.mockResolvedValue(sinConfirmar())
+    const base = sinConfirmar().datosPersonales
+    postulacionApi.datosPersonales.mockResolvedValue(
+      postulacionBase({ datosPersonales: { ...base, fechaNacimiento: '1990-06-15' } }),
+    )
+    const user = userEvent.setup()
+    abrirFormulario()
+
+    const fecha = await screen.findByLabelText(/fecha de nacimiento/i)
+    expect(fecha).toHaveValue('1985-04-12')
+    expect(screen.getByText(/solo podrá hacerlo una vez/i)).toBeInTheDocument()
+    expect(screen.queryByLabelText(/nacionalidad/i)).not.toBeInTheDocument()
+
+    await user.clear(fecha)
+    await user.type(fecha, '1990-06-15')
+    await user.click(screen.getByRole('button', { name: /confirmar mis datos/i }))
+    expect(postulacionApi.datosPersonales).not.toHaveBeenCalled()
+
+    await user.click(await screen.findByRole('button', { name: /sí, confirmar/i }))
+    expect(postulacionApi.datosPersonales).toHaveBeenCalledWith(
+      expect.objectContaining({ fechaNacimiento: '1990-06-15', nombres: 'María Fernanda', conyugeNombres: null, conyugeCedula: null }),
+    )
+    expect(await screen.findByText('Datos confirmados')).toBeInTheDocument()
+    expect(screen.getByText('15/06/1990')).toBeInTheDocument()
+    expect(screen.queryByLabelText(/fecha de nacimiento/i)).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /confirmar mis datos/i })).not.toBeInTheDocument()
+  })
+
+  it('no deja confirmar a un menor de edad ni una fecha futura', async () => {
+    postulacionApi.obtener.mockResolvedValue(sinConfirmar())
+    const user = userEvent.setup()
+    abrirFormulario()
+    const fecha = await screen.findByLabelText(/fecha de nacimiento/i)
+    await user.clear(fecha)
+    await user.type(fecha, '2099-01-01')
+    await user.click(screen.getByRole('button', { name: /confirmar mis datos/i }))
+    expect(await screen.findByText(/no puede ser una fecha futura/i)).toBeInTheDocument()
+
+    await user.clear(fecha)
+    await user.type(fecha, `${new Date().getFullYear() - 10}-01-01`)
+    await user.click(screen.getByRole('button', { name: /confirmar mis datos/i }))
+    expect(await screen.findByText(/mayor de edad/i)).toBeInTheDocument()
+    expect(postulacionApi.datosPersonales).not.toHaveBeenCalled()
+  })
+
+  it('si está casada exige los datos del cónyuge', async () => {
+    postulacionApi.obtener.mockResolvedValue(sinConfirmar())
+    const user = userEvent.setup()
+    abrirFormulario()
+    await user.selectOptions(await screen.findByLabelText(/estado civil/i), 'CASADO/A')
+    await user.click(screen.getByRole('button', { name: /confirmar mis datos/i }))
+    expect(await screen.findByText(/cédula del cónyuge/i)).toBeInTheDocument()
+    expect(postulacionApi.datosPersonales).not.toHaveBeenCalled()
+  })
+
+  it('una postulación enviada antes de esta regla sigue siendo de solo lectura', async () => {
+    postulacionApi.obtener.mockResolvedValue(postulacionBase({ estado: 'ENVIADA', datosConfirmadosEn: null, fechaEnvio: '2026-01-15T10:00:00Z' }))
+    abrirFormulario('personal')
+    expect(await screen.findByText('12/04/1985')).toBeInTheDocument()
+    expect(screen.queryByLabelText(/fecha de nacimiento/i)).not.toBeInTheDocument()
+  })
+})
+
+describe('cambios sin guardar', () => {
+  it('avisa antes de salir del folio y permite quedarse o descartar', async () => {
+    postulacionApi.obtener.mockResolvedValue(postulacionBase())
+    const user = userEvent.setup()
+    abrirFormulario('contacto')
+    const calle = await screen.findByLabelText(/calle principal/i)
+    await user.type(calle, 'Av. Solano')
+
+    await user.click(screen.getByRole('button', { name: /ir al folio 1\.3/i }))
+    expect(await screen.findByRole('heading', { name: /tiene cambios sin guardar/i })).toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: /seguir editando/i }))
+    expect(screen.getByLabelText(/calle principal/i)).toHaveValue('Av. Solano')
+
+    await user.click(screen.getByRole('button', { name: /ir al folio 1\.3/i }))
+    await user.click(await screen.findByRole('button', { name: /salir sin guardar/i }))
+    await waitFor(() => expect(screen.queryByLabelText(/calle principal/i)).not.toBeInTheDocument())
+  })
+
+  it('sin cambios se mueve entre folios sin preguntar', async () => {
+    postulacionApi.obtener.mockResolvedValue(postulacionBase())
+    const user = userEvent.setup()
+    abrirFormulario('contacto')
+    await screen.findByLabelText(/calle principal/i)
+    await user.click(screen.getByRole('button', { name: /ir al folio 1\.3/i }))
+    await waitFor(() => expect(screen.queryByLabelText(/calle principal/i)).not.toBeInTheDocument())
+    expect(screen.queryByRole('heading', { name: /tiene cambios sin guardar/i })).not.toBeInTheDocument()
+  })
+})
+
 describe('domicilio: cascada País → Provincia → Cantón', () => {
   it('carga los hijos al elegir el padre y los limpia al cambiarlo', async () => {
     postulacionApi.obtener.mockResolvedValue(postulacionBase())

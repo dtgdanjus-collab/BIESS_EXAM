@@ -149,6 +149,7 @@ export function ContactoSection() {
           type="tel"
           inputMode="tel"
           placeholder="0991234567"
+          autoComplete="tel"
           required
           error={errors.telefonoCelular?.message}
           {...conFiltro(register('telefonoCelular'), telefono)}
@@ -160,7 +161,7 @@ export function ContactoSection() {
           error={errors.telefonoDomicilio?.message}
           {...conFiltro(register('telefonoDomicilio'), telefono)}
         />
-        <Input label="Correo electrónico principal" type="email" required error={errors.correo1?.message} {...register('correo1')} />
+        <Input label="Correo electrónico principal" type="email" autoComplete="email" required error={errors.correo1?.message} {...register('correo1')} />
         <Input label="Correo electrónico alterno" type="email" error={errors.correo2?.message} {...register('correo2')} />
       </div>
     </Seccion>

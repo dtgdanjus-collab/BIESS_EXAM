@@ -56,6 +56,7 @@ Toda escritura sobre una postulación `ENVIADA` o `CERRADA` responde **422**.
 | GET | `/auth/me` | — → `{id, cedula, email, nombres, apellidos}` |
 | GET | `/postulacion` | — (404 si no existe) |
 | POST | `/postulacion` | — → 201 creada · 200 ya existía · 422 si no es ecuatoriano (queda `CERRADA`) |
+| PUT | `/postulacion/datos-personales` | `{nombres, apellidos, genero, fechaNacimiento, estadoCivil, conyugeNombres?, conyugeCedula?}` (corrige y confirma; una sola vez, luego 422) |
 | PUT | `/postulacion/contacto` | `{paisId, provinciaId?, cantonId?, provinciaTexto?, ciudadTexto?, telefonoCelular, correo1, correo2?, callePrincipal, numero?, calleSecundaria?, sector?, referencia?, telefonoDomicilio?}` |
 | PUT | `/postulacion/familiares` | `{tieneFamiliares, items:[{nombresApellidos, parentescoId, institucion: "IESS"\|"BIESS", area, cargo}]}` |
 | POST | `/postulacion/cargo` | `{sector: "AFILIADOS"\|"JUBILADOS"\|"EMPLEADORES", tieneRespaldo, organizacionNombre?}` |
@@ -68,11 +69,13 @@ Toda escritura sobre una postulación `ENVIADA` o `CERRADA` responde **422**.
 
 ### Reglas por sección
 
+- **Datos personales:** el Registro Civil es simulado, así que el postulante corrige sus datos y los confirma una sola vez. La cédula y la nacionalidad no son editables. Exige mayoría de edad y, si está casado o en unión de hecho, los datos del cónyuge.
 - **Contacto:** si `paisId` es Ecuador, `provinciaId` y `cantonId` son obligatorios y el cantón debe pertenecer a la provincia; para otro país se usan `provinciaTexto` y `ciudadTexto`.
 - **Cargo:** se valida contra el Historial Laboral (mock) según `sectores.tipo_requerido`. Si no cumple → 422 con el `mensajeRechazo` literal y `details.etiqueta`.
+- **Formación y experiencia:** requieren al menos un registro (400 si la lista está vacía).
 - **Experiencia:** cada registro devuelve `duracion: {anios, meses, dias}` (fechas inclusivas) y la postulación incluye `experienciaTotal: {general, direccion, total}`.
 - **Inhabilidades:** `detalle` es obligatorio en la 1.9.7 cuando la respuesta es "Sí". Cualquier respuesta distinta de `respuestaEsperada` marca `posibleInhabilidad = true` (no bloquea el envío).
-- **Enviar:** transacción única: bloquea la fila, verifica consentimiento y secciones obligatorias (`contacto`, `familiares`, `cargo`, `formacion`, `experiencia`, `publicaciones`, `inhabilidades`; si faltan → 422 con `details.faltantes`), cambia a `ENVIADA` con fecha y registra el historial. Ante cualquier error se hace `ROLLBACK`.
+- **Enviar:** transacción única: bloquea la fila, verifica consentimiento y secciones obligatorias (`personal`, `contacto`, `familiares`, `cargo`, `formacion`, `experiencia`, `publicaciones`, `inhabilidades`; si faltan → 422 con `details.faltantes`), cambia a `ENVIADA` con fecha y registra el historial. Ante cualquier error se hace `ROLLBACK`.
 
 ### Demostración del rollback
 

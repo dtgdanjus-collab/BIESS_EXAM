@@ -20,6 +20,8 @@ type PostulacionRepository interface {
 
 	GetDatosPersonales(ctx context.Context, postulacionID int64) (*domain.DatosPersonales, error)
 	InsertDatosPersonales(ctx context.Context, postulacionID int64, d domain.DatosPersonales) error
+	// ConfirmarDatosPersonales guarda los datos corregidos y marca la confirmación.
+	ConfirmarDatosPersonales(ctx context.Context, postulacionID int64, d domain.DatosPersonales) error
 
 	GetContacto(ctx context.Context, postulacionID int64) (*domain.Contacto, error)
 	UpsertContacto(ctx context.Context, postulacionID int64, c domain.Contacto) error
@@ -38,14 +40,14 @@ func NewPostulacionRepository(pool *pgxpool.Pool) PostulacionRepository {
 
 const columnasPostulacion = `id, usuario_id, codigo, estado, motivo_cierre, sector_codigo, tiene_respaldo,
 	organizacion_nombre, tiene_familiares, tiene_publicaciones, posible_inhabilidad,
-	consentimiento_aceptado, consentimiento_fecha, fecha_envio, creado_en, actualizado_en`
+	consentimiento_aceptado, consentimiento_fecha, fecha_envio, datos_confirmados_en, creado_en, actualizado_en`
 
 func scanPostulacion(row pgx.Row) (*domain.Postulacion, error) {
 	var p domain.Postulacion
 	err := row.Scan(&p.ID, &p.UsuarioID, &p.Codigo, &p.Estado, &p.MotivoCierre, &p.SectorCodigo,
 		&p.TieneRespaldo, &p.OrganizacionNombre, &p.TieneFamiliares, &p.TienePublicaciones,
 		&p.PosibleInhabilidad, &p.ConsentimientoAceptado, &p.ConsentimientoFecha, &p.FechaEnvio,
-		&p.CreadoEn, &p.ActualizadoEn)
+		&p.DatosConfirmadosEn, &p.CreadoEn, &p.ActualizadoEn)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, ErrNotFound
 	}
@@ -104,6 +106,31 @@ func (r *pgPostulacionRepository) InsertDatosPersonales(ctx context.Context, id 
 		id, d.Cedula, d.Nombres, d.Apellidos, d.Genero, d.FechaNacimiento, d.Nacionalidad,
 		d.EstadoCivil, d.ConyugeNombres, d.ConyugeCedula)
 	return traducir(err, "guardando datos personales")
+}
+
+// ConfirmarDatosPersonales también corrige el Registro Civil simulado, de donde salen los
+// nombres del perfil, para que todo el sistema muestre lo mismo. Debe ir en una transacción.
+func (r *pgPostulacionRepository) ConfirmarDatosPersonales(ctx context.Context, id int64, d domain.DatosPersonales) error {
+	c := conn(ctx, r.pool)
+	if _, err := c.Exec(ctx, `
+		UPDATE postulacion_datos_personales
+		SET nombres = $2, apellidos = $3, genero = $4, fecha_nacimiento = $5, estado_civil = $6,
+		    conyuge_nombres = $7, conyuge_cedula = $8
+		WHERE postulacion_id = $1`,
+		id, d.Nombres, d.Apellidos, d.Genero, d.FechaNacimiento, d.EstadoCivil, d.ConyugeNombres, d.ConyugeCedula); err != nil {
+		return traducir(err, "corrigiendo datos personales")
+	}
+	if _, err := c.Exec(ctx, `
+		UPDATE mock_registro_civil m
+		SET nombres = $2, apellidos = $3, genero = $4, fecha_nacimiento = $5, estado_civil = $6,
+		    conyuge_nombres = $7, conyuge_cedula = $8
+		FROM postulacion_datos_personales dp
+		WHERE dp.postulacion_id = $1 AND m.cedula = dp.cedula`,
+		id, d.Nombres, d.Apellidos, d.Genero, d.FechaNacimiento, d.EstadoCivil, d.ConyugeNombres, d.ConyugeCedula); err != nil {
+		return traducir(err, "corrigiendo el registro civil simulado")
+	}
+	_, err := c.Exec(ctx, `UPDATE postulaciones SET datos_confirmados_en = NOW() WHERE id = $1`, id)
+	return traducir(err, "confirmando datos personales")
 }
 
 func (r *pgPostulacionRepository) GetContacto(ctx context.Context, id int64) (*domain.Contacto, error) {

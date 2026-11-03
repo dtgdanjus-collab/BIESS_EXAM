@@ -1,10 +1,10 @@
 import { Icon } from './Icon'
 
 const estilos = {
-  success: { caja: 'border-emerald-200/80 bg-emerald-50 text-emerald-900', chip: 'bg-emerald-500 text-white', icono: 'check' },
-  error: { caja: 'border-red-200/80 bg-red-50 text-red-900', chip: 'bg-red-500 text-white', icono: 'x' },
-  warning: { caja: 'border-amber-200/80 bg-amber-50 text-amber-900', chip: 'bg-amber-400 text-amber-950', icono: 'alert' },
-  info: { caja: 'border-sky-200/80 bg-sky-50 text-sky-900', chip: 'bg-sky-500 text-white', icono: 'info' },
+  success: { caja: 'bg-ok-fondo text-ok-tinta', icono: 'check' },
+  error: { caja: 'bg-mal-fondo text-mal-tinta', icono: 'x' },
+  warning: { caja: 'bg-aviso-fondo text-aviso-tinta', icono: 'alert' },
+  info: { caja: 'bg-realce text-tinta', icono: 'info' },
 }
 
 export function Alert({ type = 'info', title, children, className = '' }) {
@@ -12,13 +12,11 @@ export function Alert({ type = 'info', title, children, className = '' }) {
   return (
     <div
       role={type === 'error' || type === 'warning' ? 'alert' : 'status'}
-      className={`flex gap-3 rounded-xl border px-4 py-3 text-sm animate-slide-down ${e.caja} ${className}`}
+      className={`flex gap-2.5 rounded-md px-3 py-2.5 text-sm animate-slide-down ${e.caja} ${className}`}
     >
-      <span className={`mt-0.5 flex size-5 shrink-0 items-center justify-center rounded-full ${e.chip}`}>
-        <Icon name={e.icono} className="size-3" strokeWidth={3} />
-      </span>
+      <Icon name={e.icono} className="mt-0.5 size-4" strokeWidth={2} />
       <div className="min-w-0 space-y-1">
-        {title && <p className="font-semibold">{title}</p>}
+        {title && <p className="font-medium">{title}</p>}
         {children && <div className="leading-relaxed">{children}</div>}
       </div>
     </div>

@@ -7,7 +7,7 @@ import { useAsync } from '../../hooks/useAsync'
 import { useBloqueo } from '../../hooks/useBloqueo'
 import { useAuthStore } from '../../store/authStore'
 import { aplicarErroresCampos } from '../../utils/formErrors'
-import { AuthCard, BloqueoAviso, CampoCedula, PasswordInput } from './components'
+import { AuthCard, BloqueoAviso, CampoCedula, claseEnlace, PasswordInput } from './components'
 import { loginSchema } from './schemas'
 
 export function LoginPage() {
@@ -49,7 +49,7 @@ export function LoginPage() {
       pie={
         <>
           ¿Aún no tiene cuenta?{' '}
-          <Link to="/registro" className="font-semibold text-brand-700 hover:underline">
+          <Link to="/registro" className={claseEnlace}>
             Regístrese aquí
           </Link>
         </>
@@ -82,7 +82,7 @@ export function LoginPage() {
             />
           </fieldset>
           <div className="flex justify-end">
-            <Link to="/recuperar" className="text-sm font-medium text-brand-700 hover:underline">
+            <Link to="/recuperar" className={claseEnlace}>
               ¿Olvidó su contraseña?
             </Link>
           </div>
