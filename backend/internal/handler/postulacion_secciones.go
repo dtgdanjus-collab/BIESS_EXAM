@@ -25,6 +25,8 @@ type SeccionesService interface {
 	GuardarInhabilidades(ctx context.Context, usuarioID int64, respuestas []domain.RespuestaInhabilidad) (*domain.Postulacion, error)
 	EliminarInhabilidades(ctx context.Context, usuarioID int64) (*domain.Postulacion, error)
 	Enviar(ctx context.Context, usuarioID int64, aceptaConsentimiento bool) (*domain.Postulacion, error)
+	Formulario(ctx context.Context, usuarioID int64) (*domain.FormularioFinal, error)
+	GuardarPostulacion(ctx context.Context, usuarioID int64) (*domain.FormularioFinal, error)
 }
 
 type SeccionesHandler struct {
@@ -200,6 +202,18 @@ func (h *SeccionesHandler) Enviar(c *fiber.Ctx) error {
 		return err
 	}
 	return responder(c)(h.svc.Enviar(c.UserContext(), middleware.UsuarioID(c), req.AceptaConsentimiento))
+}
+
+// Formulario atiende GET /postulacion/formulario.
+func (h *SeccionesHandler) Formulario(c *fiber.Ctx) error {
+	f, err := h.svc.Formulario(c.UserContext(), middleware.UsuarioID(c))
+	return enJSON(c, f, err)
+}
+
+// GuardarPostulacion atiende POST /postulacion/guardar (1.10.1).
+func (h *SeccionesHandler) GuardarPostulacion(c *fiber.Ctx) error {
+	f, err := h.svc.GuardarPostulacion(c.UserContext(), middleware.UsuarioID(c))
+	return enJSON(c, f, err)
 }
 
 // responder serializa la postulación devuelta por el service o propaga el error.

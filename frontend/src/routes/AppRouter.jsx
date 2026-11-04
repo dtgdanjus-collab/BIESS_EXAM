@@ -13,6 +13,28 @@ import { ProtectedRoute, PublicOnlyRoute } from './ProtectedRoute'
 const FormularioPage = lazy(() =>
   import('../features/postulacion/FormularioPage').then((m) => ({ default: m.FormularioPage })),
 )
+const de = (carga, nombre) => lazy(() => carga().then((m) => ({ default: m[nombre] })))
+const concurso = () => import('../features/concurso/MiConcursoPage')
+const componentes = () => import('../features/concurso/componentes')
+const examen = () => import('../features/concurso/EvaluacionPage')
+const marco = () => import('../features/admin/AdminLayout')
+const nomina = () => import('../features/admin/AdminPostulantes')
+const gestion = () => import('../features/admin/AdminConcurso')
+const MiConcursoPage = de(concurso, 'MiConcursoPage')
+const FasesPage = de(componentes, 'FasesPage')
+const EvaluacionPage = de(examen, 'EvaluacionPage')
+const AdminLoginPage = de(marco, 'AdminLoginPage')
+const AdminLayout = de(marco, 'AdminLayout')
+const PanelPage = de(nomina, 'PanelPage')
+const PostulantesPage = de(nomina, 'PostulantesPage')
+const PostulanteDetallePage = de(nomina, 'PostulanteDetallePage')
+const FasesAdminPage = de(gestion, 'FasesAdminPage')
+const EvaluacionAdminPage = de(gestion, 'EvaluacionAdminPage')
+const ResultadosPage = de(gestion, 'ResultadosPage')
+const ReconsideracionesPage = de(gestion, 'ReconsideracionesPage')
+const UsuariosPage = de(gestion, 'UsuariosPage')
+
+const conCarga = (elemento) => <Suspense fallback={<PageLoader />}>{elemento}</Suspense>
 
 function NoEncontrada() {
   useTituloPagina('Página no encontrada')
@@ -39,6 +61,7 @@ export function AppRouter() {
         </Route>
         <Route path="/recuperar" element={<RecuperarPage />} />
         <Route path="/restablecer" element={<RestablecerPage />} />
+        <Route path="/fases" element={conCarga(<FasesPage />)} />
       </Route>
 
       <Route element={<ProtectedRoute />}>
@@ -51,7 +74,21 @@ export function AppRouter() {
               </Suspense>
             }
           />
+          <Route path="/concurso" element={conCarga(<MiConcursoPage />)} />
         </Route>
+        <Route path="/evaluacion" element={conCarga(<EvaluacionPage />)} />
+      </Route>
+
+      <Route path="/admin/login" element={conCarga(<AdminLoginPage />)} />
+      <Route path="/admin" element={conCarga(<AdminLayout />)}>
+        <Route index element={conCarga(<PanelPage />)} />
+        <Route path="postulantes" element={conCarga(<PostulantesPage />)} />
+        <Route path="postulantes/:id" element={conCarga(<PostulanteDetallePage />)} />
+        <Route path="fases" element={conCarga(<FasesAdminPage />)} />
+        <Route path="evaluacion" element={conCarga(<EvaluacionAdminPage />)} />
+        <Route path="resultados" element={conCarga(<ResultadosPage />)} />
+        <Route path="reconsideraciones" element={conCarga(<ReconsideracionesPage />)} />
+        <Route path="usuarios" element={conCarga(<UsuariosPage />)} />
       </Route>
 
       <Route path="*" element={<NoEncontrada />} />

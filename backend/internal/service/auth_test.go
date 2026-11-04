@@ -144,7 +144,8 @@ func nuevoAuthService() *AuthService {
 		&fakeIntentos{max: 3, fallos: map[string]int{}, bloqueos: map[string]bool{}},
 		fakeTokens{},
 		fakeJWT{},
-		AuthConfig{Bloqueo: 10 * time.Minute, FrontendURL: "http://localhost:5173"})
+		nil,
+		AuthConfig{Bloqueo: 10 * time.Minute, FrontendURL: "http://localhost:5173", EnlaceEnPantalla: true})
 }
 
 func TestLogin_BloqueoSeparadoDelRegistroYRecuperacion(t *testing.T) {

@@ -354,11 +354,29 @@ func (s *PostulacionService) Enviar(ctx context.Context, usuarioID int64, acepta
 		return nil, err
 	}
 
-	if u, err := s.usuarios.FindByID(ctx, usuarioID); err == nil {
-		log.Printf("CORREO SIMULADO → %s | Asunto: Postulación %s enviada | Su postulación fue recibida el %s",
-			u.Email, p.Codigo, p.FechaEnvio.Format("02/01/2006 15:04"))
-	}
+	s.enviarFormularioPorCorreo(ctx, usuarioID, p)
 	return p, nil
+}
+
+// enviarFormularioPorCorreo (1.10.3) manda el formulario completo. La postulación ya quedó
+// enviada: un fallo aquí se registra y no la deshace.
+func (s *PostulacionService) enviarFormularioPorCorreo(ctx context.Context, usuarioID int64, p *domain.Postulacion) {
+	u, err := s.usuarios.FindByID(ctx, usuarioID)
+	if err != nil {
+		log.Printf("ERROR buscando el correo de la postulación %s: %v", p.Codigo, err)
+		return
+	}
+	f, err := s.armarFormulario(ctx, p)
+	if err != nil {
+		log.Printf("ERROR armando el formulario de %s: %v", p.Codigo, err)
+		return
+	}
+	cuerpo, err := formularioHTML(f)
+	if err != nil {
+		log.Printf("ERROR armando el correo de %s: %v", p.Codigo, err)
+		return
+	}
+	notificar(s.correo, Mensaje{Para: u.Email, Asunto: "Formulario de postulación " + p.Codigo, HTML: cuerpo})
 }
 
 func seccionesFaltantes(p *domain.Postulacion) []string {

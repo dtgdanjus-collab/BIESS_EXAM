@@ -17,6 +17,9 @@ import (
 	"github.com/biess-dev/biess-postulacion/backend/pkg/validator"
 )
 
+// MsgCorreoNoDisponible: sin correo no hay forma de entregar el enlace, y no se finge haberlo enviado.
+const MsgCorreoNoDisponible = "No se pudo enviar el correo de recuperación en este momento. Inténtelo más tarde o comuníquese con Talento Humano"
+
 // hashSenuelo se compara cuando la cédula no tiene cuenta, para que el tiempo de respuesta
 // no revele si el usuario existe.
 var hashSenuelo, _ = bcrypt.GenerateFromPassword([]byte("senuelo-no-usar"), bcrypt.DefaultCost)
@@ -103,46 +106,67 @@ func (s *AuthService) perfil(ctx context.Context, u *domain.Usuario) (*Perfil, e
 	return p, nil
 }
 
-// Recuperar valida la identidad (con bloqueo propio) y "envía" por correo un enlace
-// de restablecimiento. El correo se simula escribiéndolo en el log.
-// Devuelve el correo enmascarado para mostrarlo al usuario.
-func (s *AuthService) Recuperar(ctx context.Context, in IdentidadInput) (string, error) {
+// ResultadoRecuperacion: Correo va enmascarado; Enlace solo viene si no hay servicio de correo
+// y la demostración permite mostrarlo en pantalla.
+type ResultadoRecuperacion struct {
+	Correo string
+	Enlace string
+}
+
+// Recuperar valida la identidad (con bloqueo propio) y envía por correo un enlace de restablecimiento.
+func (s *AuthService) Recuperar(ctx context.Context, in IdentidadInput) (*ResultadoRecuperacion, error) {
 	in.Cedula = strings.TrimSpace(in.Cedula)
 	in.CodigoDactilar = strings.ToUpper(strings.TrimSpace(in.CodigoDactilar))
 	in.FechaExpedicion = strings.TrimSpace(in.FechaExpedicion)
 	if err := validarIdentidadInput(in); err != nil {
-		return "", err
+		return nil, err
 	}
 	if err := s.verificarBloqueo(ctx, cache.AmbitoRecuperar, in.Cedula); err != nil {
-		return "", err
+		return nil, err
 	}
 
 	persona, err := s.personas.FindByCedula(ctx, in.Cedula)
 	if err != nil && !errors.Is(err, repository.ErrNotFound) {
-		return "", err
+		return nil, err
 	}
 	if persona == nil || !coincideIdentidad(persona, in) {
-		return "", s.fallo(ctx, cache.AmbitoRecuperar, in.Cedula)
+		return nil, s.fallo(ctx, cache.AmbitoRecuperar, in.Cedula)
 	}
 	if err := s.intentos.Limpiar(ctx, cache.AmbitoRecuperar, in.Cedula); err != nil {
-		return "", err
+		return nil, err
 	}
 
 	u, err := s.usuarios.FindByCedula(ctx, in.Cedula)
 	if errors.Is(err, repository.ErrNotFound) {
-		return "", domain.NewError(domain.ErrNoEncontrado, "No existe una cuenta registrada con esta cédula")
+		return nil, domain.NewError(domain.ErrNoEncontrado, "No existe una cuenta registrada con esta cédula")
 	}
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 
+	correoListo := s.correo != nil && s.correo.Configurado()
+	if !correoListo && !s.cfg.EnlaceEnPantalla {
+		return nil, domain.NewError(domain.ErrReglaNegocio, MsgCorreoNoDisponible)
+	}
 	token := uuid.NewString()
 	if err := s.tokens.Guardar(ctx, cache.TokenRecuperacion, token, u.Cedula, recuperacionTokenTTL); err != nil {
-		return "", err
+		return nil, err
 	}
-	log.Printf("CORREO SIMULADO → %s | Asunto: Recuperación de contraseña | Enlace (válido %d min): %s/restablecer?token=%s",
-		u.Email, int(recuperacionTokenTTL.Minutes()), s.cfg.FrontendURL, token)
-	return enmascararEmail(u.Email), nil
+	enlace := fmt.Sprintf("%s/restablecer?token=%s", s.cfg.FrontendURL, token)
+	res := &ResultadoRecuperacion{Correo: enmascararEmail(u.Email)}
+	if !correoListo {
+		log.Printf("RECUPERACIÓN sin servicio de correo: enlace mostrado en pantalla a la cédula %s", u.Cedula)
+		res.Enlace = enlace
+		return res, nil
+	}
+	err = s.correo.Enviar(ctx, Mensaje{Para: u.Email, Asunto: "Recuperación de contraseña",
+		HTML: correoSimple("Recuperación de contraseña", fmt.Sprintf("Para crear una contraseña nueva abra este enlace, válido por %d minutos: %s",
+			int(recuperacionTokenTTL.Minutes()), enlace))})
+	if err != nil {
+		log.Printf("ERROR enviando la recuperación a %s: %v", u.Email, err)
+		return nil, domain.NewError(domain.ErrReglaNegocio, MsgCorreoNoDisponible)
+	}
+	return res, nil
 }
 
 // Restablecer cambia la contraseña usando el token de recuperación (un solo uso).

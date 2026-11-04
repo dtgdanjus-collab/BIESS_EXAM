@@ -1,26 +1,26 @@
-import { Button, Icon, Sello } from '../../components/ui'
-import { useCatalogo } from '../../hooks/useCatalogo'
-import { formatoFecha, textoDuracion } from '../../utils/fechas'
-import { Dato, EnlaceDocumento, adjuntoDe } from './components'
+import { useEffect, useState } from 'react'
+import { Link } from 'react-router-dom'
+import { postulacionApi } from '../../api/postulacion'
+import { Alert, Button, Icon, PageLoader, Sello } from '../../components/ui'
+import { FormularioVista } from './FormularioVista'
 
 const fechaHora = (iso) =>
   iso ? new Date(iso).toLocaleString('es-EC', { dateStyle: 'long', timeStyle: 'short' }) : '—'
 
-function Bloque({ titulo, children }) {
-  return (
-    <div>
-      <h3 className="mb-1 text-base font-medium">{titulo}</h3>
-      {children}
-    </div>
-  )
-}
-
-/** Resumen imprimible de la postulación enviada: una portada con su código y su sello. */
+/** Portada con su código y su sello, seguida del formulario completo para imprimir y firmar. */
 export function Comprobante({ postulacion, celebrar = false }) {
-  const sectores = useCatalogo('sectores')
-  const d = postulacion.datosPersonales
-  const c = postulacion.contacto
-  const sector = sectores.data.find((s) => s.codigo === postulacion.sectorCodigo)
+  const [formulario, setFormulario] = useState(null)
+  const [fallo, setFallo] = useState(false)
+
+  useEffect(() => {
+    let vigente = true
+    Promise.resolve(postulacionApi.formulario())
+      .then((f) => vigente && setFormulario(f ?? null))
+      .catch(() => vigente && setFallo(true))
+    return () => {
+      vigente = false
+    }
+  }, [])
 
   return (
     <article className="overflow-hidden rounded-lg border border-borde bg-papel print:border-0">
@@ -37,74 +37,16 @@ export function Comprobante({ postulacion, celebrar = false }) {
         </div>
       </header>
 
-      <div className="space-y-8 border-t border-regla p-5 sm:p-8">
-        <dl className="grid gap-4 sm:grid-cols-2">
-          <Dato etiqueta="Postulante" valor={`${d.nombres} ${d.apellidos}`} />
-          <Dato etiqueta="Cédula" valor={d.cedula} />
-          <Dato etiqueta="Cargo" valor={sector?.cargo ?? postulacion.sectorCodigo} className="sm:col-span-2" />
-          {postulacion.tieneRespaldo && (
-            <Dato etiqueta="Organización que respalda" valor={postulacion.organizacionNombre} className="sm:col-span-2" />
-          )}
-          {postulacion.organizacionDocumento && (
-            <Dato etiqueta="Documento de respaldo" valor={<EnlaceDocumento documento={postulacion.organizacionDocumento} />} className="sm:col-span-2" />
-          )}
-          {c && <Dato etiqueta="Correo de contacto" valor={c.correo1} />}
-          {c && <Dato etiqueta="Teléfono" valor={c.telefonoCelular} />}
-        </dl>
-
-        <Bloque titulo="Formación académica">
-          <ul>
-            {postulacion.formacion.map((f) => (
-              <li key={f.id} className="border-b border-regla py-2.5 text-sm last:border-b-0">
-                <p>{f.titulo}</p>
-                <p className="text-xs text-tenue">
-                  {f.institucion} · Registro {f.registroSenescyt} · {formatoFecha(f.fechaRegistro)}
-                </p>
-                {f.documentoId && <p className="text-xs"><EnlaceDocumento documento={adjuntoDe(f)} /></p>}
-              </li>
-            ))}
-          </ul>
-        </Bloque>
-
-        <Bloque titulo="Experiencia profesional">
-          <ul>
-            {postulacion.experiencia.map((e) => (
-              <li key={e.id} className="flex flex-wrap items-baseline justify-between gap-x-4 border-b border-regla py-2.5 text-sm">
-                <span className="min-w-0">
-                  {e.cargo}
-                  <span className="text-tenue"> · {e.institucion}</span>
-                </span>
-                <span className="tabular-nums text-tenue">{textoDuracion(e.duracion)}</span>
-                {e.documentoId && <span className="w-full text-xs"><EnlaceDocumento documento={adjuntoDe(e)} /></span>}
-              </li>
-            ))}
-          </ul>
-          <p className="mt-2.5 flex flex-wrap items-baseline justify-between gap-x-4 text-sm font-medium">
-            Total
-            <span className="tabular-nums text-sello">{textoDuracion(postulacion.experienciaTotal?.total)}</span>
-          </p>
-        </Bloque>
-
-        <dl className="grid gap-px overflow-hidden rounded-md bg-regla sm:grid-cols-2 lg:grid-cols-4">
-          {[
-            ['Familiares en IESS/BIESS', postulacion.tieneFamiliares ? `Sí (${postulacion.familiares.length})` : 'No'],
-            ['Publicaciones', postulacion.tienePublicaciones ? `Sí (${postulacion.publicaciones.length})` : 'No'],
-            ['Capacitaciones', String(postulacion.capacitaciones.length)],
-            ['Documentos adjuntos', String(
-              [postulacion.organizacionDocumento?.id, ...[...postulacion.formacion, ...postulacion.experiencia, ...postulacion.publicaciones, ...postulacion.capacitaciones].map((x) => x.documentoId)].filter(Boolean).length,
-            )],
-          ].map(([etiqueta, valor]) => (
-            <Dato key={etiqueta} etiqueta={etiqueta} valor={valor} className="bg-[#fafafa] p-3" />
-          ))}
-        </dl>
-
-        <p className="text-xs leading-relaxed text-tenue">
-          Conserve este comprobante. Recuerde entregar el formulario firmado y los documentos de respaldo en la fecha y lugar que se le
-          comuniquen.
-        </p>
+      <div className="border-t border-regla p-5 sm:p-8">
+        {formulario && <FormularioVista formulario={formulario} />}
+        {fallo && <Alert type="error">No se pudo cargar el formulario. Recargue la página para intentarlo otra vez.</Alert>}
+        {!formulario && !fallo && <PageLoader texto="Cargando el formulario…" />}
       </div>
 
-      <footer className="no-print flex justify-end border-t border-regla bg-[#fafafa] px-5 py-4 sm:px-8">
+      <footer className="no-print flex flex-wrap justify-end gap-2 border-t border-regla bg-[#fafafa] px-5 py-4 sm:px-8">
+        <Link to="/concurso" className="inline-flex min-h-11 items-center justify-center rounded-md px-4 text-sm font-medium underline-offset-4 hover:underline">
+          Ver el avance del concurso
+        </Link>
         <Button variant="secondary" onClick={() => window.print()}>
           <Icon name="printer" className="size-4" />
           Imprimir comprobante
