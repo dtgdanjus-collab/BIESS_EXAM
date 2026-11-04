@@ -151,6 +151,21 @@ El contrato completo de la API está en [docs/api.md](docs/api.md) y el guion de
 
 El backend acepta `DATABASE_URL`, `REDIS_URL` y `PORT` (variables de Render) además de las variables locales.
 
+## Aplicación instalable (PWA)
+
+El sistema se puede instalar y abrir sin internet, pero **nunca guarda datos personales en el dispositivo**. Guardar y enviar siempre requieren conexión, porque la API es quien valida y sella la postulación.
+
+| Elemento | Sin conexión | Se guarda en el dispositivo |
+|---|---|---|
+| Pantallas, código, estilos, fuentes e iconos | Funciona | Sí, al instalar |
+| Catálogos (`/api/catalogos/*`, lista cerrada en `vite.config.js`) | Funciona si ya se consultaron | Sí, y se actualizan con conexión |
+| Login, registro, expediente, administración y examen | Aviso de falta de conexión | **No** |
+
+- **Instalar:** en Android y escritorio, desde el menú del perfil. En iPhone, con Compartir → «Agregar a inicio» en Safari.
+- **Actualizaciones:** se pregunta antes de actualizar, nunca a la fuerza. Durante el examen no se ofrece.
+- **Retirada de emergencia:** un service worker defectuoso no se arregla revirtiendo el commit. Hay que definir `VITE_PWA_DESACTIVADA=true` en la web y desplegar: se desinstala solo en la siguiente visita de cada persona.
+- **En desarrollo** está apagada. Para probarla: `npm run build && npm run preview`.
+
 ## Flujo de Git
 
 Ramas `main` (entregas) y `develop` (integración). Cada fase se desarrolló en `feature/fase-XX-nombre` y se fusionó a `develop` con `--no-ff`. Los commits usan prefijos convencionales (`feat`, `fix`, `chore`, `docs`).

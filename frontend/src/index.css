@@ -28,8 +28,8 @@
   --color-aviso-fondo: #fffbeb;
   --color-aviso-tinta: #92400e;
 
-  --font-sans: "Geist", Inter, system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
-  --font-mono: "Geist Mono", ui-monospace, Consolas, monospace;
+  --font-sans: "Geist Variable", Inter, system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+  --font-mono: "Geist Mono Variable", ui-monospace, Consolas, monospace;
 
   --shadow-flota: 0 12px 32px rgb(0 0 0 / 0.14);
 

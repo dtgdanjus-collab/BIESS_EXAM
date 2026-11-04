@@ -3,6 +3,7 @@ import { Controller, useController } from 'react-hook-form'
 import { postulacionApi } from '../../api/postulacion'
 import { Alert, Button, Card, ErrorAlert, Icon, Modal, Select, Spinner } from '../../components/ui'
 import { useAsync } from '../../hooks/useAsync'
+import { useConexion } from '../../hooks/useConexion'
 import { guardarArchivo } from '../../utils/descargas'
 import { aplicarErroresCampos } from '../../utils/formErrors'
 import { siguienteSeccion } from './secciones'
@@ -63,6 +64,7 @@ export function CampoSelect({ control, name, onCambio, ...props }) {
 /** Folio del formulario con su barra de "Guardar progreso". */
 export function Seccion({ id, numeral, titulo, descripcion, children, peticion, onSubmit, pie, mostrarError = true, textoGuardar = 'Guardar progreso', ocultarGuardar = false }) {
   const { soloLectura, irA } = useFormulario()
+  const enLinea = useConexion()
   const siguiente = siguienteSeccion(id)
   return (
     <form onSubmit={onSubmit} noValidate>
@@ -97,11 +99,11 @@ export function Seccion({ id, numeral, titulo, descripcion, children, peticion, 
                 <div className="flex flex-col justify-end gap-2 sm:flex-row">
                   {/* El requerimiento pide «Guardar Progreso» en cada campo, además del botón propio del campo. */}
                   {textoGuardar !== 'Guardar progreso' && (
-                    <Button type="submit" variant="secondary" disabled={peticion.loading} className="w-full sm:w-auto">
+                    <Button type="submit" variant="secondary" disabled={peticion.loading || !enLinea} className="w-full sm:w-auto">
                       Guardar progreso
                     </Button>
                   )}
-                  <Button type="submit" loading={peticion.loading} className="w-full sm:w-auto">
+                  <Button type="submit" loading={peticion.loading} disabled={!enLinea} className="w-full sm:w-auto">
                     {textoGuardar}
                   </Button>
                 </div>
