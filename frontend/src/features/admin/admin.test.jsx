@@ -40,7 +40,7 @@ describe('acceso', () => {
     const user = userEvent.setup()
     abrir('/admin')
     await user.type(await screen.findByLabelText(/usuario/i), 'ana')
-    await user.type(screen.getByLabelText(/contraseña/i), 'mala')
+    await user.type(screen.getByLabelText(/^contraseña/i), 'mala')
     await user.click(screen.getByRole('button', { name: 'Ingresar' }))
     expect(await screen.findByText(/credenciales de ingreso son incorrectas/i)).toBeInTheDocument()
   })
