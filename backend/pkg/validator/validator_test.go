@@ -37,9 +37,9 @@ func TestCodigoDactilar(t *testing.T) {
 		"v4443v4442":  false, // minúsculas
 		"V4443V444":   false,
 		"V4443-V4442": false,
-		"V4443V444A":  false, // dígito final no numérico
-		"44430V4442":  false, // debe iniciar con letra
-		"VV443V4442":  false,
+		"0123456789":  true, // 10 dígitos, como dice el requerimiento
+		"V4443V444-":  false,
+		"0123456789A": false,
 	}
 	for c, want := range casos {
 		if got := CodigoDactilar(c); got != want {

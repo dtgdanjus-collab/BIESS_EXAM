@@ -23,6 +23,7 @@ type SeccionesService interface {
 	GuardarPublicaciones(ctx context.Context, usuarioID int64, tiene bool, items []domain.Publicacion) (*domain.Postulacion, error)
 	GuardarCapacitaciones(ctx context.Context, usuarioID int64, items []domain.Capacitacion) (*domain.Postulacion, error)
 	GuardarInhabilidades(ctx context.Context, usuarioID int64, respuestas []domain.RespuestaInhabilidad) (*domain.Postulacion, error)
+	EliminarInhabilidades(ctx context.Context, usuarioID int64) (*domain.Postulacion, error)
 	Enviar(ctx context.Context, usuarioID int64, aceptaConsentimiento bool) (*domain.Postulacion, error)
 }
 
@@ -181,6 +182,11 @@ func (h *SeccionesHandler) Inhabilidades(c *fiber.Ctx) error {
 		respuestas = append(respuestas, domain.RespuestaInhabilidad{PreguntaID: r.PreguntaID, Respuesta: *r.Respuesta, Detalle: r.Detalle})
 	}
 	return responder(c)(h.svc.GuardarInhabilidades(c.UserContext(), middleware.UsuarioID(c), respuestas))
+}
+
+// EliminarInhabilidades atiende DELETE /postulacion/inhabilidades.
+func (h *SeccionesHandler) EliminarInhabilidades(c *fiber.Ctx) error {
+	return responder(c)(h.svc.EliminarInhabilidades(c.UserContext(), middleware.UsuarioID(c)))
 }
 
 type enviarReq struct {

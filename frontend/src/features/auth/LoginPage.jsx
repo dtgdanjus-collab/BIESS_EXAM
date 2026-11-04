@@ -83,7 +83,7 @@ export function LoginPage() {
           </fieldset>
           <div className="flex justify-end">
             <Link to="/recuperar" className={claseEnlace}>
-              ¿Olvidó su contraseña?
+              ¿Olvidaste tu contraseña?
             </Link>
           </div>
           <Button type="submit" className="w-full" loading={peticion.loading} disabled={bloqueo.bloqueado}>

@@ -308,10 +308,20 @@ func validarDetalleRemocion(errs campos, k string, d *domain.DetalleRemocion) {
 		return
 	}
 	d.Institucion, d.Cargo, d.Motivo = strings.TrimSpace(d.Institucion), strings.TrimSpace(d.Cargo), strings.TrimSpace(d.Motivo)
+	// 1.9.7.1: solo la institución y el motivo llevan asterisco.
 	errs.req(k+"institucion", d.Institucion, 200)
-	errs.req(k+"cargo", d.Cargo, 150)
+	errs.opt(k+"cargo", &d.Cargo, 150)
 	errs.req(k+"motivo", d.Motivo, 500)
-	errs.fechaPasada(k+"fechaFin", d.FechaFin)
+	if !d.FechaFin.IsZero() {
+		errs.fechaPasada(k+"fechaFin", d.FechaFin)
+	}
+}
+
+// EliminarInhabilidades borra las respuestas de la sección (1.9).
+func (s *PostulacionService) EliminarInhabilidades(ctx context.Context, usuarioID int64) (*domain.Postulacion, error) {
+	return s.editarBorrador(ctx, usuarioID, "ELIMINAR_INHABILIDADES", func(ctx context.Context, p *domain.Postulacion) error {
+		return s.detalle.ReplaceInhabilidades(ctx, p.ID, nil, false)
+	})
 }
 
 // Enviar (1.10) es la transacción principal: con la fila bloqueada verifica las secciones

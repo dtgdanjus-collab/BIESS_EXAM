@@ -43,6 +43,7 @@ export function FormacionSection() {
       descripcion="Registre sus títulos de tercer y cuarto nivel."
       peticion={peticion}
       onSubmit={onSubmit}
+      textoGuardar="Guardar información"
     >
       {errors.items?.root && <Alert type="error">{errors.items.root.message}</Alert>}
       {fields.length === 0 && <p className="text-sm text-tenue">No ha registrado títulos.</p>}
