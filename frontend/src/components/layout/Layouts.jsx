@@ -24,7 +24,7 @@ export function Marca({ claro = false, compacta = false }) {
       <span className="leading-tight">
         <span className={`block text-sm font-medium ${claro ? 'text-white' : 'text-tinta'}`}>Directorio BIESS</span>
         {!compacta && (
-          <span className={`block text-xs ${claro ? 'text-noche-tenue' : 'text-tenue'}`}>Concurso de Méritos y Oposición</span>
+          <span className={`block text-[13px] ${claro ? 'text-noche-tenue' : 'text-tenue'}`}>Concurso de Méritos y Oposición</span>
         )}
       </span>
     </Link>
@@ -44,7 +44,7 @@ export function AuthLayout() {
               <Outlet />
             </div>
           </main>
-          <footer className="px-4 pb-5 text-xs text-tenue sm:px-6 lg:text-center">
+          <footer className="px-4 pb-5 text-[13px] text-tenue sm:px-6 lg:text-center">
             <p className="mx-auto max-w-md lg:max-w-none">
               Sistema académico de demostración · Requerimiento Funcional IESS v1.4 · Resolución C.D. 701
             </p>

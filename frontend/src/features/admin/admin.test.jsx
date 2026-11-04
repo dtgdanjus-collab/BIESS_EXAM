@@ -45,6 +45,28 @@ describe('acceso', () => {
     expect(await screen.findByText(/credenciales de ingreso son incorrectas/i)).toBeInTheDocument()
   })
 
+  it('el sello muestra el usuario y nunca la contraseña, y al autorizar entra al panel', async () => {
+    adminApi.login.mockResolvedValue({
+      token: 'jwt',
+      expiraEn: new Date(Date.now() + 3_600_000).toISOString(),
+      admin: { id: 1, usuario: 'ana', nombre: 'Ana Admin', rol: 'ADMINISTRADOR' },
+    })
+    adminApi.dashboard.mockResolvedValue({ cargos: [], sinCargo: 0, cerradas: 0, posibleInhabilidad: 0, cuentas: 0, generado: new Date().toISOString() })
+    const user = userEvent.setup()
+    const { container } = abrir('/admin/login')
+    await user.type(await screen.findByLabelText(/usuario/i), 'ana')
+    expect(screen.getByText('Falta la contraseña')).toBeInTheDocument()
+    expect(screen.getByText('ana')).toBeInTheDocument()
+
+    await user.type(screen.getByLabelText(/^contraseña/i), 'Secreta2026')
+    expect(screen.getByText('Listo para ingresar')).toBeInTheDocument()
+    expect(container.querySelector('aside').textContent).not.toContain('Secreta2026')
+
+    await user.click(screen.getByRole('button', { name: 'Ingresar' }))
+    expect(await screen.findByText('Autorizado')).toBeInTheDocument()
+    expect(await screen.findByText('Postulantes por cargo', {}, { timeout: 3000 })).toBeInTheDocument()
+  })
+
   it('el analista no ve los apartados del administrador', async () => {
     sesion('ANALISTA')
     adminApi.dashboard.mockResolvedValue({ cargos: [], sinCargo: 0, cerradas: 0, posibleInhabilidad: 0, cuentas: 0, generado: new Date().toISOString() })

@@ -1,7 +1,8 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { Link, Navigate, NavLink, Outlet, useNavigate } from 'react-router-dom'
 import { adminApi } from '../../api/admin'
+import { postulacionApi } from '../../api/postulacion'
 import { Button, ErrorAlert, Icon, Input } from '../../components/ui'
 import { Marca } from '../../components/layout/Layouts'
 import { useAsync } from '../../hooks/useAsync'
@@ -10,11 +11,20 @@ import { useTituloPagina } from '../../hooks/useTituloPagina'
 import { useAdminStore } from '../../store/adminStore'
 import { aplicarErroresCampos } from '../../utils/formErrors'
 import { BloqueoAviso, claseEnlace as claseEnlaceAcceso, PasswordInput } from '../auth/components'
+import { SelloCerradura } from './SelloCerradura'
 
-const TAREAS = [
-  ['Talento Humano', 'Revisa los expedientes, registra las calificaciones y responde las reconsideraciones.'],
-  ['Comisión de Selección', 'Además publica las fases, habilita el formulario y gestiona el banco de preguntas.'],
-]
+/** El estado real del concurso, tal como lo ve un postulante. */
+function useConcursoPublico() {
+  const [datos, setDatos] = useState(null)
+  useEffect(() => {
+    let vigente = true
+    postulacionApi.concursoPublico().then((d) => vigente && setDatos(d)).catch(() => {})
+    return () => {
+      vigente = false
+    }
+  }, [])
+  return datos
+}
 
 export function AdminLoginPage() {
   useTituloPagina('Administración')
@@ -23,15 +33,42 @@ export function AdminLoginPage() {
   const navigate = useNavigate()
   const peticion = useAsync()
   const bloqueo = useBloqueo()
-  const { register, handleSubmit, setError, formState: { errors } } = useForm({ defaultValues: { usuario: '', password: '' } })
+  const concurso = useConcursoPublico()
+  const [autorizado, setAutorizado] = useState(false)
+  // El aviso rojo del sello dura hasta que se corrige lo que se intentó.
+  const [intento, setIntento] = useState(null)
+  const { register, handleSubmit, setError, watch, formState: { errors } } = useForm({ defaultValues: { usuario: '', password: '' } })
+  const usuario = watch('usuario')
+  const clave = watch('password')
 
   if (autenticado) return <Navigate to="/admin" replace />
 
+  const firma = `${usuario}|${clave.length}`
+  const estadoSello = autorizado
+    ? 'autorizado'
+    : bloqueo.bloqueado
+      ? 'bloqueado'
+      : peticion.loading
+        ? 'verificando'
+        : peticion.error && intento === firma
+          ? 'error'
+          : usuario && clave
+            ? 'listo'
+            : usuario
+              ? 'usuario'
+              : 'vacio'
+
   const onSubmit = handleSubmit(async (v) => {
+    setIntento(`${v.usuario}|${v.password.length}`)
     const r = await peticion.run(() => adminApi.login(v))
     if (r.ok) {
-      guardar(r.data)
-      navigate('/admin', { replace: true })
+      // Un instante para ver caer el sello antes de entrar.
+      setAutorizado(true)
+      bloqueo.limpiar()
+      setTimeout(() => {
+        guardar(r.data)
+        navigate('/admin', { replace: true })
+      }, 700)
       return
     }
     bloqueo.procesarError(r.error)
@@ -40,29 +77,39 @@ export function AdminLoginPage() {
 
   return (
     <div className="min-h-dvh bg-papel lg:grid lg:grid-cols-[minmax(0,1.1fr)_minmax(0,1fr)]">
-      <aside className="flex flex-col bg-noche px-4 py-5 text-white [&_:focus-visible]:outline-white sm:px-6 lg:min-h-dvh lg:px-14 lg:py-12">
-        <Marca claro />
-        <div className="mt-6 lg:my-auto">
-          <h2 className="text-2xl font-medium leading-tight tracking-tight lg:text-[32px]">El concurso, de la postulación a la lista de elegibles</h2>
-          <p className="mt-3 max-w-lg text-sm leading-relaxed text-noche-tenue">
-            Espacio de trabajo de la Subdirección de Talento Humano y de la Comisión de Selección.
+      <aside className="relative overflow-hidden bg-noche text-white [&_a:focus-visible]:outline-white md:min-h-[26rem] lg:sticky lg:top-0 lg:h-dvh">
+        {/* El disco del acceso de postulantes con los colores invertidos. */}
+        <div aria-hidden="true" className="absolute -right-[10vw] -top-[15vw] aspect-square w-[30vw] rounded-full bg-sello md:-right-[9rem] md:top-[3rem] md:w-[40rem] lg:-right-[48vh] lg:top-[42vh] lg:w-[150vh]" />
+
+        <div className="relative px-4 pt-3 lg:px-10 lg:pt-10 xl:px-14 xl:pt-12">
+          <Marca claro />
+        </div>
+
+        <div className="relative px-4 pb-5 pt-3 md:max-w-[52%] md:px-6 md:pb-8 md:pt-8 lg:max-w-none lg:px-10 lg:pb-0 lg:pt-[7vh] xl:px-14">
+          <h2 className="max-w-[13em] animate-aparece text-[1.75rem] font-medium leading-[1.03] tracking-[-0.03em] md:text-[1.9rem] lg:text-[clamp(2.25rem,3.6vw,3.75rem)]">
+            Seis fases, tres sectores, un Directorio
+          </h2>
+          <p className="mt-3 max-w-[26rem] animate-aparece text-base leading-relaxed [animation-delay:70ms] lg:mt-5">
+            Talento Humano y la Comisión de Selección conducen aquí el concurso de afiliados, jubilados y empleadores.
           </p>
-          <dl className="mt-10 hidden max-w-lg border-t border-white/15 lg:block">
-            {TAREAS.map(([rol, tarea]) => (
-              <div key={rol} className="border-b border-white/15 py-4">
-                <dt className="text-sm font-medium">{rol}</dt>
-                <dd className="mt-1 text-sm leading-relaxed text-noche-tenue">{tarea}</dd>
-              </div>
-            ))}
-          </dl>
+          {concurso && (
+            <p className="mt-4 flex animate-aparece items-center gap-2.5 text-base font-medium [animation-delay:140ms]">
+              <span className={`size-3 shrink-0 rounded-full ${concurso.formularioAbierto ? 'bg-sello-claro' : 'bg-noche-tenue'}`} />
+              Formulario de postulación {concurso.formularioAbierto ? 'abierto' : 'cerrado'}
+            </p>
+          )}
+        </div>
+
+        <div aria-hidden="true" className="absolute bottom-6 right-6 hidden w-80 md:block lg:bottom-[4vh] lg:right-[5%] lg:w-[min(46vh,34vw)]">
+          <SelloCerradura usuario={usuario} largoClave={clave.length} estado={estadoSello} />
         </div>
       </aside>
       <div className="flex flex-col lg:min-h-dvh">
         <main className="flex flex-1 items-start justify-center px-4 py-6 sm:px-6 lg:items-center lg:py-12">
           <form onSubmit={onSubmit} noValidate className="w-full max-w-md">
-            <h1 className="text-2xl font-medium tracking-tight lg:text-[32px] lg:leading-tight">Módulo de administración</h1>
-            <p className="mt-2 text-sm leading-relaxed text-tenue">Ingrese con el usuario y la contraseña de su cuenta institucional.</p>
-            <div className="mt-6 space-y-4">
+            <h1 className="animate-aparece text-[32px] font-medium leading-[1.05] tracking-[-0.03em] lg:text-[44px]">Módulo de administración</h1>
+            <p className="mt-3 animate-aparece text-base leading-relaxed text-tenue [animation-delay:70ms]">Ingrese con el usuario y la contraseña de su cuenta.</p>
+            <div className="mt-7 animate-aparece space-y-4 [animation-delay:140ms]">
               {peticion.error?.status !== 423 && <ErrorAlert error={peticion.error} />}
               <BloqueoAviso bloqueo={bloqueo} mensajeBloqueo={peticion.error?.message} />
               <fieldset disabled={bloqueo.bloqueado} className="space-y-4">
@@ -81,7 +128,7 @@ export function AdminLoginPage() {
             </p>
           </form>
         </main>
-        <footer className="px-4 pb-5 text-xs text-tenue sm:px-6 lg:text-center">
+        <footer className="px-4 pb-5 text-[13px] text-tenue sm:px-6 lg:text-center">
           <p className="mx-auto max-w-md lg:max-w-none">Sistema académico de demostración · Requerimiento Funcional IESS v1.4 · Resolución C.D. 701</p>
         </footer>
       </div>
