@@ -10,11 +10,30 @@ const LECTURA = {
   autorizado: 'Autorizado',
 }
 
+/** Gris mientras está cerrado; al autorizar, el arco gira sobre su pata derecha y se abre. */
+function Candado({ abierto, rojo }) {
+  return (
+    <svg viewBox="0 0 48 56" fill="none" className="mx-auto w-[11cqw] overflow-visible">
+      <path
+        d="M14 28V16a10 10 0 0 1 20 0v12"
+        stroke={rojo ? '#ffd0cb' : '#d3d7de'}
+        strokeWidth="5.5"
+        strokeLinecap="round"
+        className="transition-transform delay-100 duration-300 ease-[cubic-bezier(0.3,1.5,0.6,1)]"
+        style={{ transformOrigin: '34px 28px', transform: abierto ? 'rotate(32deg)' : 'none' }}
+      />
+      <rect x="5" y="24" width="38" height="30" rx="7" fill={rojo ? '#ffd0cb' : '#d3d7de'} />
+      <circle cx="24" cy="36" r="4.5" className="fill-sello" />
+      <rect x="21.75" y="37" width="4.5" height="10" rx="2.25" className="fill-sello" />
+    </svg>
+  )
+}
+
 /**
- * El sello de la Comisión como cerradura: el usuario se lee en el centro y cada carácter de la
- * contraseña gira el dial y enciende una muesca. Solo recibe cuántos caracteres hay, la clave
- * nunca llega aquí. Al autorizar, el sello cae. Repite lo que ya dice el formulario, por eso queda
- * fuera del árbol de accesibilidad.
+ * El sello de la Comisión como cerradura: el candado y el usuario se leen en el centro y cada
+ * carácter de la contraseña gira el dial y enciende una muesca. Solo recibe cuántos caracteres hay,
+ * la clave nunca llega aquí. Al autorizar, el candado se abre y el sello cae. Repite lo que ya dice
+ * el formulario, por eso queda fuera del árbol de accesibilidad.
  */
 export function SelloCerradura({ usuario, largoClave, estado }) {
   const encendidas = Math.min(largoClave, MUESCAS)
@@ -62,7 +81,8 @@ export function SelloCerradura({ usuario, largoClave, estado }) {
         </svg>
 
         <div className="absolute left-1/2 top-1/2 w-[46%] -translate-x-1/2 -translate-y-1/2 rotate-[9deg] text-center">
-          <p className="truncate text-[7cqw] font-medium leading-tight tracking-tight">{usuario || 'Comisión'}</p>
+          <Candado abierto={estado === 'autorizado'} rojo={rojo} />
+          <p className="mt-[1.5cqw] truncate text-[6cqw] font-medium leading-tight tracking-tight">{usuario || 'Comisión'}</p>
           <p className={`mt-[1.5cqw] text-[3.8cqw] leading-snug ${rojo ? 'font-medium text-[#ffd0cb]' : 'text-white/85'}`}>{LECTURA[estado]}</p>
         </div>
       </div>
