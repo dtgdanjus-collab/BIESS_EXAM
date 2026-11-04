@@ -2,10 +2,10 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { useRef, useState } from 'react'
 import { Controller, useForm } from 'react-hook-form'
 import { postulacionApi } from '../../../api/postulacion'
-import { Alert, Button, ErrorAlert, Icon, Input, Modal, PageLoader, SiNo, Spinner } from '../../../components/ui'
+import { Alert, ErrorAlert, Icon, Input, PageLoader, SiNo, Spinner } from '../../../components/ui'
 import { useAsync } from '../../../hooks/useAsync'
 import { useCatalogo } from '../../../hooks/useCatalogo'
-import { CampoDocumento, Dato, EnlaceDocumento, Seccion, opcional, useFormulario, useGuardarSeccion } from '../components'
+import { AccionesGuardado, CampoDocumento, Dato, EnlaceDocumento, Seccion, opcional, useFormulario, useGuardarSeccion } from '../components'
 import { cargoSchema } from '../schemas'
 
 /** Resultado de la validación contra el Historial Laboral del IESS: ✔ o ✖. */
@@ -35,13 +35,12 @@ const valoresDe = (p) => ({
 // 1.4 — Cargo al que postula: al elegirlo se valida la calidad de afiliado/jubilado/empleador
 // y solo si la acredita se despliega la pregunta del respaldo.
 export function CargoSection() {
-  const { postulacion, soloLectura } = useFormulario()
+  const { postulacion } = useFormulario()
   const sectores = useCatalogo('sectores')
   const peticion = useGuardarSeccion()
   const validacion = useAsync()
   const [resultado, setResultado] = useState(null)
   const [editando, setEditando] = useState(!postulacion.sectorCodigo)
-  const [confirmarEliminar, setConfirmarEliminar] = useState(false)
   const ultimaConsulta = useRef(null)
 
   const { register, control, handleSubmit, watch, setError, reset, formState: { errors } } = useForm({
@@ -86,7 +85,6 @@ export function CargoSection() {
   })
 
   const eliminar = async () => {
-    setConfirmarEliminar(false)
     const r = await peticion.guardar(postulacionApi.eliminarCargo)
     if (r.ok) {
       reset(valoresDe(r.data))
@@ -130,25 +128,15 @@ export function CargoSection() {
             />
           )}
         </dl>
-        {!soloLectura && (
-          <div className="flex flex-wrap gap-2">
-            <Button variant="secondary" onClick={() => { peticion.reset(); setEditando(true) }}>Editar</Button>
-            <Button variant="danger" onClick={() => setConfirmarEliminar(true)}>Eliminar</Button>
-          </div>
-        )}
-        <Modal
-          open={confirmarEliminar}
-          onClose={() => setConfirmarEliminar(false)}
-          title="¿Eliminar el cargo seleccionado?"
-          footer={
-            <>
-              <Button variant="secondary" onClick={() => setConfirmarEliminar(false)}>Cancelar</Button>
-              <Button onClick={eliminar}>Sí, eliminar</Button>
-            </>
-          }
-        >
-          <p className="text-sm leading-relaxed">Se borrarán el cargo, la organización y su documento de respaldo. Podrá seleccionarlo otra vez.</p>
-        </Modal>
+        <AccionesGuardado
+          onEditar={() => {
+            peticion.reset()
+            setEditando(true)
+          }}
+          onEliminar={eliminar}
+          titulo="¿Eliminar el cargo seleccionado?"
+          mensaje="Se borrarán el cargo, la organización y su documento de respaldo. Podrá seleccionarlo otra vez."
+        />
       </Seccion>
     )
   }

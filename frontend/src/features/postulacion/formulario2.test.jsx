@@ -161,12 +161,12 @@ describe('inhabilidades', () => {
     expect(screen.getByText(/detalle de la remoción/i)).toBeInTheDocument()
 
     await user.click(screen.getByRole('button', { name: /guardar progreso/i }))
-    expect(await screen.findAllByText('Es obligatorio')).toHaveLength(3)
+    expect(await screen.findAllByText('Es obligatorio')).toHaveLength(2)
     expect(postulacionApi.inhabilidades).not.toHaveBeenCalled()
 
     await user.type(screen.getByLabelText(/^institución/i), 'Superintendencia de Bancos')
     await user.type(screen.getByLabelText(/^cargo/i), 'Gerente')
-    await user.type(screen.getByLabelText(/fecha de fin de funciones/i), '2022-06-30')
+    await user.type(screen.getByLabelText(/fecha finalización/i), '2022-06-30')
     await user.type(screen.getByLabelText(/^motivo/i), 'Remoción administrativa')
     await user.click(screen.getByRole('button', { name: /guardar progreso/i }))
 

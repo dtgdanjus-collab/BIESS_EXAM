@@ -45,6 +45,9 @@ func run() error {
 	}
 	defer pool.Close()
 	log.Println("conectado a PostgreSQL")
+	if err := platform.Migrar(ctx, pool); err != nil {
+		return err
+	}
 
 	rdb, err := platform.NewRedisClient(ctx, cfg.Redis)
 	if err != nil {

@@ -8,8 +8,9 @@ import (
 	"unicode"
 )
 
-// Formato real del código dactilar: letra + 4 dígitos + letra + 4 dígitos (p. ej. V4443V4442).
-var reDactilar = regexp.MustCompile(`^[A-Z][0-9]{4}[A-Z][0-9]{4}$`)
+// El requerimiento pide 10 dígitos y el código impreso en la cédula lleva letras (V4443V4442):
+// se aceptan 10 caracteres de ambos tipos.
+var reDactilar = regexp.MustCompile(`^[A-Z0-9]{10}$`)
 
 // Cedula valida una cédula ecuatoriana: 10 dígitos, provincia 01–24 o 30,
 // tercer dígito < 6 y dígito verificador por módulo 10.

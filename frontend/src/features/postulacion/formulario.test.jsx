@@ -60,7 +60,7 @@ describe('datos personales: se corrigen una sola vez', () => {
 
     await user.clear(fecha)
     await user.type(fecha, '1990-06-15')
-    await user.click(screen.getByRole('button', { name: /confirmar mis datos/i }))
+    await user.click(screen.getByRole('button', { name: /^guardar$/i }))
     expect(postulacionApi.datosPersonales).not.toHaveBeenCalled()
 
     await user.click(await screen.findByRole('button', { name: /sí, confirmar/i }))
@@ -70,7 +70,7 @@ describe('datos personales: se corrigen una sola vez', () => {
     expect(await screen.findByText('Datos confirmados')).toBeInTheDocument()
     expect(screen.getByText('15/06/1990')).toBeInTheDocument()
     expect(screen.queryByLabelText(/fecha de nacimiento/i)).not.toBeInTheDocument()
-    expect(screen.queryByRole('button', { name: /confirmar mis datos/i })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /^guardar$/i })).not.toBeInTheDocument()
   })
 
   it('no deja confirmar a un menor de edad ni una fecha futura', async () => {
@@ -80,12 +80,12 @@ describe('datos personales: se corrigen una sola vez', () => {
     const fecha = await screen.findByLabelText(/fecha de nacimiento/i)
     await user.clear(fecha)
     await user.type(fecha, '2099-01-01')
-    await user.click(screen.getByRole('button', { name: /confirmar mis datos/i }))
+    await user.click(screen.getByRole('button', { name: /^guardar$/i }))
     expect(await screen.findByText(/no puede ser una fecha futura/i)).toBeInTheDocument()
 
     await user.clear(fecha)
     await user.type(fecha, `${new Date().getFullYear() - 10}-01-01`)
-    await user.click(screen.getByRole('button', { name: /confirmar mis datos/i }))
+    await user.click(screen.getByRole('button', { name: /^guardar$/i }))
     expect(await screen.findByText(/mayor de edad/i)).toBeInTheDocument()
     expect(postulacionApi.datosPersonales).not.toHaveBeenCalled()
   })
@@ -95,7 +95,7 @@ describe('datos personales: se corrigen una sola vez', () => {
     const user = userEvent.setup()
     abrirFormulario()
     await user.selectOptions(await screen.findByLabelText(/estado civil/i), 'CASADO/A')
-    await user.click(screen.getByRole('button', { name: /confirmar mis datos/i }))
+    await user.click(screen.getByRole('button', { name: /^guardar$/i }))
     expect(await screen.findByText(/cédula del cónyuge/i)).toBeInTheDocument()
     expect(postulacionApi.datosPersonales).not.toHaveBeenCalled()
   })
@@ -149,19 +149,24 @@ describe('domicilio: cascada País → Provincia → Cantón', () => {
     await waitFor(() => expect(within(provincia).getByRole('option', { name: 'Azuay' })).toBeInTheDocument())
 
     await user.selectOptions(provincia, '1')
-    const canton = screen.getByLabelText(/^cantón/i)
+    const canton = screen.getByLabelText(/^ciudad/i)
     await waitFor(() => expect(within(canton).getByRole('option', { name: 'Cuenca' })).toBeInTheDocument())
     await user.selectOptions(canton, '1')
     expect(canton).toHaveValue('1')
 
     await user.selectOptions(provincia, '9') // otra provincia → el cantón se limpia
-    expect(screen.getByLabelText(/^cantón/i)).toHaveValue('')
+    expect(screen.getByLabelText(/^ciudad/i)).toHaveValue('')
     await waitFor(() => expect(catalogos.cantones).toHaveBeenCalledWith('9'))
 
     await user.selectOptions(pais, '59') // fuera de Ecuador → texto libre
-    expect(screen.queryByLabelText(/^cantón/i)).not.toBeInTheDocument()
-    expect(screen.getByLabelText(/provincia \/ estado/i)).toBeInTheDocument()
-    expect(screen.getByLabelText(/^ciudad/i)).toBeInTheDocument()
+    expect(screen.getByLabelText(/provincia \/ estado/i).tagName).toBe('INPUT')
+    expect(screen.getByLabelText(/^ciudad/i).tagName).toBe('INPUT')
+  })
+
+  it('carga el correo registrado y, al guardar, deja Editar y Eliminar', async () => {
+    postulacionApi.obtener.mockResolvedValue(postulacionBase())
+    abrirFormulario('contacto')
+    expect(await screen.findByLabelText(/correo electrónico 1/i)).toHaveValue('maria@correo.com')
   })
 
   it('envía el domicilio con ids numéricos y avanza', async () => {
@@ -173,15 +178,16 @@ describe('domicilio: cascada País → Provincia → Cantón', () => {
     const provincia = await screen.findByLabelText(/^provincia/i)
     await waitFor(() => expect(within(provincia).getByRole('option', { name: 'Azuay' })).toBeInTheDocument())
     await user.selectOptions(provincia, '1')
-    const canton = screen.getByLabelText(/^cantón/i)
+    const canton = screen.getByLabelText(/^ciudad/i)
     await waitFor(() => expect(within(canton).getByRole('option', { name: 'Cuenca' })).toBeInTheDocument())
     await user.selectOptions(canton, '1')
     await user.type(screen.getByLabelText(/calle principal/i), 'Av. Solano')
     await user.type(screen.getByLabelText(/teléfono celular/i), '0991234567')
-    await user.type(screen.getByLabelText(/correo electrónico principal/i), 'maria@correo.com')
     await user.click(screen.getByRole('button', { name: /guardar progreso/i }))
 
     expect(await screen.findByText(/sección guardada/i)).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Editar' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Eliminar' })).toBeInTheDocument()
     expect(postulacionApi.contacto).toHaveBeenCalledWith(
       expect.objectContaining({ paisId: 52, provinciaId: 1, cantonId: 1, provinciaTexto: null, correo2: null }),
     )

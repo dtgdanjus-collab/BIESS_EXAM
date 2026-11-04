@@ -39,6 +39,7 @@ func RegisterRoutes(app *fiber.App, h Handlers, requireAuth fiber.Handler) {
 	post.Post("/", h.Postulacion.Crear)
 	post.Put("/datos-personales", h.Postulacion.DatosPersonales)
 	post.Put("/contacto", h.Postulacion.Contacto)
+	post.Delete("/contacto", h.Postulacion.EliminarContacto)
 	post.Put("/familiares", h.Postulacion.Familiares)
 	post.Post("/cargo", h.Secciones.Cargo)
 	post.Post("/cargo/validar", h.Secciones.ValidarCargo)
@@ -50,5 +51,6 @@ func RegisterRoutes(app *fiber.App, h Handlers, requireAuth fiber.Handler) {
 	post.Put("/publicaciones", h.Secciones.Publicaciones)
 	post.Put("/capacitaciones", h.Secciones.Capacitaciones)
 	post.Put("/inhabilidades", h.Secciones.Inhabilidades)
+	post.Delete("/inhabilidades", h.Secciones.EliminarInhabilidades)
 	post.Post("/enviar", h.Secciones.Enviar)
 }

@@ -206,9 +206,8 @@ export const inhabilidadesSchema = (preguntas) =>
             else if (max && val.length > max) ctx.addIssue({ code: 'custom', path: ['detalle', campo], message: `Máximo ${max} caracteres` })
           }
           req('institucion', 200)
-          req('cargo', 150)
           req('motivo', 500)
-          req('fechaFin', 0, 'Es obligatoria')
+          if (r.detalle.cargo.length > 150) ctx.addIssue({ code: 'custom', path: ['detalle', 'cargo'], message: 'Máximo 150 caracteres' })
           if (r.detalle.fechaFin && r.detalle.fechaFin > hoyIso()) {
             ctx.addIssue({ code: 'custom', path: ['detalle', 'fechaFin'], message: 'No puede ser una fecha futura' })
           }

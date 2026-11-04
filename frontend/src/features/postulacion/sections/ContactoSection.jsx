@@ -1,42 +1,48 @@
 import { zodResolver } from '@hookform/resolvers/zod'
-import { useEffect, useMemo } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { postulacionApi } from '../../../api/postulacion'
 import { Alert, Input } from '../../../components/ui'
 import { useCatalogo } from '../../../hooks/useCatalogo'
 import { conFiltro, telefono } from '../../../utils/filtros'
-import { CampoSelect, Grupo, Seccion, opcional, useFormulario, useGuardarSeccion } from '../components'
+import { useAuthStore } from '../../../store/authStore'
+import { AccionesGuardado, CampoSelect, Dato, Grupo, Seccion, opcional, useFormulario, useGuardarSeccion } from '../components'
 import { contactoSchema } from '../schemas'
 
 const str = (v) => (v === null || v === undefined ? '' : String(v))
 
-// 1.2 — Domicilio con cascada País → Provincia → Cantón.
+// 1.2.5: el correo 1 sale del registro hasta que el postulante guarde otro.
+const valoresDe = (c, correoRegistrado) => ({
+  paisId: str(c?.paisId),
+  provinciaId: str(c?.provinciaId),
+  cantonId: str(c?.cantonId),
+  provinciaTexto: c?.provinciaTexto ?? '',
+  ciudadTexto: c?.ciudadTexto ?? '',
+  telefonoCelular: c?.telefonoCelular ?? '',
+  telefonoDomicilio: c?.telefonoDomicilio ?? '',
+  correo1: c?.correo1 ?? correoRegistrado ?? '',
+  correo2: c?.correo2 ?? '',
+  callePrincipal: c?.callePrincipal ?? '',
+  numero: c?.numero ?? '',
+  calleSecundaria: c?.calleSecundaria ?? '',
+  sector: c?.sector ?? '',
+  referencia: c?.referencia ?? '',
+})
+
+// 1.2 — Domicilio con cascada País → Provincia → Ciudad.
 export function ContactoSection() {
   const { postulacion } = useFormulario()
   const c = postulacion.contacto
+  const correoRegistrado = useAuthStore((s) => s.usuario?.email)
+  const [editando, setEditando] = useState(!c)
   const paises = useCatalogo('paises')
   const ecuadorId = paises.data.find((p) => p.nombre === 'Ecuador')?.id
   const schema = useMemo(() => contactoSchema(ecuadorId), [ecuadorId])
   const peticion = useGuardarSeccion()
 
-  const { register, control, handleSubmit, watch, setValue, setError, formState: { errors } } = useForm({
+  const { register, control, handleSubmit, watch, setValue, setError, reset, formState: { errors } } = useForm({
     resolver: zodResolver(schema),
-    defaultValues: {
-      paisId: str(c?.paisId),
-      provinciaId: str(c?.provinciaId),
-      cantonId: str(c?.cantonId),
-      provinciaTexto: c?.provinciaTexto ?? '',
-      ciudadTexto: c?.ciudadTexto ?? '',
-      telefonoCelular: c?.telefonoCelular ?? '',
-      telefonoDomicilio: c?.telefonoDomicilio ?? '',
-      correo1: c?.correo1 ?? '',
-      correo2: c?.correo2 ?? '',
-      callePrincipal: c?.callePrincipal ?? '',
-      numero: c?.numero ?? '',
-      calleSecundaria: c?.calleSecundaria ?? '',
-      sector: c?.sector ?? '',
-      referencia: c?.referencia ?? '',
-    },
+    defaultValues: valoresDe(c, correoRegistrado),
   })
 
   // Ecuador por defecto cuando aún no hay domicilio guardado.
@@ -56,8 +62,8 @@ export function ContactoSection() {
   }
   const alCambiarProvincia = () => setValue('cantonId', '')
 
-  const onSubmit = handleSubmit((v) =>
-    peticion.guardar(
+  const onSubmit = handleSubmit(async (v) => {
+    const r = await peticion.guardar(
       () =>
         postulacionApi.contacto({
           paisId: Number(v.paisId),
@@ -76,18 +82,61 @@ export function ContactoSection() {
           referencia: opcional(v.referencia),
         }),
       setError,
-    ),
-  )
+    )
+    if (r.ok) setEditando(false)
+  })
+
+  const eliminar = async () => {
+    const r = await peticion.guardar(postulacionApi.eliminarContacto)
+    if (r.ok) {
+      reset({ ...valoresDe(null, correoRegistrado), paisId: str(ecuadorId) })
+      setEditando(true)
+      peticion.reset()
+    }
+  }
+
+  const base = {
+    id: 'contacto',
+    numeral: '1.2',
+    titulo: 'Información domiciliaria y de contacto',
+    descripcion: 'Lugar de residencia actual y medios para comunicarnos con usted.',
+    peticion,
+    onSubmit,
+  }
+
+  if (c && !editando) {
+    const nombreDe = (lista, id) => lista.find((x) => x.id === id)?.nombre
+    return (
+      <Seccion {...base} ocultarGuardar>
+        <dl className="grid gap-4 sm:grid-cols-2">
+          <Dato etiqueta="País" valor={nombreDe(paises.data, c.paisId)} />
+          <Dato etiqueta="Provincia / Estado" valor={c.provinciaTexto ?? nombreDe(provincias.data, c.provinciaId)} />
+          <Dato etiqueta="Ciudad" valor={c.ciudadTexto ?? nombreDe(cantones.data, c.cantonId)} />
+          <Dato etiqueta="Teléfono celular" valor={c.telefonoCelular} />
+          <Dato etiqueta="Correo electrónico 1" valor={c.correo1} />
+          <Dato etiqueta="Correo electrónico 2" valor={c.correo2} />
+          <Dato etiqueta="Calle principal domicilio" valor={c.callePrincipal} />
+          <Dato etiqueta="Número" valor={c.numero} />
+          <Dato etiqueta="Calle secundaria" valor={c.calleSecundaria} />
+          <Dato etiqueta="Sector" valor={c.sector} />
+          <Dato etiqueta="Referencia" valor={c.referencia} />
+          <Dato etiqueta="Teléfono domicilio" valor={c.telefonoDomicilio} />
+        </dl>
+        <AccionesGuardado
+          onEditar={() => {
+            peticion.reset()
+            setEditando(true)
+          }}
+          onEliminar={eliminar}
+          titulo="¿Eliminar la información domiciliaria?"
+          mensaje="Se borrarán su domicilio y sus datos de contacto. Deberá ingresarlos otra vez antes de enviar."
+        />
+      </Seccion>
+    )
+  }
 
   return (
-    <Seccion
-      id="contacto"
-      numeral="1.2"
-      titulo="Información domiciliaria y de contacto"
-      descripcion="Lugar de residencia actual y medios para comunicarnos con usted."
-      peticion={peticion}
-      onSubmit={onSubmit}
-    >
+    <Seccion {...base} textoGuardar="Guardar">
       {paises.error && <Alert type="error">No se pudo cargar el catálogo de países.</Alert>}
 
       <Grupo titulo="Lugar de residencia" className="grid gap-4 sm:grid-cols-3">
@@ -105,7 +154,7 @@ export function ContactoSection() {
             <CampoSelect
               control={control}
               name="provinciaId"
-              label="Provincia"
+              label="Provincia / Estado"
               required
               options={provincias.data}
               loading={provincias.loading}
@@ -114,7 +163,7 @@ export function ContactoSection() {
             <CampoSelect
               control={control}
               name="cantonId"
-              label="Cantón"
+              label="Ciudad"
               required
               options={cantones.data}
               loading={cantones.loading}
@@ -131,10 +180,10 @@ export function ContactoSection() {
       </Grupo>
 
       <Grupo titulo="Dirección">
-        <Input label="Calle principal" required error={errors.callePrincipal?.message} {...register('callePrincipal')} />
+        <Input label="Calle principal domicilio" required error={errors.callePrincipal?.message} {...register('callePrincipal')} />
         <Input label="Número" error={errors.numero?.message} {...register('numero')} />
         <Input label="Calle secundaria" error={errors.calleSecundaria?.message} {...register('calleSecundaria')} />
-        <Input label="Sector / barrio" error={errors.sector?.message} {...register('sector')} />
+        <Input label="Sector" error={errors.sector?.message} {...register('sector')} />
         <Input
           label="Referencia"
           className="sm:col-span-2"
@@ -155,14 +204,14 @@ export function ContactoSection() {
           {...conFiltro(register('telefonoCelular'), telefono)}
         />
         <Input
-          label="Teléfono de domicilio"
+          label="Teléfono domicilio"
           type="tel"
           inputMode="tel"
           error={errors.telefonoDomicilio?.message}
           {...conFiltro(register('telefonoDomicilio'), telefono)}
         />
-        <Input label="Correo electrónico principal" type="email" autoComplete="email" required error={errors.correo1?.message} {...register('correo1')} />
-        <Input label="Correo electrónico alterno" type="email" error={errors.correo2?.message} {...register('correo2')} />
+        <Input label="Correo electrónico 1" type="email" autoComplete="email" required error={errors.correo1?.message} {...register('correo1')} />
+        <Input label="Correo electrónico 2" type="email" error={errors.correo2?.message} {...register('correo2')} />
       </Grupo>
     </Seccion>
   )

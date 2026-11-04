@@ -23,7 +23,7 @@ export const password = z.string().superRefine((p, ctx) => {
   if (falla) ctx.addIssue({ code: 'custom', message: `La contraseña debe tener: ${falla.texto.toLowerCase()}` })
 })
 
-export const RE_DACTILAR = /^[A-Z]\d{4}[A-Z]\d{4}$/
+export const RE_DACTILAR = /^[A-Z0-9]{10}$/
 const FECHA_MINIMA = '1950-01-01'
 
 // Validación de identidad: cédula + fecha de expedición o código dactilar (EF-11).
@@ -44,7 +44,7 @@ export const identidadSchema = z
     } else if (!v.codigoDactilar) {
       error('codigoDactilar', 'Ingrese el código dactilar')
     } else if (!RE_DACTILAR.test(v.codigoDactilar)) {
-      error('codigoDactilar', 'Formato: letra, 4 dígitos, letra y 4 dígitos (ej. V4443V4442)')
+      error('codigoDactilar', 'Debe tener 10 caracteres, letras o dígitos (ej. V4443V4442)')
     }
   })
 

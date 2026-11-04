@@ -14,6 +14,7 @@ type PostulacionService interface {
 	Crear(ctx context.Context, usuarioID int64) (*domain.Postulacion, bool, error)
 	ConfirmarDatos(ctx context.Context, usuarioID int64, d domain.DatosPersonales) (*domain.Postulacion, error)
 	GuardarContacto(ctx context.Context, usuarioID int64, c domain.Contacto) (*domain.Postulacion, error)
+	EliminarContacto(ctx context.Context, usuarioID int64) (*domain.Postulacion, error)
 	GuardarFamiliares(ctx context.Context, usuarioID int64, tiene bool, items []domain.Familiar) (*domain.Postulacion, error)
 }
 
@@ -28,6 +29,15 @@ func NewPostulacionHandler(svc PostulacionService) *PostulacionHandler {
 // Obtener atiende GET /postulacion.
 func (h *PostulacionHandler) Obtener(c *fiber.Ctx) error {
 	p, err := h.svc.Obtener(c.UserContext(), middleware.UsuarioID(c))
+	if err != nil {
+		return err
+	}
+	return c.JSON(p)
+}
+
+// EliminarContacto atiende DELETE /postulacion/contacto.
+func (h *PostulacionHandler) EliminarContacto(c *fiber.Ctx) error {
+	p, err := h.svc.EliminarContacto(c.UserContext(), middleware.UsuarioID(c))
 	if err != nil {
 		return err
 	}

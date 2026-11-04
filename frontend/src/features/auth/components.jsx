@@ -94,6 +94,8 @@ export function ReglasPassword({ valor = '' }) {
  * ficticias de los datos semilla. Este panel las muestra y permite usarlas con un clic.
  */
 export function PersonasPrueba({ onUsar }) {
+  // Solo al desarrollar: en la página publicada no se ofrecen datos de prueba.
+  if (!import.meta.env.DEV) return null
   return (
     <details className="group rounded-md bg-fondo text-sm">
       <summary className="flex min-h-11 cursor-pointer list-none items-center gap-2 px-3 font-medium [&::-webkit-details-marker]:hidden">

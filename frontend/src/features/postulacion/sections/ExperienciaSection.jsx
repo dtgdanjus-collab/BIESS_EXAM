@@ -112,6 +112,7 @@ export function ExperienciaSection() {
       descripcion="El tiempo se calcula automáticamente incluyendo el día de inicio y el de fin."
       peticion={peticion}
       onSubmit={onSubmit}
+      textoGuardar="Guardar información"
     >
       {errors.items?.root && <Alert type="error">{errors.items.root.message}</Alert>}
       {fields.length === 0 && <p className="text-sm text-tenue">No ha registrado experiencia.</p>}
