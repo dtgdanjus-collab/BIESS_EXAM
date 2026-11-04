@@ -31,7 +31,7 @@ function Campo({ id, label, error, hint, required, children, className = '' }) {
         </label>
       )}
       {children}
-      {error ? <ErrorCampo id={`${id}-error`}>{error}</ErrorCampo> : hint && <p id={`${id}-ayuda`} className="mt-1.5 text-xs text-tenue">{hint}</p>}
+      {error ? <ErrorCampo id={`${id}-error`}>{error}</ErrorCampo> : hint && <p id={`${id}-ayuda`} className="mt-1.5 text-[13px] text-tenue">{hint}</p>}
     </div>
   )
 }
