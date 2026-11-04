@@ -10,6 +10,7 @@ import (
 // Mensaje es un correo a un postulante.
 type Mensaje struct {
 	Para     string
+	Copias   []string // otros correos de la misma persona
 	Asunto   string
 	HTML     string
 	Adjuntos []Adjunto

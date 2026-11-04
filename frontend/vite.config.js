@@ -17,6 +17,7 @@ export default defineConfig({
         name: 'Directorio BIESS',
         short_name: 'BIESS',
         description: 'Registro y postulación al Concurso Público de Méritos y Oposición del Directorio del BIESS',
+        id: '/',
         lang: 'es',
         start_url: '/',
         scope: '/',
@@ -28,11 +29,17 @@ export default defineConfig({
           { src: '/icono-512.png', sizes: '512x512', type: 'image/png' },
           { src: '/icono-adaptable-512.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' },
         ],
+        // Con capturas, Chrome muestra un panel de instalación más completo.
+        screenshots: [
+          { src: '/capturas/acceso-ancho.png', sizes: '1280x720', type: 'image/png', form_factor: 'wide', label: 'Acceso de postulantes' },
+          { src: '/capturas/administracion-ancho.png', sizes: '1280x720', type: 'image/png', form_factor: 'wide', label: 'Módulo de administración' },
+          { src: '/capturas/acceso-telefono.png', sizes: '390x844', type: 'image/png', form_factor: 'narrow', label: 'Acceso desde el teléfono' },
+        ],
       },
       workbox: {
         globPatterns: ['**/*.{js,css,html,woff2,png}'],
         // El sistema está en español: solo se guardan las letras latinas de la fuente.
-        globIgnores: ['**/*-{cyrillic,cyrillic-ext,vietnamese}-*'],
+        globIgnores: ['**/*-{cyrillic,cyrillic-ext,vietnamese}-*', 'capturas/**'],
         navigateFallback: '/index.html',
         navigateFallbackDenylist: [/^\/api\//],
         cleanupOutdatedCaches: true,
