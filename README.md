@@ -6,6 +6,8 @@ Módulo inicial de registro y postulación al **Concurso Público de Méritos y 
 
 **Administración:** el primer administrador se crea al arrancar con `ADMIN_USUARIO` y `ADMIN_PASSWORD`; sin esas variables el módulo no tiene cuentas. El rol Administrador publica fases, habilita el formulario, gestiona el banco de preguntas y las cuentas. El rol Analista consulta, califica, exporta y responde reconsideraciones.
 
+**Gestión del concurso (EF-1):** la Comisión define en `/admin/puntajes` los puntajes, los pesos y la nota mínima, porque el requerimiento no los trae. Con esa tabla el sistema calcula los méritos al enviar la postulación y arma la lista de elegibles por cargo (`/admin/elegibles`, también en Excel y PDF). En las reconsideraciones, Talento Humano informa y la Comisión resuelve, cada uno con su plazo configurable. `/admin/bitacora` registra las acciones del módulo y de los postulantes, y `/privacidad` publica la política de privacidad.
+
 **Correo:** se envía con la API de Brevo (`BREVO_API_KEY`, `MAIL_REMITENTE`). Sin esos datos no se envía nada y la recuperación de contraseña lo avisa; `RECUPERACION_ENLACE_EN_PANTALLA=true` muestra el enlace en pantalla, solo para demostraciones.
 
 **Migraciones:** la API aplica al arrancar las de `backend/internal/platform/migraciones/` que falten; la tabla `schema_migraciones` registra las aplicadas.
@@ -89,7 +91,7 @@ No hay usuarios precargados: cada persona se **registra** en `/registro` con su 
 | E | `1105678906` | 2020-12-01 | `V5555I6666` | Sin historial laboral → rechazo en cualquier sector |
 | F | `0106789019` | 2023-01-17 | `E7777V8888` | Probar el bloqueo: 3 intentos fallidos → 10 min |
 
-Los correos (recuperación de contraseña y postulación enviada) se simulan: aparecen en la consola del backend como `CORREO SIMULADO → …`.
+Los correos (recuperación de contraseña y postulación enviada) salen por Brevo. Sin `BREVO_API_KEY` y `MAIL_REMITENTE` no se envían, y la consola del backend muestra `CORREO NO ENVIADO (servicio sin configurar)`.
 
 ## Pruebas automáticas
 
@@ -172,6 +174,6 @@ Ramas `main` (entregas) y `develop` (integración). Cada fase se desarrolló en 
 
 ## Trabajo futuro
 
-- **Puntaje automático de méritos (EF-1):** el requerimiento no da la tabla de puntajes; por ahora Talento Humano lo registra a mano.
-- **Integraciones reales** con el Registro Civil y el Historial Laboral del IESS (hoy simuladas con tablas mock) y envío real de correos.
+- **Valores legales (EF-1):** los puntajes y los días de cada plazo deben cargarse según la Resolución C.D. 701; el sistema no los trae definidos.
+- **Integraciones reales** con el Registro Civil y el Historial Laboral del IESS (hoy simuladas con tablas mock).
 - **Despliegue** en un VPS con Docker Compose (backend + frontend en Nginx), dominio y HTTPS.

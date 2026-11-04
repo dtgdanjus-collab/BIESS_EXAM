@@ -150,6 +150,8 @@ type DetallePostulante struct {
 	Formulario       *domain.FormularioFinal `json:"formulario"`
 	ExperienciaTotal domain.ExperienciaTotal `json:"experienciaTotal"`
 	Intento          *domain.Intento         `json:"intento"`
+	Meritos          *DesgloseMeritos        `json:"meritos"` // nil si la Comisión aún no define la tabla
+	Historial        []domain.Evento         `json:"historial"`
 }
 
 func (s *AdminService) postulante(ctx context.Context, id int64) (*domain.Postulante, error) {
@@ -179,7 +181,28 @@ func (s *AdminService) Detalle(ctx context.Context, id int64) (*DetallePostulant
 		return nil, err
 	}
 	d.Intento = i
+	cfg, err := s.repo.GetConfig(ctx)
+	if err != nil {
+		return nil, err
+	}
+	if cfg.TablaMeritos.Configurada() {
+		m := CalcularMeritos(cfg.TablaMeritos, p)
+		d.Meritos = &m
+	}
+	if d.Historial, err = s.repo.ListAuditoria(ctx, "", id); err != nil {
+		return nil, err
+	}
 	return d, nil
+}
+
+// Auditar deja constancia de una acción de una cuenta del módulo.
+func (s *AdminService) Auditar(ctx context.Context, actor, rol, accion, detalle string, postulacionID *int64) error {
+	return s.repo.RegistrarAuditoria(ctx, actor, rol, accion, detalle, postulacionID)
+}
+
+// Bitacora lista las acciones de todos, de la más reciente a la más antigua.
+func (s *AdminService) Bitacora(ctx context.Context, busqueda string) ([]domain.Evento, error) {
+	return s.repo.ListAuditoria(ctx, strings.TrimSpace(busqueda), 0)
 }
 
 // Documento descarga un certificado de un postulante.
@@ -191,7 +214,7 @@ func (s *AdminService) Documento(ctx context.Context, postulacionID, documentoID
 	return d, contenido, err
 }
 
-// Calificar registra el resultado de méritos y la nota psicotécnica, y avisa al postulante.
+// Calificar registra el resultado de méritos y la nota psicotécnica, y avisa al postulante de cada una.
 // Con EVALUACION_TECNICA se le abre el examen.
 func (s *AdminService) Calificar(ctx context.Context, id int64, c domain.Calificacion, por string) (*domain.Postulante, error) {
 	c.EstadoConcurso = strings.ToUpper(strings.TrimSpace(c.EstadoConcurso))
@@ -214,7 +237,6 @@ func (s *AdminService) Calificar(ctx context.Context, id int64, c domain.Calific
 	if p.Estado != string(domain.EstadoEnviada) {
 		return nil, domain.NewError(domain.ErrReglaNegocio, "Solo se califican postulaciones enviadas")
 	}
-	cambio := p.EstadoConcurso != c.EstadoConcurso
 	if err := s.repo.GuardarCalificacion(ctx, id, c); err != nil {
 		return nil, err
 	}
@@ -222,15 +244,8 @@ func (s *AdminService) Calificar(ctx context.Context, id int64, c domain.Calific
 	if err := s.postul.AddHistorial(ctx, id, "CALIFICAR", detalle); err != nil {
 		return nil, err
 	}
-	if cambio {
-		texto := "Su postulación " + p.Codigo + " no superó la fase de méritos."
-		if c.EstadoConcurso == domain.ConcursoEvaluacionTecnica {
-			texto = "Su postulación " + p.Codigo + " superó la fase de méritos. Ingrese al sistema para conocer la fecha y hora de su evaluación técnica."
-		}
-		if c.EstadoConcurso != domain.ConcursoPostulado {
-			notificar(s.correo, Mensaje{Para: p.Email, Asunto: "Resultado de la fase de méritos - " + p.Codigo,
-				HTML: correoSimple("Resultado de la fase de méritos", texto)})
-		}
+	for _, m := range avisosCalificacion(p, c) {
+		notificar(s.correo, m)
 	}
 	return s.repo.FindPostulante(ctx, id)
 }
@@ -254,8 +269,15 @@ func (s *AdminService) Concurso(ctx context.Context) (*ConcursoAdmin, error) {
 }
 
 func (s *AdminService) GuardarConfig(ctx context.Context, c domain.ConcursoConfig) (*ConcursoAdmin, error) {
+	errs := campos{}
 	if c.PlazoRespuestaDias <= 0 || c.PlazoRespuestaDias > 365 {
-		return nil, errValidacionCampos(map[string]string{"plazoRespuestaDias": "Debe estar entre 1 y 365 días"})
+		errs["plazoRespuestaDias"] = "Debe estar entre 1 y 365 días"
+	}
+	if c.PlazoComisionDias <= 0 || c.PlazoComisionDias > 365 {
+		errs["plazoComisionDias"] = "Debe estar entre 1 y 365 días"
+	}
+	if err := errs.err(); err != nil {
+		return nil, err
 	}
 	if err := s.repo.UpdateConfig(ctx, c); err != nil {
 		return nil, err
@@ -401,6 +423,35 @@ func (s *AdminService) Reconsideraciones(ctx context.Context) ([]domain.Reconsid
 	return s.repo.ListReconsideraciones(ctx, 0)
 }
 
+// InformarReconsideracion es el paso de Talento Humano: se puede corregir mientras la Comisión no resuelva.
+func (s *AdminService) InformarReconsideracion(ctx context.Context, id int64, informe, por string) (*domain.Reconsideracion, error) {
+	informe = strings.TrimSpace(informe)
+	errs := campos{}
+	errs.req("informe", informe, 2000)
+	if err := errs.err(); err != nil {
+		return nil, err
+	}
+	x, err := s.repo.FindReconsideracion(ctx, id)
+	if errors.Is(err, repository.ErrNotFound) {
+		return nil, domain.NewError(domain.ErrNoEncontrado, "La reconsideración no existe")
+	}
+	if err != nil {
+		return nil, err
+	}
+	n, err := s.repo.InformarReconsideracion(ctx, id, informe, por)
+	if err != nil {
+		return nil, err
+	}
+	if n == 0 {
+		return nil, domain.NewError(domain.ErrConflicto, "Esta reconsideración ya fue resuelta")
+	}
+	if err := s.postul.AddHistorial(ctx, x.PostulacionID, "INFORMAR_RECONSIDERACION", "por "+por); err != nil {
+		return nil, err
+	}
+	return s.repo.FindReconsideracion(ctx, id)
+}
+
+// ResponderReconsideracion es la resolución de la Comisión de Selección.
 func (s *AdminService) ResponderReconsideracion(ctx context.Context, id int64, estado, respuesta, por string) (*domain.Reconsideracion, error) {
 	estado = strings.ToUpper(strings.TrimSpace(estado))
 	respuesta = strings.TrimSpace(respuesta)
@@ -545,6 +596,10 @@ func (s *AdminService) MiConcurso(ctx context.Context, usuarioID int64) (*MiConc
 	if m.Reconsideraciones, err = s.repo.ListReconsideraciones(ctx, p.PostulacionID); err != nil {
 		return nil, err
 	}
+	// El informe de Talento Humano es interno: el postulante recibe la resolución.
+	for i := range m.Reconsideraciones {
+		m.Reconsideraciones[i].Informe, m.Reconsideraciones[i].InformePor, m.Reconsideraciones[i].InformeEn = nil, nil, nil
+	}
 	f, err := s.repo.FindFase(ctx, domain.FaseReconsideracion)
 	if err != nil {
 		return nil, err
@@ -582,8 +637,9 @@ func (s *AdminService) SolicitarReconsideracion(ctx context.Context, usuarioID i
 	if err != nil {
 		return nil, err
 	}
+	informeAntes := ahora.AddDate(0, 0, cfg.PlazoRespuestaDias)
 	err = s.repo.CrearReconsideracion(ctx, domain.Reconsideracion{PostulacionID: p.PostulacionID, Etapa: etapa, Motivo: motivo,
-		ResponderAntes: ahora.AddDate(0, 0, cfg.PlazoRespuestaDias)})
+		InformeAntes: informeAntes, ResponderAntes: informeAntes.AddDate(0, 0, cfg.PlazoComisionDias)})
 	var dup *repository.ErrDuplicado
 	if errors.As(err, &dup) {
 		return nil, errValidacionCampos(map[string]string{"etapa": "Ya presentó una reconsideración para esta etapa"})

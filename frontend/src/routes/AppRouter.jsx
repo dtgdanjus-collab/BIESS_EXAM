@@ -3,6 +3,7 @@ import { Link, Navigate, Route, Routes } from 'react-router-dom'
 import { AppLayout, AuthLayout } from '../components/layout/Layouts'
 import { PageLoader } from '../components/ui'
 import { LoginPage } from '../features/auth/LoginPage'
+import { PrivacidadPage } from '../features/auth/PrivacidadPage'
 import { RecuperarPage } from '../features/auth/RecuperarPage'
 import { RegistroPage } from '../features/auth/RegistroPage'
 import { RestablecerPage } from '../features/auth/RestablecerPage'
@@ -20,6 +21,7 @@ const examen = () => import('../features/concurso/EvaluacionPage')
 const marco = () => import('../features/admin/AdminLayout')
 const nomina = () => import('../features/admin/AdminPostulantes')
 const gestion = () => import('../features/admin/AdminConcurso')
+const reportes = () => import('../features/admin/AdminReportes')
 const MiConcursoPage = de(concurso, 'MiConcursoPage')
 const FasesPage = de(componentes, 'FasesPage')
 const EvaluacionPage = de(examen, 'EvaluacionPage')
@@ -33,6 +35,9 @@ const EvaluacionAdminPage = de(gestion, 'EvaluacionAdminPage')
 const ResultadosPage = de(gestion, 'ResultadosPage')
 const ReconsideracionesPage = de(gestion, 'ReconsideracionesPage')
 const UsuariosPage = de(gestion, 'UsuariosPage')
+const ElegiblesPage = de(reportes, 'ElegiblesPage')
+const PuntajesPage = de(reportes, 'PuntajesPage')
+const BitacoraPage = de(reportes, 'BitacoraPage')
 
 const conCarga = (elemento) => <Suspense fallback={<PageLoader />}>{elemento}</Suspense>
 
@@ -62,6 +67,7 @@ export function AppRouter() {
         <Route path="/recuperar" element={<RecuperarPage />} />
         <Route path="/restablecer" element={<RestablecerPage />} />
         <Route path="/fases" element={conCarga(<FasesPage />)} />
+        <Route path="/privacidad" element={<PrivacidadPage />} />
       </Route>
 
       <Route element={<ProtectedRoute />}>
@@ -89,6 +95,9 @@ export function AppRouter() {
         <Route path="resultados" element={conCarga(<ResultadosPage />)} />
         <Route path="reconsideraciones" element={conCarga(<ReconsideracionesPage />)} />
         <Route path="usuarios" element={conCarga(<UsuariosPage />)} />
+        <Route path="elegibles" element={conCarga(<ElegiblesPage />)} />
+        <Route path="puntajes" element={conCarga(<PuntajesPage />)} />
+        <Route path="bitacora" element={conCarga(<BitacoraPage />)} />
       </Route>
 
       <Route path="*" element={<NoEncontrada />} />

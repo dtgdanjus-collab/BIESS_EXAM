@@ -1,6 +1,8 @@
 package handler
 
 import (
+	"log"
+	"strings"
 	"time"
 
 	"github.com/gofiber/fiber/v2"
@@ -10,7 +12,10 @@ import (
 	"github.com/biess-dev/biess-postulacion/backend/internal/service"
 )
 
-const localAdmin = "admin"
+const (
+	localAdmin       = "admin"
+	localPostulacion = "postulacionAuditada"
+)
 
 // AdminHandler atiende EF-13, la parte administrativa de EF-14 y lo que el postulante ve del concurso.
 type AdminHandler struct {
@@ -75,7 +80,141 @@ func (h *AdminHandler) Login(c *fiber.Ctx) error {
 		return err
 	}
 	s, err := h.svc.Login(c.UserContext(), req.Usuario, req.Password)
+	if err == nil {
+		if e := h.svc.Auditar(c.UserContext(), s.Admin.Nombre, s.Admin.Rol, "INICIAR_SESION", "", nil); e != nil {
+			log.Printf("ERROR en la bitácora: %v", e)
+		}
+	}
 	return enJSON(c, s, err)
+}
+
+// accionesAuditadas nombra cada cambio del módulo. Solo en las marcadas con conCuerpo se guarda lo
+// enviado: la creación de cuentas lleva una contraseña y nunca debe quedar en la bitácora.
+var accionesAuditadas = map[string]struct {
+	accion    string
+	conCuerpo bool
+}{
+	"PUT /postulantes/:id/calificacion":   {"CALIFICAR", true},
+	"PUT /concurso":                       {"CAMBIAR_CONFIGURACION", true},
+	"PUT /fases/:codigo":                  {"CAMBIAR_FASE", true},
+	"PUT /meritos/tabla":                  {"CAMBIAR_TABLA_MERITOS", true},
+	"POST /meritos/recalcular":            {"RECALCULAR_MERITOS", false},
+	"POST /evaluacion/preguntas":          {"CREAR_PREGUNTA", false},
+	"POST /evaluacion/preguntas/importar": {"IMPORTAR_PREGUNTAS", false},
+	"PUT /evaluacion/preguntas/:id":       {"EDITAR_PREGUNTA", false},
+	"DELETE /evaluacion/preguntas/:id":    {"ELIMINAR_PREGUNTA", false},
+	"PUT /evaluacion/config":              {"CAMBIAR_EVALUACION", true},
+	"PUT /reconsideraciones/:id":          {"RESOLVER_RECONSIDERACION", true},
+	"PUT /reconsideraciones/:id/informe":  {"INFORMAR_RECONSIDERACION", true},
+	"POST /usuarios":                      {"CREAR_CUENTA", false},
+	"PUT /usuarios/:id/activo":            {"CAMBIAR_CUENTA", true},
+}
+
+const maxDetalleBitacora = 800
+
+// auditar registra cada cambio que terminó bien, en un solo lugar para que ninguno se quede afuera.
+func (h *AdminHandler) auditar(c *fiber.Ctx) error {
+	err := c.Next()
+	a := adminDe(c)
+	if err != nil || a == nil || c.Method() == fiber.MethodGet || c.Response().StatusCode() >= 300 {
+		return err
+	}
+	ruta := strings.TrimPrefix(c.Route().Path, "/api/admin")
+	regla, ok := accionesAuditadas[c.Method()+" "+ruta]
+	if !ok {
+		log.Printf("BITACORA: ruta sin nombre %s %s", c.Method(), ruta)
+		return nil
+	}
+	detalle := ""
+	for _, parametro := range c.Route().Params {
+		detalle += parametro + "=" + c.Params(parametro) + " "
+	}
+	if regla.conCuerpo {
+		detalle += string(c.Body())
+	}
+	if len(detalle) > maxDetalleBitacora {
+		detalle = strings.ToValidUTF8(detalle[:maxDetalleBitacora], "") + "…"
+	}
+	// Las reconsideraciones se identifican por su propio id: el handler dice de qué postulación son.
+	postulacion, _ := c.Locals(localPostulacion).(*int64)
+	if postulacion == nil && strings.HasPrefix(ruta, "/postulantes/") {
+		if id, e := idParam(c, "id"); e == nil {
+			postulacion = &id
+		}
+	}
+	if e := h.svc.Auditar(c.UserContext(), a.Nombre, a.Rol, regla.accion, strings.TrimSpace(detalle), postulacion); e != nil {
+		log.Printf("ERROR en la bitácora: %v", e)
+	}
+	return nil
+}
+
+// Bitacora atiende GET /admin/bitacora.
+func (h *AdminHandler) Bitacora(c *fiber.Ctx) error {
+	r, err := h.svc.Bitacora(c.UserContext(), c.Query("q"))
+	return enJSON(c, r, err)
+}
+
+// GuardarTablaMeritos atiende PUT /admin/meritos/tabla.
+func (h *AdminHandler) GuardarTablaMeritos(c *fiber.Ctx) error {
+	var req domain.TablaMeritos
+	if err := parseBody(c, &req); err != nil {
+		return err
+	}
+	r, err := h.svc.GuardarTablaMeritos(c.UserContext(), req)
+	return enJSON(c, r, err)
+}
+
+// RecalcularMeritos atiende POST /admin/meritos/recalcular.
+func (h *AdminHandler) RecalcularMeritos(c *fiber.Ctx) error {
+	n, err := h.svc.RecalcularMeritos(c.UserContext())
+	return enJSON(c, fiber.Map{"calculadas": n}, err)
+}
+
+// Elegibles atiende GET /admin/elegibles.
+func (h *AdminHandler) Elegibles(c *fiber.Ctx) error {
+	r, err := h.svc.Elegibles(c.UserContext())
+	return enJSON(c, r, err)
+}
+
+func nombreElegibles(ext string) string {
+	return "lista-elegibles-" + time.Now().Format("2006-01-02") + ext
+}
+
+func (h *AdminHandler) ElegiblesXLSX(c *fiber.Ctx) error {
+	l, err := h.svc.Elegibles(c.UserContext())
+	if err != nil {
+		return err
+	}
+	b, err := service.ElegiblesXLSX(l)
+	return descarga(c, nombreElegibles(".xlsx"), "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", b, err)
+}
+
+func (h *AdminHandler) ElegiblesPDF(c *fiber.Ctx) error {
+	l, err := h.svc.Elegibles(c.UserContext())
+	if err != nil {
+		return err
+	}
+	b, err := service.ElegiblesPDF(l)
+	return descarga(c, nombreElegibles(".pdf"), "application/pdf", b, err)
+}
+
+// InformarReconsideracion atiende PUT /admin/reconsideraciones/:id/informe.
+func (h *AdminHandler) InformarReconsideracion(c *fiber.Ctx) error {
+	id, err := idParam(c, "id")
+	if err != nil {
+		return err
+	}
+	var req struct {
+		Informe string `json:"informe"`
+	}
+	if err := parseBody(c, &req); err != nil {
+		return err
+	}
+	r, err := h.svc.InformarReconsideracion(c.UserContext(), id, req.Informe, adminDe(c).Nombre)
+	if err == nil {
+		c.Locals(localPostulacion, &r.PostulacionID)
+	}
+	return enJSON(c, r, err)
 }
 
 func (h *AdminHandler) Me(c *fiber.Ctx) error { return c.JSON(adminDe(c)) }
@@ -272,6 +411,9 @@ func (h *AdminHandler) ResponderReconsideracion(c *fiber.Ctx) error {
 		return err
 	}
 	r, err := h.svc.ResponderReconsideracion(c.UserContext(), id, req.Estado, req.Respuesta, adminDe(c).Nombre)
+	if err == nil {
+		c.Locals(localPostulacion, &r.PostulacionID)
+	}
 	return enJSON(c, r, err)
 }
 

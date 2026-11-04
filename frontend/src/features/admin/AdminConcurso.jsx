@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import { adminApi } from '../../api/admin'
 import { Alert, Button, Checkbox, ErrorAlert, Input, Modal, PageLoader, Select, Textarea } from '../../components/ui'
 import { useAsync } from '../../hooks/useAsync'
+import { useAdminStore } from '../../store/adminStore'
 import { useTituloPagina } from '../../hooks/useTituloPagina'
 import { guardarArchivo } from '../../utils/descargas'
 import { formatoInstante } from '../concurso/componentes'
@@ -73,16 +74,25 @@ export function FasesAdminPage() {
             {d.config.formularioHabilitado ? 'Deshabilitar formulario' : 'Habilitar formulario'}
           </Button>
         </div>
-        <div className="mt-4 max-w-xs">
+        <div className="mt-4 grid max-w-xl gap-4 sm:grid-cols-2">
           <Input
-            label="Plazo para responder reconsideraciones (días)"
+            label="Plazo de Talento Humano para informar reconsideraciones (días)"
             type="number"
             min={1}
             defaultValue={d.config.plazoRespuestaDias}
             error={config.error?.details?.campos?.plazoRespuestaDias}
             onBlur={(e) => Number(e.target.value) !== d.config.plazoRespuestaDias && guardarConfig({ plazoRespuestaDias: Number(e.target.value) })}
           />
+          <Input
+            label="Plazo de la Comisión para resolverlas (días, tras el informe)"
+            type="number"
+            min={1}
+            defaultValue={d.config.plazoComisionDias}
+            error={config.error?.details?.campos?.plazoComisionDias}
+            onBlur={(e) => Number(e.target.value) !== d.config.plazoComisionDias && guardarConfig({ plazoComisionDias: Number(e.target.value) })}
+          />
         </div>
+        <p className="mt-2 text-xs text-tenue">El plazo del postulante para solicitarlas son las fechas de la fase Reconsideraciones.</p>
         {!config.error?.details?.campos && <ErrorAlert error={config.error} className="mt-3" />}
       </Panel>
       <Panel titulo="Fases">
@@ -297,26 +307,59 @@ export function ResultadosPage() {
   )
 }
 
+function Plazo({ texto, fecha, cumplido }) {
+  const vencido = !cumplido && new Date(fecha) < new Date()
+  return (
+    <p className={`text-xs ${vencido ? 'font-medium text-mal' : 'text-tenue'}`}>
+      {vencido ? `Plazo vencido. ${texto}` : `${texto} antes del`}: {formatoInstante(fecha)}
+    </p>
+  )
+}
+
+/** Talento Humano informa y la Comisión resuelve, cada uno con su plazo (EF-1). */
 function FilaReconsideracion({ r, onRespondida }) {
+  const esComision = useAdminStore((s) => s.admin?.rol) === 'ADMINISTRADOR'
   const peticion = useAsync()
+  const informar = useAsync()
   const [respuesta, setRespuesta] = useState('')
-  const vencida = r.estado === 'PENDIENTE' && new Date(r.responderAntes) < new Date()
+  const [informe, setInforme] = useState(r.informe ?? '')
   const responder = async (estado) => {
     const x = await peticion.run(() => adminApi.responderReconsideracion(r.id, { estado, respuesta }))
+    if (x.ok) onRespondida()
+  }
+  const guardarInforme = async () => {
+    const x = await informar.run(() => adminApi.informarReconsideracion(r.id, { informe }))
     if (x.ok) onRespondida()
   }
   return (
     <div className="border-b border-regla py-4 first:pt-0 last:border-b-0 last:pb-0">
       <div className="flex flex-wrap items-baseline justify-between gap-x-4">
         <p className="text-sm font-medium">{r.nombres} · {r.etapa}</p>
-        <p className={`text-xs ${vencida ? 'font-medium text-mal' : 'text-tenue'}`}>
-          {r.estado === 'PENDIENTE' ? `${vencida ? 'Plazo vencido' : 'Responder antes del'}: ${formatoInstante(r.responderAntes)}` : `${r.estado} por ${r.respondidaPor}`}
-        </p>
+        {r.estado !== 'PENDIENTE' && <p className="text-xs text-tenue">{r.estado} por {r.respondidaPor}</p>}
       </div>
+      {r.estado === 'PENDIENTE' && (
+        <div className="mt-1">
+          <Plazo texto="Informe de Talento Humano" fecha={r.informeAntes} cumplido={Boolean(r.informe)} />
+          <Plazo texto="Resolución de la Comisión" fecha={r.responderAntes} />
+        </div>
+      )}
       <p className="mt-1 text-xs text-tenue">{r.codigo} · {r.cedula}</p>
       <p className="mt-2 text-sm leading-relaxed">{r.motivo}</p>
+      {r.informe && (
+        <p className="mt-2 rounded-md bg-fondo p-2 text-sm">
+          <span className="block text-xs text-tenue">Informe de {r.informePor}</span>
+          {r.informe}
+        </p>
+      )}
       {r.respuesta && <p className="mt-2 rounded-md bg-fondo p-2 text-sm">{r.respuesta}</p>}
-      {r.estado === 'PENDIENTE' && (
+      {r.estado === 'PENDIENTE' && !esComision && (
+        <div className="mt-3 space-y-2">
+          <Textarea label="Informe" required maxLength={2000} value={informe} error={informar.error?.details?.campos?.informe} onChange={(e) => setInforme(e.target.value)} />
+          {!informar.error?.details?.campos && <ErrorAlert error={informar.error} />}
+          <Button variant="secondary" onClick={guardarInforme} loading={informar.loading}>Guardar informe</Button>
+        </div>
+      )}
+      {r.estado === 'PENDIENTE' && esComision && (
         <div className="mt-3 space-y-2">
           <Textarea label="Respuesta" required maxLength={2000} value={respuesta} error={peticion.error?.details?.campos?.respuesta} onChange={(e) => setRespuesta(e.target.value)} />
           {!peticion.error?.details?.campos && <ErrorAlert error={peticion.error} />}
@@ -342,7 +385,7 @@ export function ReconsideracionesPage() {
   if (!lista) return carga.error ? <ErrorAlert error={carga.error} /> : <PageLoader />
   return (
     <div className="space-y-6">
-      <Titulo texto="Reconsideraciones" detalle="Primero las pendientes, por plazo de respuesta" />
+      <Titulo texto="Reconsideraciones" detalle="Primero las pendientes, por plazo. Talento Humano informa y la Comisión resuelve." />
       <Panel>
         {lista.length === 0 && <p className="text-sm text-tenue">No hay solicitudes.</p>}
         {lista.map((r) => (
@@ -386,7 +429,7 @@ export function UsuariosPage() {
   }
   return (
     <div className="space-y-6">
-      <Titulo texto="Usuarios" detalle="Analista: consulta, califica y responde reconsideraciones. Administrador: además publica fases y gestiona el banco de preguntas." />
+      <Titulo texto="Usuarios" detalle="Analista: consulta, califica e informa reconsideraciones. Administrador: además las resuelve, publica fases y gestiona puntajes y el banco de preguntas." />
       <Panel titulo="Nueva cuenta">
         <form onSubmit={crear} noValidate className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           <Input label="Usuario" required autoComplete="off" value={v.usuario} error={campos?.usuario} onChange={cambiar('usuario')} />

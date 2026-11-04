@@ -47,8 +47,48 @@ func (f Fase) Vigente(ahora time.Time) bool {
 }
 
 type ConcursoConfig struct {
-	FormularioHabilitado bool `json:"formularioHabilitado"`
-	PlazoRespuestaDias   int  `json:"plazoRespuestaDias"`
+	FormularioHabilitado bool         `json:"formularioHabilitado"`
+	PlazoRespuestaDias   int          `json:"plazoRespuestaDias"` // Talento Humano
+	PlazoComisionDias    int          `json:"plazoComisionDias"`
+	TablaMeritos         TablaMeritos `json:"tablaMeritos"`
+}
+
+// TablaMeritos son los puntajes de la fase de méritos y lo que se exige para ser elegible. El
+// requerimiento no trae estos valores: los define la Comisión.
+type TablaMeritos struct {
+	PuntosPorNivel      map[string]float64 `json:"puntosPorNivel"` // por id de nivel de instrucción
+	TopeFormacion       float64            `json:"topeFormacion"`
+	PuntosAnioGeneral   float64            `json:"puntosAnioGeneral"`
+	PuntosAnioDireccion float64            `json:"puntosAnioDireccion"`
+	TopeExperiencia     float64            `json:"topeExperiencia"`
+	PuntosPublicacion   float64            `json:"puntosPublicacion"`
+	TopePublicaciones   float64            `json:"topePublicaciones"`
+	PuntosHora          float64            `json:"puntosHora"`
+	TopeCapacitacion    float64            `json:"topeCapacitacion"`
+	PesoMeritos         float64            `json:"pesoMeritos"`
+	PesoTeorica         float64            `json:"pesoTeorica"`
+	PesoPsicotecnica    float64            `json:"pesoPsicotecnica"`
+	NotaMinima          float64            `json:"notaMinima"`
+}
+
+// Configurada indica si la Comisión ya asignó puntos a algún rubro.
+func (t TablaMeritos) Configurada() bool {
+	for _, v := range t.PuntosPorNivel {
+		if v > 0 {
+			return true
+		}
+	}
+	return t.PuntosAnioGeneral > 0 || t.PuntosAnioDireccion > 0 || t.PuntosPublicacion > 0 || t.PuntosHora > 0
+}
+
+// Evento es una línea de la bitácora: lo que hizo una cuenta del módulo o un postulante.
+type Evento struct {
+	CreadoEn time.Time `json:"creadoEn"`
+	Actor    string    `json:"actor"`
+	Rol      string    `json:"rol"`
+	Accion   string    `json:"accion"`
+	Detalle  *string   `json:"detalle"`
+	Codigo   *string   `json:"codigo"`
 }
 
 // ResumenCargo es una fila del dashboard (EF-13.3).
@@ -165,6 +205,10 @@ type Reconsideracion struct {
 	RespondidaEn   *time.Time `json:"respondidaEn"`
 	RespondidaPor  *string    `json:"respondidaPor"`
 	CreadoEn       time.Time  `json:"creadoEn"`
+	InformeAntes   time.Time  `json:"informeAntes"`
+	Informe        *string    `json:"informe,omitempty"`
+	InformePor     *string    `json:"informePor,omitempty"`
+	InformeEn      *time.Time `json:"informeEn,omitempty"`
 	Codigo         string     `json:"codigo" db:"-"`
 	Nombres        string     `json:"nombres" db:"-"`
 	Cedula         string     `json:"cedula" db:"-"`
