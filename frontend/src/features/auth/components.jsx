@@ -12,10 +12,10 @@ export function AuthCard({ titulo, subtitulo, children, pie }) {
   useTituloPagina(titulo)
   return (
     <div>
-      <h1 className="text-2xl font-medium tracking-tight lg:text-[32px] lg:leading-tight">{titulo}</h1>
-      {subtitulo && <p className="mt-2 text-sm leading-relaxed text-tenue">{subtitulo}</p>}
-      <div className="mt-6">{children}</div>
-      {pie && <div className="mt-6 text-sm text-tenue">{pie}</div>}
+      <h1 className="animate-aparece text-[32px] font-medium leading-[1.05] tracking-[-0.03em] lg:text-[44px]">{titulo}</h1>
+      {subtitulo && <p className="mt-3 animate-aparece text-base leading-relaxed text-tenue [animation-delay:70ms]">{subtitulo}</p>}
+      <div className="mt-7 animate-aparece [animation-delay:140ms]">{children}</div>
+      {pie && <div className="mt-6 animate-aparece text-sm text-tenue [animation-delay:210ms]">{pie}</div>}
     </div>
   )
 }
