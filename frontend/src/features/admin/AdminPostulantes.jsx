@@ -8,6 +8,7 @@ import { useTituloPagina } from '../../hooks/useTituloPagina'
 import { guardarArchivo } from '../../utils/descargas'
 import { textoDuracion } from '../../utils/fechas'
 import { FormularioVista } from '../postulacion/FormularioVista'
+import { TablaEventos } from './AdminReportes'
 import { Panel, Tabla, Titulo, nota } from './comunes'
 
 const ESTADOS = [
@@ -136,7 +137,7 @@ export function PostulantesPage() {
   )
 }
 
-function FormularioCalificacion({ postulante, onGuardado }) {
+function FormularioCalificacion({ postulante, calculado, onGuardado }) {
   const peticion = useAsync()
   const [v, setV] = useState({
     estadoConcurso: postulante.estadoConcurso,
@@ -164,7 +165,14 @@ function FormularioCalificacion({ postulante, onGuardado }) {
   return (
     <form onSubmit={guardar} noValidate className="grid gap-4 sm:grid-cols-3">
       <Select label="Resultado" required placeholder="Seleccione…" options={ESTADOS_CONCURSO} value={v.estadoConcurso} error={campos?.estadoConcurso} onChange={cambiar('estadoConcurso')} />
-      <Input label="Puntaje de méritos (0 a 100)" inputMode="decimal" value={v.puntajeMeritos} error={campos?.puntajeMeritos} onChange={cambiar('puntajeMeritos')} />
+      <div>
+        <Input label="Puntaje de méritos (0 a 100)" inputMode="decimal" value={v.puntajeMeritos} error={campos?.puntajeMeritos} onChange={cambiar('puntajeMeritos')} />
+        {calculado !== undefined && (
+          <button type="button" className="mt-1 text-xs underline underline-offset-4" onClick={() => setV((x) => ({ ...x, puntajeMeritos: calculado }))}>
+            Usar el calculado: {calculado.toFixed(2)}
+          </button>
+        )}
+      </div>
       <Input label="Nota psicotécnica (0 a 100)" inputMode="decimal" value={v.notaPsicotecnica} error={campos?.notaPsicotecnica} onChange={cambiar('notaPsicotecnica')} />
       <Textarea label="Observación" className="sm:col-span-3" maxLength={2000} value={v.observacion} error={campos?.observacion} onChange={cambiar('observacion')} />
       <div className="space-y-3 sm:col-span-3">
@@ -219,10 +227,23 @@ export function PostulanteDetallePage() {
         </dl>
       </Panel>
 
+      {d.meritos && (
+        <Panel titulo="Méritos según la tabla de la Comisión">
+          <dl className="grid gap-4 sm:grid-cols-5">
+            {[['Formación', d.meritos.formacion], ['Experiencia', d.meritos.experiencia], ['Publicaciones', d.meritos.publicaciones], ['Capacitación', d.meritos.capacitacion], ['Total', d.meritos.total]].map(([e, v]) => (
+              <div key={e}>
+                <dt className="text-xs text-tenue">{e}</dt>
+                <dd className={`mt-0.5 text-sm tabular-nums ${e === 'Total' ? 'font-medium' : ''}`}>{v.toFixed(2)}</dd>
+              </div>
+            ))}
+          </dl>
+        </Panel>
+      )}
+
       <div className="no-print">
         <Panel titulo="Calificación">
           {p.estado === 'ENVIADA' ? (
-            <FormularioCalificacion postulante={p} onGuardado={cargar} />
+            <FormularioCalificacion postulante={p} calculado={d.meritos?.total} onGuardado={cargar} />
           ) : (
             <p className="text-sm text-tenue">Solo se califican postulaciones enviadas.</p>
           )}
@@ -248,6 +269,10 @@ export function PostulanteDetallePage() {
 
       <Panel titulo="Formulario de postulación">
         <FormularioVista formulario={d.formulario} descargar={(doc) => adminApi.documento(id, doc.id)} />
+      </Panel>
+
+      <Panel titulo="Historial de la postulación">
+        <TablaEventos eventos={d.historial ?? []} conCodigo={false} />
       </Panel>
     </div>
   )

@@ -123,7 +123,13 @@ Sesión propia: `POST /admin/login` con `{usuario, password}`. **A** = solo rol 
 | GET | `/admin/postulantes/:id/evaluacion.pdf` | Reporte de la evaluación |
 | PUT | `/admin/postulantes/:id/calificacion` | `{estadoConcurso, puntajeMeritos?, notaPsicotecnica?, observacion?}` |
 | GET | `/admin/matriz.xlsx`, `/admin/matriz.pdf` | Cuadro comparativo, con los filtros de la nómina |
-| GET / PUT **A** | `/admin/concurso` | `{formularioHabilitado, plazoRespuestaDias}` |
+| GET / PUT **A** | `/admin/concurso` | `{formularioHabilitado, plazoRespuestaDias, plazoComisionDias}`; el GET también trae `tablaMeritos` |
+| PUT **A** | `/admin/meritos/tabla` | Puntajes por rubro, topes, pesos de la nota final y nota mínima |
+| POST **A** | `/admin/meritos/recalcular` | Aplica la tabla a las postulaciones en revisión. Devuelve `{calculadas}` |
+| GET | `/admin/elegibles` | Lista por cargo con puesto y nota final, más `pendientes` y `bajoMinimo` |
+| GET | `/admin/elegibles.xlsx` · `/admin/elegibles.pdf` | La misma lista para descargar |
+| PUT | `/admin/reconsideraciones/:id/informe` | Informe de Talento Humano. El postulante no lo ve |
+| GET **A** | `/admin/bitacora?q=` | Últimas 500 acciones de las cuentas y de los postulantes |
 | PUT **A** | `/admin/fases/:codigo` | `{publicada, descripcion?, fechaInicio?, fechaFin?}` |
 | GET / POST / PUT / DELETE **A** | `/admin/evaluacion/preguntas` | Banco de preguntas; `POST .../importar` con `{items}` |
 | GET / PUT **A** | `/admin/evaluacion/config` | `{numPreguntas, duracionMinutos, inicio?, fin?}` |

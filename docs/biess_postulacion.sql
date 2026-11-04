@@ -1,7 +1,7 @@
 -- =====================================================================
 -- biess_postulacion.sql — Script único de entrega
--- DDL (22 tablas) + catálogos (división política, listas) + personas mock.
--- Generado concatenando db/01_schema.sql, 02_seed_catalogos.sql y 03_seed_mocks.sql.
+-- DDL (33 tablas) + catálogos (división política, listas) + personas mock.
+-- Generado con db/01_schema.sql, 02_seed_catalogos.sql, 03_seed_mocks.sql y las migraciones.
 -- Uso: psql -U biess -d biess_postulacion -f biess_postulacion.sql
 -- =====================================================================
 
@@ -320,7 +320,6 @@ CREATE TABLE postulacion_historial (
     creado_en       TIMESTAMPTZ  NOT NULL DEFAULT NOW()
 );
 CREATE INDEX idx_historial_post ON postulacion_historial(postulacion_id);
-
 
 -- =====================================================================
 -- 02_seed_catalogos.sql — Datos semilla de catálogos (división política y listas)
@@ -816,7 +815,6 @@ INSERT INTO preguntas_inhabilidad (numeral, texto, respuesta_esperada, requiere_
 ('1.9.12', '¿Mantiene en firme algún tipo de responsabilidades por la Contraloría General del Estado?', FALSE, FALSE, 12),
 ('1.9.13', '¿Se encuentra registrado en la base de datos de la Unidad de Análisis Financiero y Económico?', FALSE, FALSE, 13);
 
-
 -- =====================================================================
 -- 03_seed_mocks.sql — Personas ficticias que simulan Registro Civil e Historial Laboral
 -- Las cédulas son válidas según el algoritmo módulo 10. Datos 100% ficticios.
@@ -846,3 +844,209 @@ INSERT INTO mock_historial_laboral (cedula, tipo, activo) VALUES
   ('1712345675', 'AFILIADO', TRUE),
   ('0923456784', 'AFILIADO', TRUE),
   ('0106789019', 'AFILIADO', TRUE);
+
+
+-- =====================================================================
+-- Migraciones: lo que la API aplica al arrancar, ya registrado para que no se repita.
+-- =====================================================================
+
+-- 001_datos_confirmados.sql
+-- Para bases ya creadas (Render): el postulante confirma sus datos personales una sola vez.
+-- Es aditiva y se puede ejecutar más de una vez. Las bases nuevas ya la traen en 01_schema.sql.
+ALTER TABLE postulaciones ADD COLUMN IF NOT EXISTS datos_confirmados_en TIMESTAMPTZ;
+
+-- 002_documentos_respaldo.sql
+-- Para bases ya creadas (Render, Railway): PDF de respaldo guardados en la base, porque el disco
+-- de esos servicios se borra en cada despliegue. Se puede ejecutar más de una vez.
+-- La tabla documentos nunca se usó antes de esta migración: quitar "ruta" no pierde datos.
+ALTER TABLE documentos DROP COLUMN IF EXISTS ruta;
+ALTER TABLE documentos ADD COLUMN IF NOT EXISTS contenido BYTEA NOT NULL;
+ALTER TABLE postulaciones ADD COLUMN IF NOT EXISTS organizacion_documento_id BIGINT REFERENCES documentos(id) ON DELETE SET NULL;
+
+-- 003_pregunta_respaldo_literal.sql
+-- Para bases ya creadas (Render, Railway): pregunta del respaldo (1.4) con el texto literal del requerimiento.
+-- Se puede ejecutar más de una vez. La API limpia la caché de catálogos al arrancar.
+UPDATE sectores SET pregunta_respaldo = replace(pregunta_respaldo, 'respaldado por', 'respaldadas por');
+
+-- 004_catalogos_literales.sql
+-- Catálogos iguales al requerimiento. Salinas no está en la lista de 1.2.3: se quita salvo que
+-- algún domicilio ya guardado la use.
+DELETE FROM cantones c
+USING provincias p
+WHERE p.id = c.provincia_id AND p.nombre = 'Santa Elena' AND c.nombre = 'Salinas'
+  AND NOT EXISTS (SELECT 1 FROM postulacion_contacto x WHERE x.canton_id = c.id);
+
+UPDATE preguntas_inhabilidad SET texto = replace(texto, 'IESS - BIESS?', 'IESS- BIESS?') WHERE numeral = '1.9.10';
+
+-- 005_administracion_evaluacion.sql
+-- EF-1, EF-13 y EF-14: administración del concurso, calificaciones, evaluación teórica y reconsideraciones.
+
+-- Rol Administrador (Comisión de Selección) y Rol Analista (Talento Humano).
+CREATE TABLE administradores (
+    id             BIGSERIAL    PRIMARY KEY,
+    usuario        VARCHAR(60)  NOT NULL UNIQUE,
+    nombre         VARCHAR(150) NOT NULL,
+    rol            VARCHAR(15)  NOT NULL CHECK (rol IN ('ADMINISTRADOR','ANALISTA')),
+    password_hash  VARCHAR(100) NOT NULL,
+    activo         BOOLEAN      NOT NULL DEFAULT TRUE,
+    creado_en      TIMESTAMPTZ  NOT NULL DEFAULT NOW()
+);
+
+-- Fases que el administrador publica (EF-13.1). Las fechas de POSTULACION limitan el formulario.
+CREATE TABLE concurso_fases (
+    codigo        VARCHAR(30)  PRIMARY KEY,
+    nombre        VARCHAR(120) NOT NULL,
+    orden         SMALLINT     NOT NULL,
+    descripcion   TEXT,
+    publicada     BOOLEAN      NOT NULL DEFAULT FALSE,
+    fecha_inicio  TIMESTAMPTZ,
+    fecha_fin     TIMESTAMPTZ,
+    CONSTRAINT ck_fase_fechas CHECK (fecha_fin IS NULL OR fecha_inicio IS NULL OR fecha_fin >= fecha_inicio)
+);
+INSERT INTO concurso_fases (codigo, nombre, orden, publicada) VALUES
+  ('POSTULACION',       'Postulación',              1, TRUE),
+  ('MERITOS',           'Fase de méritos',          2, FALSE),
+  ('EVALUACION_TECNICA','Evaluación técnica',       3, FALSE),
+  ('PSICOTECNICA',      'Evaluación psicotécnica',  4, FALSE),
+  ('RECONSIDERACION',   'Reconsideraciones',        5, FALSE),
+  ('RESULTADOS',        'Lista de elegibles',       6, FALSE);
+
+-- Una sola fila: lo que el administrador controla del concurso (EF-13.2).
+CREATE TABLE concurso_config (
+    id                     SMALLINT PRIMARY KEY DEFAULT 1 CHECK (id = 1),
+    formulario_habilitado  BOOLEAN  NOT NULL DEFAULT TRUE,
+    plazo_respuesta_dias   SMALLINT NOT NULL DEFAULT 5 CHECK (plazo_respuesta_dias > 0)
+);
+INSERT INTO concurso_config DEFAULT VALUES;
+
+-- Avance de cada postulante en el concurso.
+ALTER TABLE postulaciones
+    ADD COLUMN estado_concurso VARCHAR(20) NOT NULL DEFAULT 'POSTULADO'
+        CHECK (estado_concurso IN ('POSTULADO','NO_SUPERA_MERITOS','EVALUACION_TECNICA')),
+    ADD COLUMN puntaje_meritos    NUMERIC(5,2) CHECK (puntaje_meritos BETWEEN 0 AND 100),
+    ADD COLUMN nota_psicotecnica  NUMERIC(5,2) CHECK (nota_psicotecnica BETWEEN 0 AND 100),
+    ADD COLUMN observacion_concurso TEXT;
+
+-- EF-14: banco de preguntas de opción múltiple.
+CREATE TABLE preguntas_evaluacion (
+    id         BIGSERIAL   PRIMARY KEY,
+    enunciado  TEXT        NOT NULL,
+    opciones   JSONB       NOT NULL,
+    correcta   SMALLINT    NOT NULL CHECK (correcta >= 0),
+    activa     BOOLEAN     NOT NULL DEFAULT TRUE,
+    creado_en  TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+-- Una sola fila: cuándo se habilita el examen, cuántas preguntas tiene y cuánto dura.
+CREATE TABLE evaluacion_config (
+    id                SMALLINT PRIMARY KEY DEFAULT 1 CHECK (id = 1),
+    num_preguntas     INT      NOT NULL DEFAULT 10 CHECK (num_preguntas > 0),
+    duracion_minutos  INT      NOT NULL DEFAULT 30 CHECK (duracion_minutos > 0),
+    inicio            TIMESTAMPTZ,
+    fin               TIMESTAMPTZ
+);
+INSERT INTO evaluacion_config DEFAULT VALUES;
+
+CREATE TABLE evaluacion_intentos (
+    id              BIGSERIAL    PRIMARY KEY,
+    postulacion_id  BIGINT       NOT NULL UNIQUE REFERENCES postulaciones(id) ON DELETE CASCADE,
+    iniciado_en     TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
+    expira_en       TIMESTAMPTZ  NOT NULL,
+    finalizado_en   TIMESTAMPTZ,
+    forzado         BOOLEAN      NOT NULL DEFAULT FALSE,
+    total           INT          NOT NULL DEFAULT 0,
+    correctas       INT,
+    nota            NUMERIC(5,2)
+);
+CREATE INDEX idx_intentos_pendientes ON evaluacion_intentos(expira_en) WHERE finalizado_en IS NULL;
+
+-- Copia cada pregunta: editar el banco después no cambia un examen ya rendido.
+CREATE TABLE evaluacion_respuestas (
+    intento_id   BIGINT   NOT NULL REFERENCES evaluacion_intentos(id) ON DELETE CASCADE,
+    orden        INT      NOT NULL,
+    pregunta_id  BIGINT   REFERENCES preguntas_evaluacion(id) ON DELETE SET NULL,
+    enunciado    TEXT     NOT NULL,
+    opciones     JSONB    NOT NULL,
+    correcta     SMALLINT NOT NULL,
+    respuesta    SMALLINT,
+    PRIMARY KEY (intento_id, orden)
+);
+
+-- EF-1: reconsideraciones, con plazo de respuesta para Talento Humano y la Comisión.
+CREATE TABLE reconsideraciones (
+    id               BIGSERIAL    PRIMARY KEY,
+    postulacion_id   BIGINT       NOT NULL REFERENCES postulaciones(id) ON DELETE CASCADE,
+    etapa            VARCHAR(30)  NOT NULL,
+    motivo           VARCHAR(2000) NOT NULL,
+    estado           VARCHAR(10)  NOT NULL DEFAULT 'PENDIENTE' CHECK (estado IN ('PENDIENTE','ACEPTADA','NEGADA')),
+    respuesta        VARCHAR(2000),
+    responder_antes  TIMESTAMPTZ  NOT NULL,
+    respondida_en    TIMESTAMPTZ,
+    respondida_por   VARCHAR(150),
+    creado_en        TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
+    UNIQUE (postulacion_id, etapa)
+);
+
+-- 006_areas_estudio.sql
+-- Más áreas de estudio para títulos que no encajaban en la lista inicial.
+INSERT INTO areas_estudio (nombre) VALUES
+  ('Actuaría'),
+  ('Ciencias Políticas y Relaciones Internacionales'),
+  ('Comercio Exterior'),
+  ('Contabilidad y Auditoría'),
+  ('Educación'),
+  ('Estadística y Matemáticas'),
+  ('Gestión Pública'),
+  ('Ingeniería Civil'),
+  ('Ingeniería Comercial'),
+  ('Ingeniería Industrial'),
+  ('Marketing'),
+  ('Medicina y Ciencias de la Salud'),
+  ('Seguridad Social'),
+  ('Sistemas, Software y Tecnologías de la Información'),
+  ('Talento Humano')
+ON CONFLICT (nombre) DO NOTHING;
+
+-- 007_meritos_elegibles_auditoria.sql
+-- EF-1: tabla de puntajes, plazos por actor en las reconsideraciones y bitácora de acciones.
+
+-- Los valores los fija la Comisión: el requerimiento no los trae, así que nacen vacíos.
+ALTER TABLE concurso_config
+    ADD COLUMN plazo_comision_dias SMALLINT NOT NULL DEFAULT 5 CHECK (plazo_comision_dias > 0),
+    ADD COLUMN tabla_meritos       JSONB    NOT NULL DEFAULT '{}';
+
+-- Talento Humano informa primero y la Comisión resuelve después, cada uno con su plazo.
+ALTER TABLE reconsideraciones
+    ADD COLUMN informe       VARCHAR(2000),
+    ADD COLUMN informe_por   VARCHAR(150),
+    ADD COLUMN informe_en    TIMESTAMPTZ,
+    ADD COLUMN informe_antes TIMESTAMPTZ;
+UPDATE reconsideraciones SET informe_antes = responder_antes;
+ALTER TABLE reconsideraciones ALTER COLUMN informe_antes SET NOT NULL;
+
+-- Lo que hacen las cuentas del módulo; lo del postulante queda en postulacion_historial.
+CREATE TABLE auditoria (
+    id              BIGSERIAL    PRIMARY KEY,
+    actor           VARCHAR(150) NOT NULL,
+    rol             VARCHAR(15)  NOT NULL,
+    accion          VARCHAR(40)  NOT NULL,
+    detalle         TEXT,
+    postulacion_id  BIGINT       REFERENCES postulaciones(id) ON DELETE SET NULL,
+    creado_en       TIMESTAMPTZ  NOT NULL DEFAULT NOW()
+);
+CREATE INDEX idx_auditoria_fecha ON auditoria(creado_en DESC);
+CREATE INDEX idx_auditoria_postulacion ON auditoria(postulacion_id);
+
+CREATE TABLE IF NOT EXISTS schema_migraciones (
+    nombre      VARCHAR(100) PRIMARY KEY,
+    aplicada_en TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+INSERT INTO schema_migraciones (nombre) VALUES
+  ('001_datos_confirmados.sql'),
+  ('002_documentos_respaldo.sql'),
+  ('003_pregunta_respaldo_literal.sql'),
+  ('004_catalogos_literales.sql'),
+  ('005_administracion_evaluacion.sql'),
+  ('006_areas_estudio.sql'),
+  ('007_meritos_elegibles_auditoria.sql')
+ON CONFLICT (nombre) DO NOTHING;

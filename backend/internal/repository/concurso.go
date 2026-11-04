@@ -30,6 +30,10 @@ type ConcursoRepository interface {
 	FindPostulante(ctx context.Context, postulacionID int64) (*domain.Postulante, error)
 	FindPostulanteDeUsuario(ctx context.Context, usuarioID int64) (*domain.Postulante, error)
 	GuardarCalificacion(ctx context.Context, postulacionID int64, c domain.Calificacion) error
+	GuardarPuntajeMeritos(ctx context.Context, postulacionID int64, puntaje float64) error
+	UpdateTablaMeritos(ctx context.Context, t domain.TablaMeritos) error
+	RegistrarAuditoria(ctx context.Context, actor, rol, accion, detalle string, postulacionID *int64) error
+	ListAuditoria(ctx context.Context, busqueda string, postulacionID int64) ([]domain.Evento, error)
 	FindDocumentoDePostulacion(ctx context.Context, postulacionID, documentoID int64) (*domain.Documento, []byte, error)
 
 	ListPreguntas(ctx context.Context) ([]domain.PreguntaEvaluacion, error)
@@ -52,6 +56,7 @@ type ConcursoRepository interface {
 	CrearReconsideracion(ctx context.Context, r domain.Reconsideracion) error
 	FindReconsideracion(ctx context.Context, id int64) (*domain.Reconsideracion, error)
 	ResponderReconsideracion(ctx context.Context, id int64, estado, respuesta, por string) (int64, error)
+	InformarReconsideracion(ctx context.Context, id int64, informe, por string) (int64, error)
 }
 
 type pgConcursoRepository struct {
@@ -107,8 +112,8 @@ func (r *pgConcursoRepository) SetAdminActivo(ctx context.Context, id int64, act
 
 func (r *pgConcursoRepository) GetConfig(ctx context.Context) (*domain.ConcursoConfig, error) {
 	var c domain.ConcursoConfig
-	err := conn(ctx, r.pool).QueryRow(ctx, `SELECT formulario_habilitado, plazo_respuesta_dias FROM concurso_config WHERE id = 1`).
-		Scan(&c.FormularioHabilitado, &c.PlazoRespuestaDias)
+	err := conn(ctx, r.pool).QueryRow(ctx, `SELECT formulario_habilitado, plazo_respuesta_dias, plazo_comision_dias, tabla_meritos FROM concurso_config WHERE id = 1`).
+		Scan(&c.FormularioHabilitado, &c.PlazoRespuestaDias, &c.PlazoComisionDias, &c.TablaMeritos)
 	if err != nil {
 		return nil, traducir(err, "leyendo configuración del concurso")
 	}
@@ -116,9 +121,14 @@ func (r *pgConcursoRepository) GetConfig(ctx context.Context) (*domain.ConcursoC
 }
 
 func (r *pgConcursoRepository) UpdateConfig(ctx context.Context, c domain.ConcursoConfig) error {
-	_, err := conn(ctx, r.pool).Exec(ctx, `UPDATE concurso_config SET formulario_habilitado = $1, plazo_respuesta_dias = $2 WHERE id = 1`,
-		c.FormularioHabilitado, c.PlazoRespuestaDias)
+	_, err := conn(ctx, r.pool).Exec(ctx, `UPDATE concurso_config SET formulario_habilitado = $1, plazo_respuesta_dias = $2, plazo_comision_dias = $3 WHERE id = 1`,
+		c.FormularioHabilitado, c.PlazoRespuestaDias, c.PlazoComisionDias)
 	return traducir(err, "guardando configuración del concurso")
+}
+
+func (r *pgConcursoRepository) UpdateTablaMeritos(ctx context.Context, t domain.TablaMeritos) error {
+	_, err := conn(ctx, r.pool).Exec(ctx, `UPDATE concurso_config SET tabla_meritos = $1 WHERE id = 1`, t)
+	return traducir(err, "guardando la tabla de méritos")
 }
 
 const columnasFase = `codigo, nombre, orden, descripcion, publicada, fecha_inicio, fecha_fin`
@@ -223,6 +233,37 @@ func (r *pgConcursoRepository) GuardarCalificacion(ctx context.Context, id int64
 		UPDATE postulaciones SET estado_concurso = $2, puntaje_meritos = $3, nota_psicotecnica = $4, observacion_concurso = $5
 		WHERE id = $1`, id, c.EstadoConcurso, c.PuntajeMeritos, c.NotaPsicotecnica, c.Observacion)
 	return traducir(err, "guardando calificación")
+}
+
+func (r *pgConcursoRepository) GuardarPuntajeMeritos(ctx context.Context, id int64, puntaje float64) error {
+	_, err := conn(ctx, r.pool).Exec(ctx, `UPDATE postulaciones SET puntaje_meritos = $2 WHERE id = $1`, id, puntaje)
+	return traducir(err, "guardando el puntaje de méritos")
+}
+
+func (r *pgConcursoRepository) RegistrarAuditoria(ctx context.Context, actor, rol, accion, detalle string, postulacionID *int64) error {
+	_, err := conn(ctx, r.pool).Exec(ctx, `
+		INSERT INTO auditoria (actor, rol, accion, detalle, postulacion_id) VALUES ($1, $2, $3, NULLIF($4, ''), $5)`,
+		actor, rol, accion, detalle, postulacionID)
+	return traducir(err, "registrando en la bitácora")
+}
+
+// ListAuditoria une lo que hacen las cuentas del módulo con lo que hace cada postulante. Calificar,
+// informar y resolver también se guardan en el historial de la postulación: aquí cuentan una sola vez.
+func (r *pgConcursoRepository) ListAuditoria(ctx context.Context, busqueda string, postulacionID int64) ([]domain.Evento, error) {
+	return listar[domain.Evento](ctx, conn(ctx, r.pool), `
+		SELECT creado_en, actor, rol, accion, detalle, codigo FROM (
+			SELECT a.creado_en, a.actor, a.rol, a.accion, a.detalle, p.codigo, a.postulacion_id
+			FROM auditoria a LEFT JOIN postulaciones p ON p.id = a.postulacion_id
+			UNION ALL
+			SELECT h.creado_en, COALESCE(dp.nombres || ' ' || dp.apellidos, 'Postulante'), 'POSTULANTE', h.accion, h.detalle, p.codigo, h.postulacion_id
+			FROM postulacion_historial h
+			JOIN postulaciones p ON p.id = h.postulacion_id
+			LEFT JOIN postulacion_datos_personales dp ON dp.postulacion_id = p.id
+			WHERE h.accion NOT IN ('CALIFICAR', 'RESPONDER_RECONSIDERACION', 'INFORMAR_RECONSIDERACION')
+		) e
+		WHERE ($1 = 0 OR e.postulacion_id = $1)
+		  AND ($2 = '' OR e.actor ILIKE '%' || $2 || '%' OR e.accion ILIKE '%' || $2 || '%' OR e.codigo ILIKE '%' || $2 || '%')
+		ORDER BY e.creado_en DESC LIMIT 500`, postulacionID, busqueda)
 }
 
 func (r *pgConcursoRepository) FindDocumentoDePostulacion(ctx context.Context, postulacionID, documentoID int64) (*domain.Documento, []byte, error) {
@@ -402,7 +443,8 @@ func (r *pgConcursoRepository) ListResultados(ctx context.Context) ([]domain.Res
 
 const selectReconsideracion = `
 	SELECT r.id, r.postulacion_id, r.etapa, r.motivo, r.estado, r.respuesta, r.responder_antes, r.respondida_en,
-	       r.respondida_por, r.creado_en, p.codigo, dp.nombres || ' ' || dp.apellidos, dp.cedula, u.email
+	       r.respondida_por, r.creado_en, r.informe_antes, r.informe, r.informe_por, r.informe_en,
+	       p.codigo, dp.nombres || ' ' || dp.apellidos, dp.cedula, u.email
 	FROM reconsideraciones r
 	JOIN postulaciones p ON p.id = r.postulacion_id
 	JOIN usuarios u ON u.id = p.usuario_id
@@ -412,7 +454,7 @@ func scanReconsideraciones(rows pgx.Rows) ([]domain.Reconsideracion, error) {
 	items, err := pgx.CollectRows(rows, func(row pgx.CollectableRow) (domain.Reconsideracion, error) {
 		var x domain.Reconsideracion
 		err := row.Scan(&x.ID, &x.PostulacionID, &x.Etapa, &x.Motivo, &x.Estado, &x.Respuesta, &x.ResponderAntes, &x.RespondidaEn,
-			&x.RespondidaPor, &x.CreadoEn, &x.Codigo, &x.Nombres, &x.Cedula, &x.Email)
+			&x.RespondidaPor, &x.CreadoEn, &x.InformeAntes, &x.Informe, &x.InformePor, &x.InformeEn, &x.Codigo, &x.Nombres, &x.Cedula, &x.Email)
 		return x, err
 	})
 	if err != nil {
@@ -433,8 +475,8 @@ func (r *pgConcursoRepository) ListReconsideraciones(ctx context.Context, postul
 
 func (r *pgConcursoRepository) CrearReconsideracion(ctx context.Context, x domain.Reconsideracion) error {
 	_, err := conn(ctx, r.pool).Exec(ctx, `
-		INSERT INTO reconsideraciones (postulacion_id, etapa, motivo, responder_antes) VALUES ($1, $2, $3, $4)`,
-		x.PostulacionID, x.Etapa, x.Motivo, x.ResponderAntes)
+		INSERT INTO reconsideraciones (postulacion_id, etapa, motivo, informe_antes, responder_antes) VALUES ($1, $2, $3, $4, $5)`,
+		x.PostulacionID, x.Etapa, x.Motivo, x.InformeAntes, x.ResponderAntes)
 	return traducir(err, "guardando reconsideración")
 }
 
@@ -451,6 +493,16 @@ func (r *pgConcursoRepository) FindReconsideracion(ctx context.Context, id int64
 		return nil, ErrNotFound
 	}
 	return &items[0], nil
+}
+
+func (r *pgConcursoRepository) InformarReconsideracion(ctx context.Context, id int64, informe, por string) (int64, error) {
+	tag, err := conn(ctx, r.pool).Exec(ctx, `
+		UPDATE reconsideraciones SET informe = $2, informe_por = $3, informe_en = NOW()
+		WHERE id = $1 AND estado = 'PENDIENTE'`, id, informe, por)
+	if err != nil {
+		return 0, traducir(err, "guardando el informe")
+	}
+	return tag.RowsAffected(), nil
 }
 
 func (r *pgConcursoRepository) ResponderReconsideracion(ctx context.Context, id int64, estado, respuesta, por string) (int64, error) {

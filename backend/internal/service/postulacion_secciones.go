@@ -354,6 +354,7 @@ func (s *PostulacionService) Enviar(ctx context.Context, usuarioID int64, acepta
 		return nil, err
 	}
 
+	s.calcularMeritosAlEnviar(ctx, usuarioID, p.ID)
 	s.enviarFormularioPorCorreo(ctx, usuarioID, p)
 	return p, nil
 }

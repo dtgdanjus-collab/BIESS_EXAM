@@ -36,7 +36,8 @@ export function AuthLayout() {
           </main>
           <footer className="px-4 pb-5 text-[13px] text-tenue sm:px-6 lg:text-center">
             <p className="mx-auto max-w-md lg:max-w-none">
-              Sistema académico de demostración · Requerimiento Funcional IESS v1.4 · Resolución C.D. 701
+              Sistema académico de demostración · Requerimiento Funcional IESS v1.4 · Resolución C.D. 701 ·{' '}
+              <Link to="/privacidad" className="underline underline-offset-2">Política de privacidad</Link>
             </p>
           </footer>
         </div>
