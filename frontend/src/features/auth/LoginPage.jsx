@@ -8,6 +8,7 @@ import { useBloqueo } from '../../hooks/useBloqueo'
 import { useAuthStore } from '../../store/authStore'
 import { aplicarErroresCampos } from '../../utils/formErrors'
 import { AuthCard, BloqueoAviso, CampoCedula, claseEnlace, PasswordInput } from './components'
+import { InstalarApp } from './InstalarApp'
 import { loginSchema } from './schemas'
 
 export function LoginPage() {
@@ -97,6 +98,7 @@ export function LoginPage() {
             {bloqueo.bloqueado ? `Bloqueado (${bloqueo.tiempo})` : 'Ingresar'}
           </Button>
         </form>
+        <InstalarApp />
       </div>
     </AuthCard>
   )
