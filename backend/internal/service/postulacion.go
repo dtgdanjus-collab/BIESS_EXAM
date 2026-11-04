@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/biess-dev/biess-postulacion/backend/internal/domain"
@@ -38,7 +39,10 @@ type PostulacionService struct {
 	concurso  repository.ConcursoRepository
 	correo    Correo
 	cfg       PostulacionConfig
+	reenvios  sync.Map // usuario → hora del último reenvío del formulario
 }
+
+const esperaReenvio = time.Minute
 
 func NewPostulacionService(
 	tx repository.TxManager,

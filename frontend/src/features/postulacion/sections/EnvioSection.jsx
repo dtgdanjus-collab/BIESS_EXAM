@@ -4,6 +4,7 @@ import { Alert, Button, Card, Checkbox, ErrorAlert, Icon, Modal } from '../../..
 import { useAsync } from '../../../hooks/useAsync'
 import { Comprobante } from '../Comprobante'
 import { FormularioVista } from '../FormularioVista'
+import { HojaImpresion } from '../HojaImpresion'
 import { useFormulario, useGuardarSeccion } from '../components'
 import { SECCIONES } from '../secciones'
 
@@ -73,6 +74,7 @@ export function EnvioSection() {
         {formulario && (
           <div className="rounded-md border border-regla p-4 sm:p-5">
             <FormularioVista formulario={formulario} />
+            <HojaImpresion formulario={formulario} />
           </div>
         )}
 
@@ -135,7 +137,7 @@ export function EnvioSection() {
         }
       >
         Una vez enviada, la postulación <strong className="font-mono font-medium">{postulacion.codigo}</strong> ya no podrá modificarse y el
-        formulario llegará a su correo.
+        formulario llegará a su correo en PDF.
       </Modal>
     </Card>
   )

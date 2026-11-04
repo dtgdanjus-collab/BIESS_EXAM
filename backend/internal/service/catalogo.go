@@ -51,7 +51,7 @@ func (s *CatalogoService) Niveles(ctx context.Context) ([]domain.NivelInstruccio
 }
 
 func (s *CatalogoService) Areas(ctx context.Context) ([]domain.Item, error) {
-	return cacheAside(ctx, s.cache, "cat:areas", s.repo.ListAreas)
+	return cacheAside(ctx, s.cache, "cat:areas:v2", s.repo.ListAreas)
 }
 
 func (s *CatalogoService) Sectores(ctx context.Context) ([]domain.Sector, error) {

@@ -250,6 +250,7 @@ func (s *PostulacionService) armarFormulario(ctx context.Context, p *domain.Post
 var plantillaFormulario = template.Must(template.New("formulario").Parse(`<div style="font-family:Arial,sans-serif;color:#111;max-width:720px">
 <h2 style="font-size:18px;margin-bottom:4px">Formulario de postulación</h2>
 <p style="font-size:14px;margin-top:0">Código único: <strong>{{.Codigo}}</strong></p>
+<p style="font-size:14px">Adjuntamos este formulario en PDF para que lo imprima y lo firme.</p>
 {{range .Secciones}}<h3 style="font-size:15px;border-bottom:1px solid #ccc;padding-bottom:4px;margin-top:24px">{{.Numeral}} {{.Titulo}}</h3>
 <table style="font-size:13px;border-collapse:collapse;width:100%">{{range .Campos}}<tr><td style="padding:3px 12px 3px 0;color:#555;vertical-align:top;width:45%">{{.Etiqueta}}</td><td style="padding:3px 0">{{.Valor}}</td></tr>{{end}}</table>
 {{range .Registros}}<p style="font-size:13px;font-weight:bold;margin:14px 0 4px">{{.Titulo}}</p>
