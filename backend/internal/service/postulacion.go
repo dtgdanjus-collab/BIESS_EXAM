@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/biess-dev/biess-postulacion/backend/internal/domain"
 	"github.com/biess-dev/biess-postulacion/backend/internal/repository"
@@ -34,6 +35,8 @@ type PostulacionService struct {
 	personas  repository.RegistroCivilRepository
 	historial repository.HistorialLaboralRepository
 	catalogos repository.CatalogoRepository
+	concurso  repository.ConcursoRepository
+	correo    Correo
 	cfg       PostulacionConfig
 }
 
@@ -45,10 +48,26 @@ func NewPostulacionService(
 	personas repository.RegistroCivilRepository,
 	historial repository.HistorialLaboralRepository,
 	catalogos repository.CatalogoRepository,
+	concurso repository.ConcursoRepository,
+	correo Correo,
 	cfg PostulacionConfig,
 ) *PostulacionService {
 	return &PostulacionService{tx: tx, repo: repo, detalle: detalle, usuarios: usuarios,
-		personas: personas, historial: historial, catalogos: catalogos, cfg: cfg}
+		personas: personas, historial: historial, catalogos: catalogos, concurso: concurso, correo: correo, cfg: cfg}
+}
+
+// MsgFormularioCerrado se devuelve fuera del periodo de postulación (EF-13.2).
+const MsgFormularioCerrado = "El formulario de postulación no está habilitado en este momento"
+
+func (s *PostulacionService) exigirFormularioAbierto(ctx context.Context) error {
+	abierto, err := formularioAbierto(ctx, s.concurso, time.Now())
+	if err != nil {
+		return err
+	}
+	if !abierto {
+		return domain.NewError(domain.ErrReglaNegocio, MsgFormularioCerrado).WithDetail("formularioCerrado", true)
+	}
+	return nil
 }
 
 // Obtener devuelve la postulación completa del usuario (404 si aún no la crea).
@@ -126,6 +145,9 @@ func (s *PostulacionService) Crear(ctx context.Context, usuarioID int64) (p *dom
 	}
 
 	if err := s.exigirCuenta(ctx, usuarioID); err != nil {
+		return nil, false, err
+	}
+	if err := s.exigirFormularioAbierto(ctx); err != nil {
 		return nil, false, err
 	}
 	u, err := s.usuarios.FindByID(ctx, usuarioID)
@@ -321,6 +343,9 @@ func validarFamiliares(tiene bool, items []domain.Familiar) error {
 func (s *PostulacionService) editarBorrador(ctx context.Context, usuarioID int64, accion string,
 	fn func(ctx context.Context, p *domain.Postulacion) error) (*domain.Postulacion, error) {
 
+	if err := s.exigirFormularioAbierto(ctx); err != nil {
+		return nil, err
+	}
 	err := s.tx.WithTx(ctx, func(ctx context.Context) error {
 		p, err := s.repo.FindByUsuario(ctx, usuarioID, true)
 		if errors.Is(err, repository.ErrNotFound) {

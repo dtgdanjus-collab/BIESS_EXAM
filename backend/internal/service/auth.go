@@ -38,6 +38,8 @@ type AuthConfig struct {
 	// AutoRegistroCivil: una cédula válida que no está en el Registro Civil simulado se da
 	// de alta (una sola vez) con datos ficticios y los datos de identidad que ingresó.
 	AutoRegistroCivil bool
+	// EnlaceEnPantalla: sin servicio de correo, el enlace de recuperación se devuelve al navegador.
+	EnlaceEnPantalla bool
 }
 
 // TokenEmisor firma los JWT de sesión (implementado por pkg/jwtutil).
@@ -52,6 +54,7 @@ type AuthService struct {
 	intentos cache.IntentosCache
 	tokens   cache.TokenCache
 	jwt      TokenEmisor
+	correo   Correo
 	cfg      AuthConfig
 }
 
@@ -61,9 +64,10 @@ func NewAuthService(
 	intentos cache.IntentosCache,
 	tokens cache.TokenCache,
 	jwt TokenEmisor,
+	correo Correo,
 	cfg AuthConfig,
 ) *AuthService {
-	return &AuthService{personas: personas, usuarios: usuarios, intentos: intentos, tokens: tokens, jwt: jwt, cfg: cfg}
+	return &AuthService{personas: personas, usuarios: usuarios, intentos: intentos, tokens: tokens, jwt: jwt, correo: correo, cfg: cfg}
 }
 
 // IdentidadInput: cédula más fecha de expedición y/o código dactilar.

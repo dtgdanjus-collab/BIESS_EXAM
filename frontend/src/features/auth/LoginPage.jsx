@@ -52,10 +52,17 @@ export function LoginPage() {
           <Link to="/registro" className={claseEnlace}>
             Regístrese aquí
           </Link>
+          <br />
+          <Link to="/fases" className={`${claseEnlace} mt-3`}>
+            Ver las fases del concurso
+          </Link>
         </>
       }
     >
       <div className="space-y-4">
+        {params.get('rechazo') && !error && (
+          <Alert type="info">Su sesión se cerró porque no cumple el requisito del cargo seleccionado.</Alert>
+        )}
         {params.get('expirada') && !error && (
           <Alert type="info">Su sesión expiró. Vuelva a iniciar sesión.</Alert>
         )}

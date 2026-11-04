@@ -40,15 +40,25 @@ export function RecuperarPage() {
     </Link>
   )
 
+  if (peticion.success && peticion.data.enlace) {
+    return (
+      <AuthCard titulo="Identidad validada" pie={volver}>
+        <Alert type="success" title={peticion.data.message}>
+          <a href={peticion.data.enlace} className="font-medium underline underline-offset-4">
+            Crear una contraseña nueva
+          </a>
+          . El enlace es válido por 15 minutos.
+        </Alert>
+      </AuthCard>
+    )
+  }
+
   if (peticion.success) {
     return (
       <AuthCard titulo="Revise su correo" pie={volver}>
         <Alert type="success" title="Enlace enviado">
           {peticion.data.message}. El enlace es válido por 15 minutos.
         </Alert>
-        <p className="mt-4 text-xs text-tenue">
-          Entorno de demostración: el correo se simula y el enlace aparece en el log del backend.
-        </p>
       </AuthCard>
     )
   }

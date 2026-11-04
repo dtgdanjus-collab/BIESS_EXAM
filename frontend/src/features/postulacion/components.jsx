@@ -3,6 +3,7 @@ import { Controller, useController } from 'react-hook-form'
 import { postulacionApi } from '../../api/postulacion'
 import { Alert, Button, Card, ErrorAlert, Icon, Modal, Select, Spinner } from '../../components/ui'
 import { useAsync } from '../../hooks/useAsync'
+import { guardarArchivo } from '../../utils/descargas'
 import { aplicarErroresCampos } from '../../utils/formErrors'
 import { siguienteSeccion } from './secciones'
 
@@ -211,22 +212,16 @@ export const adjuntoDe = (item) =>
   item.documentoId ? { id: item.documentoId, nombre: item.documentoNombre, tamanoBytes: item.documentoTamano } : null
 
 /** Descarga un PDF con la sesión. Es un enlace porque un botón quedaría inactivo en el modo de solo lectura. */
-export function EnlaceDocumento({ documento }) {
+export function EnlaceDocumento({ documento, descargar = (d) => postulacionApi.descargarDocumento(d.id) }) {
   const descarga = useAsync()
-  const descargar = async (e) => {
+  const bajar = async (e) => {
     e.preventDefault()
-    const r = await descarga.run(() => postulacionApi.descargarDocumento(documento.id))
-    if (!r.ok) return
-    const url = URL.createObjectURL(r.data)
-    const enlace = document.createElement('a')
-    enlace.href = url
-    enlace.download = documento.nombre
-    enlace.click()
-    setTimeout(() => URL.revokeObjectURL(url), 60000)
+    const r = await descarga.run(() => descargar(documento))
+    if (r.ok) guardarArchivo(r.data, documento.nombre)
   }
   return (
     <>
-      <a href={`#documento-${documento.id}`} onClick={descargar} className="break-all underline underline-offset-4">
+      <a href={`#documento-${documento.id}`} onClick={bajar} className="break-all underline underline-offset-4">
         {documento.nombre}
       </a>
       {descarga.loading && <Spinner className="ml-2 inline size-3.5" label="Descargando" />}

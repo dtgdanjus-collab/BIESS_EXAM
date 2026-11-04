@@ -15,6 +15,7 @@ const (
 	AmbitoRegistro  Ambito = "registro"
 	AmbitoLogin     Ambito = "login"
 	AmbitoRecuperar Ambito = "recuperar"
+	AmbitoAdmin     Ambito = "admin"
 )
 
 // IntentosCache implementa el rate limiting de EF-11: N fallos → bloqueo temporal.

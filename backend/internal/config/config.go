@@ -53,6 +53,25 @@ type APIConfig struct {
 	FrontendURL string
 	// AutoRegistroCivil da de alta con datos ficticios las cédulas válidas desconocidas (modo demostración).
 	AutoRegistroCivil bool
+	// EnlaceEnPantalla muestra el enlace de recuperación en pantalla si no hay servicio de correo.
+	// Es solo para demostraciones: quien conozca la cédula y la fecha de expedición puede usarlo.
+	EnlaceEnPantalla bool
+	Correo           CorreoConfig
+	Admin            AdminConfig
+}
+
+// CorreoConfig: cuenta de Brevo. Sin BREVO_API_KEY y MAIL_REMITENTE no se envían correos.
+type CorreoConfig struct {
+	APIKey    string
+	Remitente string
+	Nombre    string
+}
+
+// AdminConfig: primer administrador. Sin estas variables el módulo no tiene cuentas.
+type AdminConfig struct {
+	Usuario  string
+	Password string
+	Nombre   string
 }
 
 type SecurityConfig struct {
@@ -97,6 +116,17 @@ func Load() (*Config, error) {
 			CORSOrigins:       getStr("CORS_ORIGINS", "http://localhost:5173"),
 			FrontendURL:       strings.TrimRight(getStr("FRONTEND_URL", "http://localhost:5173"), "/"),
 			AutoRegistroCivil: getStr("REGISTRO_CIVIL_AUTOGENERAR", "true") == "true",
+			EnlaceEnPantalla:  getStr("RECUPERACION_ENLACE_EN_PANTALLA", "false") == "true",
+			Correo: CorreoConfig{
+				APIKey:    getStr("BREVO_API_KEY", ""),
+				Remitente: getStr("MAIL_REMITENTE", ""),
+				Nombre:    getStr("MAIL_REMITENTE_NOMBRE", "Concurso Directorio BIESS"),
+			},
+			Admin: AdminConfig{
+				Usuario:  strings.ToLower(getStr("ADMIN_USUARIO", "")),
+				Password: getStr("ADMIN_PASSWORD", ""),
+				Nombre:   getStr("ADMIN_NOMBRE", "Administrador del concurso"),
+			},
 		},
 		Security: SecurityConfig{
 			MaxIntentos:    getInt("MAX_INTENTOS", 3, &errs),

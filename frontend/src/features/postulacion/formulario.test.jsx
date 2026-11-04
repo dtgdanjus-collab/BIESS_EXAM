@@ -214,6 +214,7 @@ describe('cargo', () => {
     expect(postulacionApi.validarCargo).toHaveBeenCalledWith('JUBILADOS')
     expect(screen.queryByText(/respaldadas por una organización/i)).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: /guardar postulación/i })).not.toBeInTheDocument()
+    expect(screen.getByText(/el sistema se cerrará en/i)).toBeInTheDocument()
   })
 
   it('la pregunta del respaldo aparece solo después de validar ✔', async () => {
@@ -277,6 +278,20 @@ describe('cargo', () => {
 })
 
 describe('familiares', () => {
+  it('usa el texto literal del requerimiento y deja editar lo guardado', async () => {
+    postulacionApi.obtener.mockResolvedValue(
+      postulacionBase({ tieneFamiliares: true, familiares: [{ id: 1, nombresApellidos: 'Luis Mora', parentescoId: 4, institucion: 'IESS', area: 'TI', cargo: 'Analista' }] }),
+    )
+    const user = userEvent.setup()
+    abrirFormulario('familiares')
+    expect(await screen.findByText(/segundo grado de consanguinidad y cuarto de afinidad/i)).toBeInTheDocument()
+    expect(screen.getByText('Luis Mora · IESS')).toBeInTheDocument()
+    expect(screen.getByLabelText(/nombres y apellidos del familiar/i).closest('.hidden')).not.toBeNull()
+    await user.click(screen.getByRole('button', { name: 'Editar Familiar 1' }))
+    expect(screen.getByLabelText(/nombres y apellidos del familiar/i).closest('.hidden')).toBeNull()
+    expect(screen.getByRole('button', { name: /guardar información/i })).toBeInTheDocument()
+  })
+
   it('al responder Sí agrega un registro y valida sus campos', async () => {
     postulacionApi.obtener.mockResolvedValue(postulacionBase())
     const user = userEvent.setup()

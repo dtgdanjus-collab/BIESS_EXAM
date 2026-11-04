@@ -39,6 +39,15 @@ services:
         value: https://biess-web.onrender.com
       - key: FRONTEND_URL
         value: https://biess-web.onrender.com
+      # Se llenan en el panel de Render: no van en el repositorio público.
+      - key: ADMIN_USUARIO
+        sync: false
+      - key: ADMIN_PASSWORD
+        sync: false
+      - key: BREVO_API_KEY
+        sync: false
+      - key: MAIL_REMITENTE
+        sync: false
 
   - type: web
     name: biess-web

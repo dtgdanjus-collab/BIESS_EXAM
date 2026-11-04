@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { useSearchParams } from 'react-router-dom'
+import { Link, useSearchParams } from 'react-router-dom'
 import { postulacionApi } from '../../api/postulacion'
 import { EnBarra, EnCabecera } from '../../components/layout/Layouts'
 import { Alert, Button, ErrorAlert, Icon, Modal, PageLoader, Pliego, SelectorFolios, Stepper } from '../../components/ui'
@@ -98,6 +98,12 @@ function Cabecera({ postulacion, pasos, actual, pendiente, faltan, irA }) {
                     : `Faltan ${faltan} folios obligatorios`}
             </p>
           </div>
+          {enviada && (
+            <Link to="/concurso" className="inline-flex min-h-11 items-center gap-2 rounded-md bg-realce px-4 text-sm font-medium text-tinta transition-colors hover:bg-control">
+              Avance del concurso
+              <Icon name="arrowRight" className="size-4" strokeWidth={2} />
+            </Link>
+          )}
           {pendiente && (
             // En el teléfono ya está el selector de folios: la cabecera no debe empujar el formulario.
             <div className="hidden animate-slide-down sm:block">
@@ -155,7 +161,15 @@ export function FormularioPage() {
   const creacion = useAsync()
   const [postulacion, setPostulacion] = useState(null)
   const [noIniciada, setNoIniciada] = useState(false)
+  const [formularioCerrado, setFormularioCerrado] = useState(false)
   const [params, setParams] = useSearchParams()
+
+  // EF-13.2: el administrador habilita el formulario. El backend lo exige; esto solo lo anuncia.
+  useEffect(() => {
+    Promise.resolve(postulacionApi.concursoPublico())
+      .then((c) => setFormularioCerrado(c?.formularioAbierto === false))
+      .catch(() => {})
+  }, [])
 
   const cargar = useCallback(async () => {
     const r = await carga.run(postulacionApi.obtener)
@@ -300,6 +314,12 @@ export function FormularioPage() {
       <div className="no-print mb-5">
         <SelectorFolios steps={pasos} actual={seccionActual} onSelect={irA} />
       </div>
+
+      {formularioCerrado && postulacion.estado === 'BORRADOR' && (
+        <Alert type="warning" className="no-print mb-6">
+          El formulario de postulación no está habilitado en este momento: puede revisar sus datos, pero no guardar cambios.
+        </Alert>
+      )}
 
       {postulacion.estado === 'ENVIADA' && seccionActual !== 'envio' && (
         <Alert type="success" className="no-print mb-6">
