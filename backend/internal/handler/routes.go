@@ -9,12 +9,14 @@ type Handlers struct {
 	Auth        *AuthHandler
 	Postulacion *PostulacionHandler
 	Secciones   *SeccionesHandler
+	Admin       *AdminHandler
 }
 
 // RegisterRoutes declara las rutas bajo el prefijo /api. requireAuth protege las rutas privadas.
-func RegisterRoutes(app *fiber.App, h Handlers, requireAuth fiber.Handler) {
+func RegisterRoutes(app *fiber.App, h Handlers, requireAuth, requireAdmin fiber.Handler) {
 	api := app.Group("/api")
 	api.Get("/health", h.Health.Check)
+	api.Get("/concurso", h.Admin.ConcursoPublico)
 
 	cat := api.Group("/catalogos")
 	cat.Get("/paises", h.Catalogos.Paises)
@@ -53,4 +55,46 @@ func RegisterRoutes(app *fiber.App, h Handlers, requireAuth fiber.Handler) {
 	post.Put("/inhabilidades", h.Secciones.Inhabilidades)
 	post.Delete("/inhabilidades", h.Secciones.EliminarInhabilidades)
 	post.Post("/enviar", h.Secciones.Enviar)
+	post.Post("/guardar", h.Secciones.GuardarPostulacion)
+	post.Get("/formulario", h.Secciones.Formulario)
+	post.Get("/concurso", h.Admin.MiConcurso)
+	post.Post("/reconsideraciones", h.Admin.SolicitarReconsideracion)
+
+	// EF-14: el examen solo responde a quien superó la fase de méritos.
+	eva := api.Group("/evaluacion", requireAuth)
+	eva.Get("/", h.Admin.EvaluacionEstado)
+	eva.Post("/iniciar", h.Admin.EvaluacionIniciar)
+	eva.Post("/responder", h.Admin.EvaluacionResponder)
+	eva.Post("/finalizar", h.Admin.EvaluacionFinalizar)
+	eva.Get("/reporte.pdf", h.Admin.EvaluacionReporte)
+
+	// EF-13: Analista y Administrador consultan y califican; lo demás es del Administrador.
+	api.Post("/admin/login", h.Admin.Login)
+	adm := api.Group("/admin", requireAdmin, h.Admin.conRol(false))
+	soloAdmin := h.Admin.conRol(true)
+	adm.Get("/me", h.Admin.Me)
+	adm.Get("/dashboard", h.Admin.Dashboard)
+	adm.Get("/postulantes", h.Admin.Postulantes)
+	adm.Get("/postulantes/:id", h.Admin.Detalle)
+	adm.Get("/postulantes/:id/documentos/:doc", h.Admin.Documento)
+	adm.Get("/postulantes/:id/evaluacion.pdf", h.Admin.ReporteEvaluacion)
+	adm.Put("/postulantes/:id/calificacion", h.Admin.Calificar)
+	adm.Get("/matriz.xlsx", h.Admin.MatrizXLSX)
+	adm.Get("/matriz.pdf", h.Admin.MatrizPDF)
+	adm.Get("/concurso", h.Admin.Concurso)
+	adm.Put("/concurso", soloAdmin, h.Admin.GuardarConfig)
+	adm.Put("/fases/:codigo", soloAdmin, h.Admin.GuardarFase)
+	adm.Get("/evaluacion/preguntas", soloAdmin, h.Admin.Preguntas)
+	adm.Post("/evaluacion/preguntas", soloAdmin, h.Admin.CrearPregunta)
+	adm.Post("/evaluacion/preguntas/importar", soloAdmin, h.Admin.ImportarPreguntas)
+	adm.Put("/evaluacion/preguntas/:id", soloAdmin, h.Admin.GuardarPregunta)
+	adm.Delete("/evaluacion/preguntas/:id", soloAdmin, h.Admin.EliminarPregunta)
+	adm.Get("/evaluacion/config", soloAdmin, h.Admin.EvaluacionConfig)
+	adm.Put("/evaluacion/config", soloAdmin, h.Admin.GuardarEvaluacionConfig)
+	adm.Get("/evaluacion/resultados", h.Admin.Resultados)
+	adm.Get("/reconsideraciones", h.Admin.Reconsideraciones)
+	adm.Put("/reconsideraciones/:id", h.Admin.ResponderReconsideracion)
+	adm.Get("/usuarios", soloAdmin, h.Admin.Usuarios)
+	adm.Post("/usuarios", soloAdmin, h.Admin.CrearUsuario)
+	adm.Put("/usuarios/:id/activo", soloAdmin, h.Admin.CambiarActivo)
 }

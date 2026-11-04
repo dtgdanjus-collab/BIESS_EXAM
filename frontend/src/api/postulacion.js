@@ -29,4 +29,18 @@ export const postulacionApi = {
   capacitaciones: (items) => api.put('/postulacion/capacitaciones', { items }).then(data),
   inhabilidades: (respuestas) => api.put('/postulacion/inhabilidades', { respuestas }).then(data),
   enviar: () => api.post('/postulacion/enviar', { aceptaConsentimiento: true }).then(data),
+  guardarPostulacion: () => api.post('/postulacion/guardar').then(data),
+  formulario: () => api.get('/postulacion/formulario').then(data),
+  concurso: () => api.get('/postulacion/concurso').then(data),
+  concursoPublico: () => api.get('/concurso').then(data),
+  reconsiderar: (body) => api.post('/postulacion/reconsideraciones', body).then(data),
+}
+
+// EF-14: el backend responde 404 a quien no superó la fase de méritos.
+export const evaluacionApi = {
+  estado: () => api.get('/evaluacion').then(data),
+  iniciar: () => api.post('/evaluacion/iniciar').then(data),
+  responder: (body) => api.post('/evaluacion/responder', body).then(data),
+  finalizar: () => api.post('/evaluacion/finalizar').then(data),
+  reporte: () => api.get('/evaluacion/reporte.pdf', { responseType: 'blob', timeout: 60000 }).then(data),
 }

@@ -84,3 +84,47 @@ Toda escritura sobre una postulación `ENVIADA` o `CERRADA` responde **422**.
 ### Demostración del rollback
 
 Con `DEMO_FALLA_ENVIO=true` el INSERT del historial del envío excede `VARCHAR(40)` y PostgreSQL lo rechaza **después** de haber marcado la postulación como `ENVIADA`. El backend responde 500, el log muestra `TX ROLLBACK: … (SQLSTATE 22001)` y la postulación sigue en `BORRADOR`.
+
+## Concurso y formulario final
+
+| Método | Ruta | Cuerpo / respuesta |
+|---|---|---|
+| GET | `/concurso` | Público: `{formularioAbierto, fases}` (solo las publicadas) |
+| POST | `/postulacion/guardar` | 1.10.1: exige las secciones obligatorias y devuelve el formulario final |
+| GET | `/postulacion/formulario` | Formulario final con nombres de catálogo, consentimiento y firma |
+| DELETE | `/postulacion/contacto`, `/postulacion/inhabilidades` | Borra la sección |
+| GET | `/postulacion/concurso` | Avance: estado, notas, fases, reconsideraciones |
+| POST | `/postulacion/reconsideraciones` | `{etapa, motivo}`, solo con la fase publicada y vigente |
+
+## Evaluación técnica (EF-14)
+
+Responde 404 a quien no superó la fase de méritos. La respuesta correcta nunca viaja al postulante y el reloj lo lleva el servidor.
+
+| Método | Ruta | Cuerpo / respuesta |
+|---|---|---|
+| GET | `/evaluacion` | Estado del examen y pregunta actual |
+| POST | `/evaluacion/iniciar` | Arma el examen al azar y arranca el reloj |
+| POST | `/evaluacion/responder` | `{orden, opcion}` |
+| POST | `/evaluacion/finalizar` | Califica una sola vez |
+| GET | `/evaluacion/reporte.pdf` | Reporte del resultado |
+
+## Administración (EF-13)
+
+Sesión propia: `POST /admin/login` con `{usuario, password}`. **A** = solo rol Administrador.
+
+| Método | Ruta | Descripción |
+|---|---|---|
+| GET | `/admin/dashboard` | Postulantes por cargo |
+| GET | `/admin/postulantes?sector=&estado=&estadoConcurso=&q=` | Nómina |
+| GET | `/admin/postulantes/:id` | Formulario íntegro, experiencia y evaluación |
+| GET | `/admin/postulantes/:id/documentos/:doc` | Certificado en PDF |
+| GET | `/admin/postulantes/:id/evaluacion.pdf` | Reporte de la evaluación |
+| PUT | `/admin/postulantes/:id/calificacion` | `{estadoConcurso, puntajeMeritos?, notaPsicotecnica?, observacion?}` |
+| GET | `/admin/matriz.xlsx`, `/admin/matriz.pdf` | Cuadro comparativo, con los filtros de la nómina |
+| GET / PUT **A** | `/admin/concurso` | `{formularioHabilitado, plazoRespuestaDias}` |
+| PUT **A** | `/admin/fases/:codigo` | `{publicada, descripcion?, fechaInicio?, fechaFin?}` |
+| GET / POST / PUT / DELETE **A** | `/admin/evaluacion/preguntas` | Banco de preguntas; `POST .../importar` con `{items}` |
+| GET / PUT **A** | `/admin/evaluacion/config` | `{numPreguntas, duracionMinutos, inicio?, fin?}` |
+| GET | `/admin/evaluacion/resultados` | Notas, de mayor a menor |
+| GET / PUT | `/admin/reconsideraciones` | Lista; `PUT .../:id` con `{estado, respuesta}` |
+| GET / POST / PUT **A** | `/admin/usuarios` | Cuentas; `PUT .../:id/activo` con `{activo}` |

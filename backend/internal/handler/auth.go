@@ -15,7 +15,7 @@ type AuthService interface {
 	Registrar(ctx context.Context, in service.RegistroInput) (*domain.Usuario, error)
 	Login(ctx context.Context, cedula, password string) (*service.Sesion, error)
 	Me(ctx context.Context, usuarioID int64) (*service.Perfil, error)
-	Recuperar(ctx context.Context, in service.IdentidadInput) (string, error)
+	Recuperar(ctx context.Context, in service.IdentidadInput) (*service.ResultadoRecuperacion, error)
 	Restablecer(ctx context.Context, token, nuevaPassword string) error
 }
 
@@ -93,20 +93,20 @@ func (h *AuthHandler) Me(c *fiber.Ctx) error {
 	return c.JSON(perfil)
 }
 
-// Recuperar atiende POST /auth/recuperar: el enlace se "envía" al log del backend.
+// Recuperar atiende POST /auth/recuperar.
 func (h *AuthHandler) Recuperar(c *fiber.Ctx) error {
 	var req verificarIdentidadReq
 	if err := parseBody(c, &req); err != nil {
 		return err
 	}
-	email, err := h.svc.Recuperar(c.UserContext(), service.IdentidadInput(req))
+	r, err := h.svc.Recuperar(c.UserContext(), service.IdentidadInput(req))
 	if err != nil {
 		return err
 	}
-	return c.JSON(fiber.Map{
-		"message": "Se envió un enlace de recuperación al correo " + email,
-		"email":   email,
-	})
+	if r.Enlace != "" {
+		return c.JSON(fiber.Map{"message": "Abra este enlace para crear una contraseña nueva", "email": r.Correo, "enlace": r.Enlace})
+	}
+	return c.JSON(fiber.Map{"message": "Se envió un enlace de recuperación al correo " + r.Correo, "email": r.Correo})
 }
 
 type restablecerReq struct {

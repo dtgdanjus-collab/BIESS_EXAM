@@ -1,12 +1,35 @@
 import { zodResolver } from '@hookform/resolvers/zod'
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Controller, useForm } from 'react-hook-form'
 import { postulacionApi } from '../../../api/postulacion'
 import { Alert, ErrorAlert, Icon, Input, PageLoader, SiNo, Spinner } from '../../../components/ui'
 import { useAsync } from '../../../hooks/useAsync'
 import { useCatalogo } from '../../../hooks/useCatalogo'
+import { useAuthStore } from '../../../store/authStore'
 import { AccionesGuardado, CampoDocumento, Dato, EnlaceDocumento, Seccion, opcional, useFormulario, useGuardarSeccion } from '../components'
 import { cargoSchema } from '../schemas'
+
+const SEGUNDOS_CIERRE = 15
+
+/** 1.4.x.2: tras leer el rechazo, «el sistema se cierra automáticamente». */
+function CierreAutomatico() {
+  const logout = useAuthStore((s) => s.logout)
+  const [quedan, setQuedan] = useState(SEGUNDOS_CIERRE)
+
+  useEffect(() => {
+    const t = setInterval(() => setQuedan((n) => n - 1), 1000)
+    return () => clearInterval(t)
+  }, [])
+
+  useEffect(() => {
+    if (quedan > 0) return
+    logout()
+    // Como al expirar la sesión: una redirección de la ruta protegida perdería el aviso.
+    window.location.assign('/login?rechazo=1')
+  }, [quedan, logout])
+
+  return <p className="mt-2 text-xs tabular-nums">El sistema se cerrará en {Math.max(quedan, 0)} segundos.</p>
+}
 
 /** Resultado de la validación contra el Historial Laboral del IESS: ✔ o ✖. */
 function ResultadoValidacion({ resultado }) {
@@ -21,6 +44,7 @@ function ResultadoValidacion({ resultado }) {
       <p className="text-xs">No cumple el requisito</p>
       <p className="text-sm font-medium">{resultado.etiqueta}</p>
       <p className="mt-1 text-sm leading-relaxed">{resultado.mensaje}</p>
+      <CierreAutomatico />
     </div>
   )
 }
@@ -99,7 +123,7 @@ export function CargoSection() {
   const base = {
     id: 'cargo',
     numeral: '1.4',
-    titulo: 'Selección del cargo',
+    titulo: 'Selección del cargo al que postula',
     descripcion: 'Su calidad de afiliado, jubilado o empleador se verifica en el Historial Laboral del IESS.',
     peticion,
     onSubmit,

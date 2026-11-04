@@ -2,7 +2,13 @@
 
 Módulo inicial de registro y postulación al **Concurso Público de Méritos y Oposición del Directorio del BIESS**, basado en el Requerimiento Funcional IESS v1.4 (Resolución C.D. 701).
 
-**Alcance:** EF-11 (registro y autenticación) y EF-12 (formulario de postulación). EF-13 (administración) y EF-14 (evaluación teórica) se dejan como [trabajo futuro](#trabajo-futuro).
+**Alcance:** EF-11 (registro y autenticación), EF-12 (formulario de postulación), EF-13 (módulo de administración, en `/admin`) y EF-14 (banco de preguntas y evaluación teórica).
+
+**Administración:** el primer administrador se crea al arrancar con `ADMIN_USUARIO` y `ADMIN_PASSWORD`; sin esas variables el módulo no tiene cuentas. El rol Administrador publica fases, habilita el formulario, gestiona el banco de preguntas y las cuentas. El rol Analista consulta, califica, exporta y responde reconsideraciones.
+
+**Correo:** se envía con la API de Brevo (`BREVO_API_KEY`, `MAIL_REMITENTE`). Sin esos datos no se envía nada y la recuperación de contraseña lo avisa; `RECUPERACION_ENLACE_EN_PANTALLA=true` muestra el enlace en pantalla, solo para demostraciones.
+
+**Migraciones:** la API aplica al arrancar las de `backend/internal/platform/migraciones/` que falten; la tabla `schema_migraciones` registra las aplicadas.
 
 | Capa | Tecnología |
 |---|---|
@@ -151,7 +157,6 @@ Ramas `main` (entregas) y `develop` (integración). Cada fase se desarrolló en 
 
 ## Trabajo futuro
 
-- **EF-13 Administración:** panel de Talento Humano para revisar postulaciones, incluidas las marcadas con `posible_inhabilidad`.
-- **EF-14 Evaluación teórica.**
+- **Puntaje automático de méritos (EF-1):** el requerimiento no da la tabla de puntajes; por ahora Talento Humano lo registra a mano.
 - **Integraciones reales** con el Registro Civil y el Historial Laboral del IESS (hoy simuladas con tablas mock) y envío real de correos.
 - **Despliegue** en un VPS con Docker Compose (backend + frontend en Nginx), dominio y HTTPS.

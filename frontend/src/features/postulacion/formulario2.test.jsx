@@ -182,13 +182,20 @@ describe('inhabilidades', () => {
   })
 })
 
+const FORMULARIO = {
+  codigo: 'BIESS-2026-000002',
+  secciones: [{ numeral: '1.1', titulo: 'Información personal', campos: [{ etiqueta: 'Nombres', valor: 'María Fernanda' }] }],
+  consentimiento: ['Autorizo de manera libre y voluntaria'],
+  firmaNombres: 'María Fernanda Ortega Vásquez',
+  firmaCedula: '0102345675',
+}
+
 describe('envío', () => {
   it('bloquea el envío si faltan secciones obligatorias', async () => {
     postulacionApi.obtener.mockResolvedValue(postulacionBase())
-    const user = userEvent.setup()
     abrirFormulario('envio')
     expect(await screen.findByText(/complete las siguientes secciones/i)).toBeInTheDocument()
-    await user.click(screen.getByRole('checkbox'))
+    expect(screen.getByRole('button', { name: /guardar postulación/i })).toBeDisabled()
     expect(screen.getByRole('button', { name: /enviar postulación/i })).toBeDisabled()
   })
 
@@ -198,7 +205,15 @@ describe('envío', () => {
     const user = userEvent.setup()
     abrirFormulario('envio')
 
+    postulacionApi.guardarPostulacion.mockResolvedValue(FORMULARIO)
+    postulacionApi.formulario.mockResolvedValue(FORMULARIO)
     const boton = await screen.findByRole('button', { name: /enviar postulación/i })
+    expect(boton).toBeDisabled()
+    expect(screen.queryByRole('checkbox')).not.toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: /guardar postulación/i }))
+    expect(await screen.findByText(/autorizo de manera libre/i)).toBeInTheDocument()
+    expect(screen.getByText(/firma del postulante/i)).toBeInTheDocument()
     expect(boton).toBeDisabled()
     await user.click(screen.getByRole('checkbox'))
     await user.click(boton)

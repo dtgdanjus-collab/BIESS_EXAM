@@ -64,6 +64,7 @@ func run() error {
 	historialRepo := repository.NewHistorialLaboralRepository(pool)
 	personaRepo := repository.NewRegistroCivilRepository(pool)
 	usuarioRepo := repository.NewUsuarioRepository(pool)
+	concursoRepo := repository.NewConcursoRepository(pool)
 
 	// --- Caches ---
 	catalogoCache := cache.NewCatalogoCache(rdb, cfg.Security.CatalogoTTL)
@@ -76,15 +77,28 @@ func run() error {
 	intentosCache := cache.NewIntentosCache(rdb, cfg.Security.MaxIntentos, cfg.Security.Bloqueo)
 	tokenCache := cache.NewTokenCache(rdb)
 
+	correo := platform.NewCorreoBrevo(cfg.API.Correo.APIKey, cfg.API.Correo.Remitente, cfg.API.Correo.Nombre)
+	if !correo.Configurado() {
+		log.Println("AVISO: sin BREVO_API_KEY y MAIL_REMITENTE no se envían correos")
+	}
+
 	// --- Services ---
 	catalogoSvc := service.NewCatalogoService(catalogoRepo, catalogoCache)
 	jwtManager := jwtutil.NewManager(cfg.API.JWTSecret, cfg.API.JWTTTL)
-	authSvc := service.NewAuthService(personaRepo, usuarioRepo, intentosCache, tokenCache, jwtManager,
+	authSvc := service.NewAuthService(personaRepo, usuarioRepo, intentosCache, tokenCache, jwtManager, correo,
 		service.AuthConfig{Bloqueo: cfg.Security.Bloqueo, FrontendURL: cfg.API.FrontendURL,
-			AutoRegistroCivil: cfg.API.AutoRegistroCivil})
+			AutoRegistroCivil: cfg.API.AutoRegistroCivil, EnlaceEnPantalla: cfg.API.EnlaceEnPantalla})
 	postulacionSvc := service.NewPostulacionService(store, postulacionRepo, detalleRepo, usuarioRepo,
-		personaRepo, historialRepo, catalogoRepo,
+		personaRepo, historialRepo, catalogoRepo, concursoRepo, correo,
 		service.PostulacionConfig{SimularFallaEnvio: cfg.Security.DemoFallaEnvio})
+	evaluacionSvc := service.NewEvaluacionService(store, concursoRepo, postulacionRepo, correo)
+	// Clave distinta: el token de un postulante no sirve en el módulo de administración.
+	adminJWT := jwtutil.NewManager(cfg.API.JWTSecret+":admin", cfg.API.JWTTTL)
+	adminSvc := service.NewAdminService(concursoRepo, postulacionRepo, postulacionSvc, evaluacionSvc, intentosCache, adminJWT, cfg.Security.Bloqueo, correo)
+	if err := adminSvc.CrearAdminInicial(ctx, cfg.API.Admin.Usuario, cfg.API.Admin.Password, cfg.API.Admin.Nombre); err != nil {
+		return fmt.Errorf("administrador inicial: %w", err)
+	}
+	go evaluacionSvc.Vigilar(ctx)
 
 	// --- Handlers ---
 	handlers := handler.Handlers{
@@ -96,6 +110,7 @@ func run() error {
 		Auth:        handler.NewAuthHandler(authSvc),
 		Postulacion: handler.NewPostulacionHandler(postulacionSvc),
 		Secciones:   handler.NewSeccionesHandler(postulacionSvc),
+		Admin:       handler.NewAdminHandler(adminSvc, evaluacionSvc),
 	}
 
 	// --- HTTP ---
@@ -108,7 +123,7 @@ func run() error {
 		WriteTimeout: 90 * time.Second,
 	})
 	middleware.RegisterCommon(app, cfg.API.CORSOrigins)
-	handler.RegisterRoutes(app, handlers, middleware.RequireAuth(jwtManager))
+	handler.RegisterRoutes(app, handlers, middleware.RequireAuth(jwtManager), middleware.RequireAuth(adminJWT))
 
 	errCh := make(chan error, 1)
 	go func() {
