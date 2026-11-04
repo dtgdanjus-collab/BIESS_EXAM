@@ -25,7 +25,7 @@ export function FormularioVista({ formulario, descargar }) {
     <div className="space-y-8">
       {formulario.secciones.map((s) => (
         <section key={s.numeral}>
-          <h3 className="mb-3 border-b border-regla pb-2 text-base font-medium">
+          <h3 className="mb-3 border-b border-regla pb-2 text-base font-medium print:break-after-avoid">
             <span className="mr-2 tabular-nums text-tenue">{s.numeral}</span>
             {s.titulo}
           </h3>
@@ -40,23 +40,26 @@ export function FormularioVista({ formulario, descargar }) {
         </section>
       ))}
 
-      <section>
-        <h3 className="mb-3 border-b border-regla pb-2 text-base font-medium">Declaración y consentimiento</h3>
-        <ol className="list-decimal space-y-2 pl-5 text-sm leading-relaxed marker:tabular-nums marker:text-tenue">
-          {formulario.consentimiento.map((p) => (
-            <li key={p}>{p}</li>
-          ))}
-        </ol>
-      </section>
+      {/* En el papel la firma queda en la misma hoja que lo que se firma. */}
+      <div className="space-y-8 break-inside-avoid">
+        <section>
+          <h3 className="mb-3 border-b border-regla pb-2 text-base font-medium">Declaración y consentimiento</h3>
+          <ol className="list-decimal space-y-2 pl-5 text-sm leading-relaxed marker:tabular-nums marker:text-tenue">
+            {formulario.consentimiento.map((p) => (
+              <li key={p}>{p}</li>
+            ))}
+          </ol>
+        </section>
 
-      {/* 1.10.2: la firma manuscrita se hace sobre el formulario impreso. */}
-      <section className="break-inside-avoid pt-10 text-sm">
-        <div className="w-full max-w-sm border-t border-tinta pt-2">
-          <p className="font-medium">Firma del postulante</p>
-          <p className="mt-1">{formulario.firmaNombres}</p>
-          <p className="tabular-nums">Cédula: {formulario.firmaCedula}</p>
-        </div>
-      </section>
+        {/* 1.10.2: la firma manuscrita se hace sobre el formulario impreso. */}
+        <section className="pt-10 text-sm">
+          <div className="w-full max-w-sm border-t border-tinta pt-2">
+            <p className="font-medium">Firma del postulante</p>
+            <p className="mt-1">{formulario.firmaNombres}</p>
+            <p className="tabular-nums">Cédula: {formulario.firmaCedula}</p>
+          </div>
+        </section>
+      </div>
     </div>
   )
 }
