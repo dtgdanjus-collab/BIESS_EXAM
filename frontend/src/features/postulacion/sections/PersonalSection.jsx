@@ -79,7 +79,7 @@ function FormularioDatos({ d }) {
             {peticion.error?.details?.campos && <Alert type="error">Revise los campos marcados en rojo.</Alert>}
             <div className="flex justify-end">
               <Button type="submit" loading={peticion.loading} className="w-full sm:w-auto">
-                Confirmar mis datos
+                Guardar
               </Button>
             </div>
           </>

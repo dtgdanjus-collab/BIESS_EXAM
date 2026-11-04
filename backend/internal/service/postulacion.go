@@ -268,6 +268,13 @@ func (s *PostulacionService) validarContacto(ctx context.Context, c *domain.Cont
 	return errs.err()
 }
 
+// EliminarContacto borra el domicilio guardado (1.2).
+func (s *PostulacionService) EliminarContacto(ctx context.Context, usuarioID int64) (*domain.Postulacion, error) {
+	return s.editarBorrador(ctx, usuarioID, "ELIMINAR_CONTACTO", func(ctx context.Context, p *domain.Postulacion) error {
+		return s.repo.DeleteContacto(ctx, p.ID)
+	})
+}
+
 // GuardarFamiliares (1.3): reemplazo transaccional de la lista completa.
 func (s *PostulacionService) GuardarFamiliares(ctx context.Context, usuarioID int64, tiene bool, items []domain.Familiar) (*domain.Postulacion, error) {
 	if !tiene {

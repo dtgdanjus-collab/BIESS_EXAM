@@ -86,7 +86,7 @@ export function abrirFormulario(seccion) {
   useAuthStore.getState().login({
     token: 'jwt',
     expiraEn: new Date(Date.now() + 3_600_000).toISOString(),
-    usuario: { id: 1, cedula: '0102345675', nombres: 'María Fernanda', apellidos: 'Ortega Vásquez' },
+    usuario: { id: 1, cedula: '0102345675', email: 'maria@correo.com', nombres: 'María Fernanda', apellidos: 'Ortega Vásquez' },
   })
   const ruta = seccion ? `/formulario?seccion=${seccion}` : '/formulario'
   return render(

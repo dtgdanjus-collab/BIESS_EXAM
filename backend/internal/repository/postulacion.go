@@ -25,6 +25,7 @@ type PostulacionRepository interface {
 
 	GetContacto(ctx context.Context, postulacionID int64) (*domain.Contacto, error)
 	UpsertContacto(ctx context.Context, postulacionID int64, c domain.Contacto) error
+	DeleteContacto(ctx context.Context, postulacionID int64) error
 
 	ListFamiliares(ctx context.Context, postulacionID int64) ([]domain.Familiar, error)
 	ReplaceFamiliares(ctx context.Context, postulacionID int64, tiene bool, items []domain.Familiar) error
@@ -179,6 +180,11 @@ func (r *pgPostulacionRepository) UpsertContacto(ctx context.Context, id int64, 
 		c.Correo1, c.Correo2, c.CallePrincipal, c.Numero, c.CalleSecundaria, c.Sector, c.Referencia,
 		c.TelefonoDomicilio)
 	return traducir(err, "guardando contacto")
+}
+
+func (r *pgPostulacionRepository) DeleteContacto(ctx context.Context, id int64) error {
+	_, err := conn(ctx, r.pool).Exec(ctx, `DELETE FROM postulacion_contacto WHERE postulacion_id = $1`, id)
+	return traducir(err, "eliminando contacto")
 }
 
 func (r *pgPostulacionRepository) ListFamiliares(ctx context.Context, id int64) ([]domain.Familiar, error) {

@@ -729,7 +729,6 @@ SELECT pr.id, v.canton FROM (VALUES
   ('Pichincha', 'San Miguel de los Bancos'),
   ('Santa Elena', 'Santa Elena'),
   ('Santa Elena', 'La Libertad'),
-  ('Santa Elena', 'Salinas'),
   ('Santo Domingo de los Tsáchilas', 'La Concordia'),
   ('Santo Domingo de los Tsáchilas', 'Santo Domingo'),
   ('Sucumbíos', 'Cascales'),
@@ -808,7 +807,7 @@ INSERT INTO preguntas_inhabilidad (numeral, texto, respuesta_esperada, requiere_
 ('1.9.7',  '¿En los últimos 5 años, ha sido removido por algún Organismo de Control?', FALSE, TRUE, 7),
 ('1.9.8',  '¿Mantiene obligaciones pendientes con el SRI?', FALSE, FALSE, 8),
 ('1.9.9',  '¿Ha incurrido en los últimos 5 años en castigo de sus obligaciones por parte de cualquier institución financiera?', FALSE, FALSE, 9),
-('1.9.10', '¿Actualmente se encuentra litigando en contra del IESS - BIESS?', FALSE, FALSE, 10),
+('1.9.10', '¿Actualmente se encuentra litigando en contra del IESS- BIESS?', FALSE, FALSE, 10),
 ('1.9.11', '¿Se encuentra procesado, enjuiciado o condenado por algún delito relacionado con corrupción o crimen organizado?', FALSE, FALSE, 11),
 ('1.9.12', '¿Mantiene en firme algún tipo de responsabilidades por la Contraloría General del Estado?', FALSE, FALSE, 12),
 ('1.9.13', '¿Se encuentra registrado en la base de datos de la Unidad de Análisis Financiero y Económico?', FALSE, FALSE, 13);

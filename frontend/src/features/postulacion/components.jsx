@@ -1,7 +1,7 @@
 import { createContext, use, useId, useState } from 'react'
 import { Controller, useController } from 'react-hook-form'
 import { postulacionApi } from '../../api/postulacion'
-import { Alert, Button, Card, ErrorAlert, Icon, Select, Spinner } from '../../components/ui'
+import { Alert, Button, Card, ErrorAlert, Icon, Modal, Select, Spinner } from '../../components/ui'
 import { useAsync } from '../../hooks/useAsync'
 import { aplicarErroresCampos } from '../../utils/formErrors'
 import { siguienteSeccion } from './secciones'
@@ -93,7 +93,13 @@ export function Seccion({ id, numeral, titulo, descripcion, children, peticion, 
               {peticion.error?.details?.campos && <Alert type="error">Revise los campos marcados en rojo.</Alert>}
               {pie}
               {!soloLectura && !ocultarGuardar && (
-                <div className="flex justify-end">
+                <div className="flex flex-col justify-end gap-2 sm:flex-row">
+                  {/* El requerimiento pide «Guardar Progreso» en cada campo, además del botón propio del campo. */}
+                  {textoGuardar !== 'Guardar progreso' && (
+                    <Button type="submit" variant="secondary" disabled={peticion.loading} className="w-full sm:w-auto">
+                      Guardar progreso
+                    </Button>
+                  )}
                   <Button type="submit" loading={peticion.loading} className="w-full sm:w-auto">
                     {textoGuardar}
                   </Button>
@@ -318,6 +324,39 @@ export function CampoDocumento({ control, name, categoria, inicial, required = f
           {error}
         </p>
       )}
+    </div>
+  )
+}
+
+/** Editar y Eliminar de un campo ya guardado. Eliminar se aplica de inmediato, por eso pide confirmación. */
+export function AccionesGuardado({ onEditar, onEliminar, titulo, mensaje }) {
+  const { soloLectura } = useFormulario()
+  const [confirmar, setConfirmar] = useState(false)
+  if (soloLectura) return null
+  return (
+    <div className="flex flex-wrap gap-2">
+      <Button variant="secondary" onClick={onEditar}>Editar</Button>
+      <Button variant="danger" onClick={() => setConfirmar(true)}>Eliminar</Button>
+      <Modal
+        open={confirmar}
+        onClose={() => setConfirmar(false)}
+        title={titulo}
+        footer={
+          <>
+            <Button variant="secondary" onClick={() => setConfirmar(false)}>Cancelar</Button>
+            <Button
+              onClick={() => {
+                setConfirmar(false)
+                onEliminar()
+              }}
+            >
+              Sí, eliminar
+            </Button>
+          </>
+        }
+      >
+        <p className="text-sm leading-relaxed">{mensaje}</p>
+      </Modal>
     </div>
   )
 }

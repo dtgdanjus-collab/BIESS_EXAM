@@ -277,7 +277,7 @@ func validarIdentidadInput(in IdentidadInput) error {
 		campos["genero"] = "Seleccione una opción válida"
 	}
 	if in.CodigoDactilar != "" && !validator.CodigoDactilar(in.CodigoDactilar) {
-		campos["codigoDactilar"] = "Formato inválido: letra, 4 dígitos, letra y 4 dígitos (ej. V4443V4442)"
+		campos["codigoDactilar"] = "Debe tener 10 caracteres, letras o dígitos (ej. V4443V4442)"
 	}
 	if len(campos) > 0 {
 		return errValidacionCampos(campos)
