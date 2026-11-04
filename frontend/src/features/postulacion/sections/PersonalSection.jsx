@@ -3,6 +3,7 @@ import { useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { postulacionApi } from '../../../api/postulacion'
 import { Alert, Button, Card, ErrorAlert, Input, Modal, Select } from '../../../components/ui'
+import { useConexion } from '../../../hooks/useConexion'
 import { useAuthStore } from '../../../store/authStore'
 import { formatoFecha, hoyIso } from '../../../utils/fechas'
 import { conFiltro, soloDigitos } from '../../../utils/filtros'
@@ -26,6 +27,7 @@ const etiquetaConyuge = (estadoCivil) => (estadoCivil === 'UNION DE HECHO' ? 'co
 /** Antes de confirmar: los datos se revisan y se corrigen aquí mismo, una sola vez. */
 function FormularioDatos({ d }) {
   const peticion = useGuardarSeccion()
+  const enLinea = useConexion()
   const usuario = useAuthStore((s) => s.usuario)
   const setUsuario = useAuthStore((s) => s.setUsuario)
   const [revisados, setRevisados] = useState(null)
@@ -78,7 +80,7 @@ function FormularioDatos({ d }) {
             {peticion.error && !peticion.error.details?.campos && <ErrorAlert error={peticion.error} />}
             {peticion.error?.details?.campos && <Alert type="error">Revise los campos marcados en rojo.</Alert>}
             <div className="flex justify-end">
-              <Button type="submit" loading={peticion.loading} className="w-full sm:w-auto">
+              <Button type="submit" loading={peticion.loading} disabled={!enLinea} className="w-full sm:w-auto">
                 Guardar
               </Button>
             </div>
