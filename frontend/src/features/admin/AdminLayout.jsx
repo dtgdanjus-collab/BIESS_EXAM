@@ -11,6 +11,7 @@ import { useTituloPagina } from '../../hooks/useTituloPagina'
 import { useAdminStore } from '../../store/adminStore'
 import { aplicarErroresCampos } from '../../utils/formErrors'
 import { BloqueoAviso, claseEnlace as claseEnlaceAcceso, PasswordInput } from '../auth/components'
+import { InstalarApp } from '../auth/InstalarApp'
 import { SelloCerradura } from './SelloCerradura'
 
 /** El estado real del concurso, tal como lo ve un postulante. */
@@ -119,6 +120,7 @@ export function AdminLoginPage() {
               <Button type="submit" className="w-full" loading={peticion.loading} disabled={bloqueo.bloqueado}>
                 {bloqueo.bloqueado ? `Bloqueado (${bloqueo.tiempo})` : 'Ingresar'}
               </Button>
+              <InstalarApp />
             </div>
             <p className="mt-6 text-sm text-tenue">
               ¿Es postulante?{' '}
