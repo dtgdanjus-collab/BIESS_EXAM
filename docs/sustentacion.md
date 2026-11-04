@@ -59,3 +59,4 @@ Respuestas preparadas:
 - **¿Qué pasa si Redis se cae?** Los catálogos se sirven desde PostgreSQL (registrando `CACHE ERROR`) y `/health` responde 503.
 - **¿Por qué se valida en el frontend y también en el backend?** El frontend da retroalimentación inmediata; el backend es la autoridad (cédula por módulo 10, cascada, nacionalidad, sector).
 - **¿Las inhabilidades bloquean?** No: marcan `posible_inhabilidad` para la revisión de Talento Humano.
+- **¿La PWA guarda el expediente sin conexión?** No, a propósito: tiene datos sensibles y puede usarse en equipos compartidos, y el envío es definitivo. Sin internet abren las pantallas y los catálogos ya consultados, pero guardar y enviar siguen en la API.
