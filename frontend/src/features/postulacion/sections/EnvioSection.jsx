@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { Link } from 'react-router-dom'
 import { postulacionApi } from '../../../api/postulacion'
 import { Alert, Button, Card, Checkbox, ErrorAlert, Icon, Modal } from '../../../components/ui'
 import { useAsync } from '../../../hooks/useAsync'
@@ -80,11 +81,16 @@ export function EnvioSection() {
 
         <div className="no-print space-y-6">
           {formulario && (
-            <Checkbox
-              label="He leído y acepto la declaración y el consentimiento para el tratamiento de mis datos personales."
-              checked={acepta}
-              onChange={(e) => setAcepta(e.target.checked)}
-            />
+            <div className="space-y-2">
+              <Checkbox
+                label="He leído y acepto la declaración y el consentimiento para el tratamiento de mis datos personales."
+                checked={acepta}
+                onChange={(e) => setAcepta(e.target.checked)}
+              />
+              <Link to="/privacidad" target="_blank" className="text-sm underline underline-offset-4">
+                Leer la política de privacidad
+              </Link>
+            </div>
           )}
 
           {faltantesBackend ? (

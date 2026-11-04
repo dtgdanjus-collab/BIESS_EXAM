@@ -131,7 +131,10 @@ export function AdminLoginPage() {
           </form>
         </main>
         <footer className="px-4 pb-5 text-[13px] text-tenue sm:px-6 lg:text-center">
-          <p className="mx-auto max-w-md lg:max-w-none">Sistema académico de demostración · Requerimiento Funcional IESS v1.4 · Resolución C.D. 701</p>
+          <p className="mx-auto max-w-md lg:max-w-none">
+            Sistema académico de demostración · Requerimiento Funcional IESS v1.4 · Resolución C.D. 701 ·{' '}
+            <Link to="/privacidad" className="underline underline-offset-2">Política de privacidad</Link>
+          </p>
         </footer>
       </div>
     </div>
@@ -175,9 +178,12 @@ export function AdminLayout() {
           <NavLink to="/admin/postulantes" className={claseEnlace}>Postulantes</NavLink>
           <NavLink to="/admin/reconsideraciones" className={claseEnlace}>Reconsideraciones</NavLink>
           <NavLink to="/admin/resultados" className={claseEnlace}>Resultados</NavLink>
+          <NavLink to="/admin/elegibles" className={claseEnlace}>Elegibles</NavLink>
           {esAdministrador && <NavLink to="/admin/fases" className={claseEnlace}>Fases</NavLink>}
+          {esAdministrador && <NavLink to="/admin/puntajes" className={claseEnlace}>Puntajes</NavLink>}
           {esAdministrador && <NavLink to="/admin/evaluacion" className={claseEnlace}>Banco de preguntas</NavLink>}
           {esAdministrador && <NavLink to="/admin/usuarios" className={claseEnlace}>Usuarios</NavLink>}
+          {esAdministrador && <NavLink to="/admin/bitacora" className={claseEnlace}>Bitácora</NavLink>}
         </nav>
       </header>
       <main className="mx-auto max-w-[84rem] px-4 py-6 sm:px-6">

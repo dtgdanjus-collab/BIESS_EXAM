@@ -49,7 +49,7 @@ Tener abiertos: el navegador en `http://localhost:5173`, el log del backend, una
   - PowerShell: `$env:DEMO_FALLA_ENVIO='true'; go run ./cmd/api` (luego `Remove-Item Env:DEMO_FALLA_ENVIO`)
   - Respuesta 500; el log muestra `TX ROLLBACK: … value too long for type character varying(40) (SQLSTATE 22001)`.
   - `SELECT estado, fecha_envio FROM postulaciones;` → sigue en **BORRADOR** y sin fecha, aunque el `UPDATE` a ENVIADA ya se había ejecutado dentro de la transacción.
-- Reiniciar sin la variable, enviar de nuevo → ENVIADA, comprobante imprimible y `CORREO SIMULADO` en el log.
+- Reiniciar sin la variable, enviar de nuevo → ENVIADA, comprobante imprimible y, sin servicio de correo configurado, `CORREO NO ENVIADO` en el log.
 
 ## 6. Preguntas (1 min)
 
@@ -59,4 +59,5 @@ Respuestas preparadas:
 - **¿Qué pasa si Redis se cae?** Los catálogos se sirven desde PostgreSQL (registrando `CACHE ERROR`) y `/health` responde 503.
 - **¿Por qué se valida en el frontend y también en el backend?** El frontend da retroalimentación inmediata; el backend es la autoridad (cédula por módulo 10, cascada, nacionalidad, sector).
 - **¿Las inhabilidades bloquean?** No: marcan `posible_inhabilidad` para la revisión de Talento Humano.
+- **¿De dónde salen los puntajes de méritos?** El requerimiento pide calcularlos, pero no trae la tabla. La Comisión la carga en `/admin/puntajes` según la Resolución C.D. 701 y el sistema calcula con ella.
 - **¿La PWA guarda el expediente sin conexión?** No, a propósito: tiene datos sensibles y puede usarse en equipos compartidos, y el envío es definitivo. Sin internet abren las pantallas y los catálogos ya consultados, pero guardar y enviar siguen en la API.
