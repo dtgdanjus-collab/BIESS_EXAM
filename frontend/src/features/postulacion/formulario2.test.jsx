@@ -62,6 +62,20 @@ describe('experiencia', () => {
   })
 })
 
+describe('formación', () => {
+  it('los demás campos se despliegan al elegir el nivel de instrucción', async () => {
+    postulacionApi.obtener.mockResolvedValue(postulacionBase())
+    const user = userEvent.setup()
+    abrirFormulario('formacion')
+    await user.click(await screen.findByRole('button', { name: /agregar título/i }))
+
+    // jsdom no carga Tailwind: lo oculto se comprueba por su clase.
+    expect(screen.getByLabelText(/título obtenido/i).closest('.hidden')).not.toBeNull()
+    await user.selectOptions(screen.getByLabelText(/nivel de instrucción/i), '3')
+    expect(screen.getByLabelText(/título obtenido/i).closest('.hidden')).toBeNull()
+  })
+})
+
 describe('documentos de respaldo', () => {
   const pdf = (bytes, nombre = 'doc.pdf') => {
     const f = new File(['%PDF-'], nombre, { type: 'application/pdf' })

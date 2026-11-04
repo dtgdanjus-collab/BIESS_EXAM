@@ -206,7 +206,7 @@ describe('cargo', () => {
     expect(await screen.findByText('Postulante no acredita jubilación')).toBeInTheDocument()
     expect(screen.getByText('NO puede continuar, no acredita jubilación')).toBeInTheDocument()
     expect(postulacionApi.validarCargo).toHaveBeenCalledWith('JUBILADOS')
-    expect(screen.queryByText(/respaldado por una organización/i)).not.toBeInTheDocument()
+    expect(screen.queryByText(/respaldadas por una organización/i)).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: /guardar postulación/i })).not.toBeInTheDocument()
   })
 
@@ -219,7 +219,7 @@ describe('cargo', () => {
 
     await user.click(await screen.findByLabelText(/sector de afiliados/i))
     expect(await screen.findByText('Postulante afiliado al IESS')).toBeInTheDocument()
-    expect(screen.getByText(/respaldado por una organización de trabajadores/i)).toBeInTheDocument()
+    expect(screen.getByText(/respaldadas por una organización de trabajadores/i)).toBeInTheDocument()
 
     await user.click(screen.getByRole('radio', { name: 'No' }))
     await user.click(screen.getByRole('button', { name: /guardar postulación/i }))

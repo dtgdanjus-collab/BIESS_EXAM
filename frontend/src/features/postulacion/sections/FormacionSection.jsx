@@ -59,20 +59,23 @@ export function FormacionSection() {
             onEliminar={() => remove(i)}
           >
             <CampoSelect control={control} name={`items.${i}.nivelId`} label="Nivel de instrucción" required options={niveles.data} loading={niveles.loading} />
-            <CampoSelect control={control} name={`items.${i}.tipo`} label="Tipo" required options={TIPOS} />
-            <Input label="Institución educativa" required className="sm:col-span-2" error={e.institucion?.message} {...register(`items.${i}.institucion`)} />
-            <Input label="Título obtenido" required className="sm:col-span-2" error={e.titulo?.message} {...register(`items.${i}.titulo`)} />
-            <CampoSelect control={control} name={`items.${i}.areaId`} label="Área de estudios" required options={areas.data} loading={areas.loading} />
-            <Input label="Número de registro SENESCYT" required error={e.registroSenescyt?.message} {...register(`items.${i}.registroSenescyt`)} />
-            <Input
-              label="Fecha de registro SENESCYT"
-              type="date"
-              max={hoyIso()}
-              required
-              error={e.fechaRegistro?.message}
-              {...register(`items.${i}.fechaRegistro`)}
-            />
-            <CampoDocumento control={control} name={`items.${i}.documentoId`} categoria="FORMACION" inicial={adjuntoDe(f)} className="sm:col-span-2" />
+            {/* 1.5.1: el resto se despliega al elegir el nivel. Oculto, no desmontado: conserva el PDF subido. */}
+            <div className={actual.nivelId ? 'contents' : 'hidden'}>
+              <CampoSelect control={control} name={`items.${i}.tipo`} label="Tipo" required options={TIPOS} />
+              <Input label="Institución educativa" required className="sm:col-span-2" error={e.institucion?.message} {...register(`items.${i}.institucion`)} />
+              <Input label="Título obtenido" required className="sm:col-span-2" error={e.titulo?.message} {...register(`items.${i}.titulo`)} />
+              <CampoSelect control={control} name={`items.${i}.areaId`} label="Área de estudios" required options={areas.data} loading={areas.loading} />
+              <Input label="Número de registro SENESCYT" required error={e.registroSenescyt?.message} {...register(`items.${i}.registroSenescyt`)} />
+              <Input
+                label="Fecha de registro SENESCYT"
+                type="date"
+                max={hoyIso()}
+                required
+                error={e.fechaRegistro?.message}
+                {...register(`items.${i}.fechaRegistro`)}
+              />
+              <CampoDocumento control={control} name={`items.${i}.documentoId`} categoria="FORMACION" inicial={adjuntoDe(f)} className="sm:col-span-2" />
+            </div>
           </ItemLista>
         )
       })}
