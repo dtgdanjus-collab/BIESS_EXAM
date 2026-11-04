@@ -31,6 +31,9 @@ export const postulacionApi = {
   enviar: () => api.post('/postulacion/enviar', { aceptaConsentimiento: true }).then(data),
   guardarPostulacion: () => api.post('/postulacion/guardar').then(data),
   formulario: () => api.get('/postulacion/formulario').then(data),
+  formularioPdf: () => api.get('/postulacion/formulario.pdf', { responseType: 'blob', timeout: 60000 }).then(data),
+  // El servidor espera la respuesta del servicio de correo.
+  reenviarFormulario: () => api.post('/postulacion/formulario/reenviar', null, { timeout: 40000 }).then(data),
   concurso: () => api.get('/postulacion/concurso').then(data),
   concursoPublico: () => api.get('/concurso').then(data),
   reconsiderar: (body) => api.post('/postulacion/reconsideraciones', body).then(data),

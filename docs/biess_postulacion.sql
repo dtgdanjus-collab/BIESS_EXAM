@@ -776,7 +776,11 @@ INSERT INTO niveles_instruccion (nombre, orden) VALUES
 -- Áreas de estudio / actividades relacionadas (1.5.1.4 y 1.6.6)
 INSERT INTO areas_estudio (nombre) VALUES
   ('Finanzas'), ('Mercado de Capitales'), ('Administración de Empresas'),
-  ('Economía'), ('Derecho'), ('Materias afines');
+  ('Economía'), ('Derecho'), ('Actuaría'),
+  ('Ciencias Políticas y Relaciones Internacionales'), ('Comercio Exterior'), ('Contabilidad y Auditoría'),
+  ('Educación'), ('Estadística y Matemáticas'), ('Gestión Pública'), ('Ingeniería Civil'), ('Ingeniería Comercial'),
+  ('Ingeniería Industrial'), ('Marketing'), ('Medicina y Ciencias de la Salud'), ('Seguridad Social'),
+  ('Sistemas, Software y Tecnologías de la Información'), ('Talento Humano'), ('Materias afines');
 
 -- Sectores de representación (1.4) con los mensajes literales del requerimiento
 INSERT INTO sectores (codigo, cargo, tipo_requerido, etiqueta_cumple, etiqueta_no_cumple, mensaje_rechazo, pregunta_respaldo) VALUES

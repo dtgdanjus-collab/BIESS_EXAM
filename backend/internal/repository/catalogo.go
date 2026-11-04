@@ -56,7 +56,7 @@ func (r *pgCatalogoRepository) ListParentescos(ctx context.Context) ([]domain.It
 }
 
 func (r *pgCatalogoRepository) ListAreas(ctx context.Context) ([]domain.Item, error) {
-	return queryItems(ctx, r.pool, `SELECT id, nombre FROM areas_estudio ORDER BY id`)
+	return queryItems(ctx, r.pool, `SELECT id, nombre FROM areas_estudio ORDER BY nombre = 'Materias afines', nombre`)
 }
 
 func (r *pgCatalogoRepository) ListNiveles(ctx context.Context) ([]domain.NivelInstruccion, error) {

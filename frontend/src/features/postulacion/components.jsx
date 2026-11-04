@@ -223,7 +223,7 @@ export function EnlaceDocumento({ documento, descargar = (d) => postulacionApi.d
   }
   return (
     <>
-      <a href={`#documento-${documento.id}`} onClick={bajar} className="break-all underline underline-offset-4">
+      <a href={`#documento-${documento.id}`} onClick={bajar} className="break-all underline underline-offset-4 print:no-underline">
         {documento.nombre}
       </a>
       {descarga.loading && <Spinner className="ml-2 inline size-3.5" label="Descargando" />}

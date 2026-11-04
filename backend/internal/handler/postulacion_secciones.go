@@ -26,6 +26,8 @@ type SeccionesService interface {
 	EliminarInhabilidades(ctx context.Context, usuarioID int64) (*domain.Postulacion, error)
 	Enviar(ctx context.Context, usuarioID int64, aceptaConsentimiento bool) (*domain.Postulacion, error)
 	Formulario(ctx context.Context, usuarioID int64) (*domain.FormularioFinal, error)
+	DescargarFormulario(ctx context.Context, usuarioID int64) (string, []byte, error)
+	ReenviarFormulario(ctx context.Context, usuarioID int64) (string, error)
 	GuardarPostulacion(ctx context.Context, usuarioID int64) (*domain.FormularioFinal, error)
 }
 
@@ -208,6 +210,18 @@ func (h *SeccionesHandler) Enviar(c *fiber.Ctx) error {
 func (h *SeccionesHandler) Formulario(c *fiber.Ctx) error {
 	f, err := h.svc.Formulario(c.UserContext(), middleware.UsuarioID(c))
 	return enJSON(c, f, err)
+}
+
+// FormularioPDF atiende GET /postulacion/formulario.pdf.
+func (h *SeccionesHandler) FormularioPDF(c *fiber.Ctx) error {
+	nombre, pdf, err := h.svc.DescargarFormulario(c.UserContext(), middleware.UsuarioID(c))
+	return descarga(c, nombre, "application/pdf", pdf, err)
+}
+
+// ReenviarFormulario atiende POST /postulacion/formulario/reenviar.
+func (h *SeccionesHandler) ReenviarFormulario(c *fiber.Ctx) error {
+	correo, err := h.svc.ReenviarFormulario(c.UserContext(), middleware.UsuarioID(c))
+	return enJSON(c, fiber.Map{"correo": correo}, err)
 }
 
 // GuardarPostulacion atiende POST /postulacion/guardar (1.10.1).

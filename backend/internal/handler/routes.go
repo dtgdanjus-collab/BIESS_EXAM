@@ -57,6 +57,8 @@ func RegisterRoutes(app *fiber.App, h Handlers, requireAuth, requireAdmin fiber.
 	post.Post("/enviar", h.Secciones.Enviar)
 	post.Post("/guardar", h.Secciones.GuardarPostulacion)
 	post.Get("/formulario", h.Secciones.Formulario)
+	post.Get("/formulario.pdf", h.Secciones.FormularioPDF)
+	post.Post("/formulario/reenviar", h.Secciones.ReenviarFormulario)
 	post.Get("/concurso", h.Admin.MiConcurso)
 	post.Post("/reconsideraciones", h.Admin.SolicitarReconsideracion)
 

@@ -92,6 +92,8 @@ Con `DEMO_FALLA_ENVIO=true` el INSERT del historial del envío excede `VARCHAR(4
 | GET | `/concurso` | Público: `{formularioAbierto, fases}` (solo las publicadas) |
 | POST | `/postulacion/guardar` | 1.10.1: exige las secciones obligatorias y devuelve el formulario final |
 | GET | `/postulacion/formulario` | Formulario final con nombres de catálogo, consentimiento y firma |
+| GET | `/postulacion/formulario.pdf` | El mismo formulario en PDF, para imprimir y firmar |
+| POST | `/postulacion/formulario/reenviar` | Reenvía el PDF al correo del postulante, una vez por minuto; solo si ya está ENVIADA. Devuelve `{correo}` enmascarado |
 | DELETE | `/postulacion/contacto`, `/postulacion/inhabilidades` | Borra la sección |
 | GET | `/postulacion/concurso` | Avance: estado, notas, fases, reconsideraciones |
 | POST | `/postulacion/reconsideraciones` | `{etapa, motivo}`, solo con la fase publicada y vigente |

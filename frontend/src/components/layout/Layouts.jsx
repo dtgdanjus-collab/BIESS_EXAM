@@ -7,7 +7,7 @@ import { CedulaEnVivo, LecturaCedula } from './LecturaCedula'
 import { MenuPerfil } from './MenuPerfil'
 
 /** Monograma del producto: el sello de recepción reducido a su letra. */
-function Monograma() {
+export function Monograma() {
   return (
     <svg viewBox="0 0 32 32" aria-hidden="true" className="size-8 shrink-0">
       <circle cx="16" cy="16" r="14" fill="white" stroke="#1d5fbf" strokeWidth="2.5" />

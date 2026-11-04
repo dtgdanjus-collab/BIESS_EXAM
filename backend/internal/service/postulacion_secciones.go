@@ -371,12 +371,84 @@ func (s *PostulacionService) enviarFormularioPorCorreo(ctx context.Context, usua
 		log.Printf("ERROR armando el formulario de %s: %v", p.Codigo, err)
 		return
 	}
-	cuerpo, err := formularioHTML(f)
+	m, err := mensajeFormulario(f, u.Email)
 	if err != nil {
 		log.Printf("ERROR armando el correo de %s: %v", p.Codigo, err)
 		return
 	}
-	notificar(s.correo, Mensaje{Para: u.Email, Asunto: "Formulario de postulación " + p.Codigo, HTML: cuerpo})
+	notificar(s.correo, m)
+}
+
+// mensajeFormulario lleva el formulario en el cuerpo y en PDF, para imprimirlo y firmarlo.
+func mensajeFormulario(f *domain.FormularioFinal, para string) (Mensaje, error) {
+	cuerpo, err := formularioHTML(f)
+	if err != nil {
+		return Mensaje{}, err
+	}
+	pdf, err := FormularioPDF(f)
+	if err != nil {
+		return Mensaje{}, err
+	}
+	return Mensaje{
+		Para:     para,
+		Asunto:   "Formulario de postulación " + f.Codigo,
+		HTML:     cuerpo,
+		Adjuntos: []Adjunto{{Nombre: nombreFormularioPDF(f.Codigo), Contenido: pdf}},
+	}, nil
+}
+
+// DescargarFormulario devuelve el formulario del postulante en PDF.
+func (s *PostulacionService) DescargarFormulario(ctx context.Context, usuarioID int64) (string, []byte, error) {
+	f, err := s.Formulario(ctx, usuarioID)
+	if err != nil {
+		return "", nil, err
+	}
+	pdf, err := FormularioPDF(f)
+	if err != nil {
+		return "", nil, err
+	}
+	return nombreFormularioPDF(f.Codigo), pdf, nil
+}
+
+// reservarReenvio deja pasar un reenvío por minuto y por postulante: cada uno gasta del cupo diario del correo.
+func (s *PostulacionService) reservarReenvio(usuarioID int64, ahora time.Time) bool {
+	anterior, hay := s.reenvios.Load(usuarioID)
+	if hay && ahora.Sub(anterior.(time.Time)) < esperaReenvio {
+		return false
+	}
+	s.reenvios.Store(usuarioID, ahora)
+	return true
+}
+
+// ReenviarFormulario manda otra vez el formulario de una postulación ya enviada y devuelve el
+// correo enmascarado. A diferencia del envío inicial espera la respuesta, para poder avisar si falla.
+func (s *PostulacionService) ReenviarFormulario(ctx context.Context, usuarioID int64) (string, error) {
+	f, err := s.Formulario(ctx, usuarioID)
+	if err != nil {
+		return "", err
+	}
+	if f.Estado != domain.EstadoEnviada {
+		return "", domain.NewError(domain.ErrReglaNegocio, "El formulario se envía a su correo cuando envía la postulación")
+	}
+	if s.correo == nil || !s.correo.Configurado() {
+		return "", domain.NewError(domain.ErrReglaNegocio, "El envío de correos no está disponible en este momento. Descargue el PDF.")
+	}
+	if !s.reservarReenvio(usuarioID, time.Now()) {
+		return "", domain.NewError(domain.ErrReglaNegocio, "Ya se envió el formulario. Espere un minuto para volver a enviarlo.")
+	}
+	u, err := s.usuarios.FindByID(ctx, usuarioID)
+	if err != nil {
+		return "", err
+	}
+	m, err := mensajeFormulario(f, u.Email)
+	if err != nil {
+		return "", err
+	}
+	if err := s.correo.Enviar(ctx, m); err != nil {
+		log.Printf("ERROR reenviando el formulario de %s: %v", f.Codigo, err)
+		return "", domain.NewError(domain.ErrReglaNegocio, "No se pudo enviar el correo. Inténtelo más tarde o descargue el PDF.")
+	}
+	return enmascararEmail(u.Email), nil
 }
 
 func seccionesFaltantes(p *domain.Postulacion) []string {
