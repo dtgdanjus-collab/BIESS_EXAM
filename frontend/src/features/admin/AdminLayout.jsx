@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useForm } from 'react-hook-form'
-import { Navigate, NavLink, Outlet, useNavigate } from 'react-router-dom'
+import { Link, Navigate, NavLink, Outlet, useNavigate } from 'react-router-dom'
 import { adminApi } from '../../api/admin'
 import { Button, ErrorAlert, Icon, Input } from '../../components/ui'
 import { Marca } from '../../components/layout/Layouts'
@@ -9,7 +9,12 @@ import { useBloqueo } from '../../hooks/useBloqueo'
 import { useTituloPagina } from '../../hooks/useTituloPagina'
 import { useAdminStore } from '../../store/adminStore'
 import { aplicarErroresCampos } from '../../utils/formErrors'
-import { BloqueoAviso } from '../auth/components'
+import { BloqueoAviso, claseEnlace as claseEnlaceAcceso, PasswordInput } from '../auth/components'
+
+const TAREAS = [
+  ['Talento Humano', 'Revisa los expedientes, registra las calificaciones y responde las reconsideraciones.'],
+  ['Comisión de Selección', 'Además publica las fases, habilita el formulario y gestiona el banco de preguntas.'],
+]
 
 export function AdminLoginPage() {
   useTituloPagina('Administración')
@@ -34,22 +39,52 @@ export function AdminLoginPage() {
   })
 
   return (
-    <div className="flex min-h-dvh items-center justify-center bg-noche px-4 py-8">
-      <form onSubmit={onSubmit} noValidate className="w-full max-w-sm rounded-lg bg-papel p-6">
-        <h1 className="text-xl font-medium tracking-tight">Módulo de administración</h1>
-        <p className="mt-1 text-sm text-tenue">Talento Humano y Comisión de Selección</p>
-        <div className="mt-6 space-y-4">
-          {peticion.error?.status !== 423 && <ErrorAlert error={peticion.error} />}
-          <BloqueoAviso bloqueo={bloqueo} mensajeBloqueo={peticion.error?.message} />
-          <fieldset disabled={bloqueo.bloqueado} className="space-y-4">
-            <Input label="Usuario" autoComplete="username" required error={errors.usuario?.message} {...register('usuario')} />
-            <Input label="Contraseña" type="password" autoComplete="current-password" required error={errors.password?.message} {...register('password')} />
-          </fieldset>
-          <Button type="submit" className="w-full" loading={peticion.loading} disabled={bloqueo.bloqueado}>
-            {bloqueo.bloqueado ? `Bloqueado (${bloqueo.tiempo})` : 'Ingresar'}
-          </Button>
+    <div className="min-h-dvh bg-papel lg:grid lg:grid-cols-[minmax(0,1.1fr)_minmax(0,1fr)]">
+      <aside className="flex flex-col bg-noche px-4 py-5 text-white [&_:focus-visible]:outline-white sm:px-6 lg:min-h-dvh lg:px-14 lg:py-12">
+        <Marca claro />
+        <div className="mt-6 lg:my-auto">
+          <h2 className="text-2xl font-medium leading-tight tracking-tight lg:text-[32px]">El concurso, de la postulación a la lista de elegibles</h2>
+          <p className="mt-3 max-w-lg text-sm leading-relaxed text-noche-tenue">
+            Espacio de trabajo de la Subdirección de Talento Humano y de la Comisión de Selección.
+          </p>
+          <dl className="mt-10 hidden max-w-lg border-t border-white/15 lg:block">
+            {TAREAS.map(([rol, tarea]) => (
+              <div key={rol} className="border-b border-white/15 py-4">
+                <dt className="text-sm font-medium">{rol}</dt>
+                <dd className="mt-1 text-sm leading-relaxed text-noche-tenue">{tarea}</dd>
+              </div>
+            ))}
+          </dl>
         </div>
-      </form>
+      </aside>
+      <div className="flex flex-col lg:min-h-dvh">
+        <main className="flex flex-1 items-start justify-center px-4 py-6 sm:px-6 lg:items-center lg:py-12">
+          <form onSubmit={onSubmit} noValidate className="w-full max-w-md">
+            <h1 className="text-2xl font-medium tracking-tight lg:text-[32px] lg:leading-tight">Módulo de administración</h1>
+            <p className="mt-2 text-sm leading-relaxed text-tenue">Ingrese con el usuario y la contraseña de su cuenta institucional.</p>
+            <div className="mt-6 space-y-4">
+              {peticion.error?.status !== 423 && <ErrorAlert error={peticion.error} />}
+              <BloqueoAviso bloqueo={bloqueo} mensajeBloqueo={peticion.error?.message} />
+              <fieldset disabled={bloqueo.bloqueado} className="space-y-4">
+                <Input label="Usuario" icono="user" autoComplete="username" autoCapitalize="none" spellCheck={false} required error={errors.usuario?.message} {...register('usuario')} />
+                <PasswordInput label="Contraseña" autoComplete="current-password" required error={errors.password?.message} {...register('password')} />
+              </fieldset>
+              <Button type="submit" className="w-full" loading={peticion.loading} disabled={bloqueo.bloqueado}>
+                {bloqueo.bloqueado ? `Bloqueado (${bloqueo.tiempo})` : 'Ingresar'}
+              </Button>
+            </div>
+            <p className="mt-6 text-sm text-tenue">
+              ¿Es postulante?{' '}
+              <Link to="/login" className={claseEnlaceAcceso}>
+                Ingrese con su cédula
+              </Link>
+            </p>
+          </form>
+        </main>
+        <footer className="px-4 pb-5 text-xs text-tenue sm:px-6 lg:text-center">
+          <p className="mx-auto max-w-md lg:max-w-none">Sistema académico de demostración · Requerimiento Funcional IESS v1.4 · Resolución C.D. 701</p>
+        </footer>
+      </div>
     </div>
   )
 }
