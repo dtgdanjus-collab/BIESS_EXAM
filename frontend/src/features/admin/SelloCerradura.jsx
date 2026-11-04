@@ -13,18 +13,19 @@ const LECTURA = {
 /** Gris mientras está cerrado; al autorizar, el arco gira sobre su pata derecha y se abre. */
 function Candado({ abierto, rojo }) {
   return (
-    <svg viewBox="0 0 48 56" fill="none" className="mx-auto w-[11cqw] overflow-visible">
+    <svg viewBox="0 0 48 56" fill="none" className="mx-auto w-[19cqw] overflow-visible">
       <path
-        d="M14 28V16a10 10 0 0 1 20 0v12"
-        stroke={rojo ? '#ffd0cb' : '#d3d7de'}
-        strokeWidth="5.5"
-        strokeLinecap="round"
+        d="M13 28V15a11 11 0 0 1 22 0v13"
+        stroke={rojo ? '#ffb4ac' : '#aab0bb'}
+        strokeWidth="7"
         className="transition-transform delay-100 duration-300 ease-[cubic-bezier(0.3,1.5,0.6,1)]"
-        style={{ transformOrigin: '34px 28px', transform: abierto ? 'rotate(32deg)' : 'none' }}
+        style={{ transformOrigin: '35px 28px', transform: abierto ? 'rotate(32deg)' : 'none' }}
       />
-      <rect x="5" y="24" width="38" height="30" rx="7" fill={rojo ? '#ffd0cb' : '#d3d7de'} />
-      <circle cx="24" cy="36" r="4.5" className="fill-sello" />
-      <rect x="21.75" y="37" width="4.5" height="10" rx="2.25" className="fill-sello" />
+      <rect x="3" y="23" width="42" height="33" rx="7" fill={rojo ? '#ffd0cb' : '#dde0e5'} />
+      {/* La mitad derecha más oscura le da el volumen del metal. */}
+      <path d="M24 23h14a7 7 0 0 1 7 7v19a7 7 0 0 1-7 7H24z" fill={rojo ? '#ffb4ac' : '#c1c6ce'} />
+      <circle cx="24" cy="36" r="5" className="fill-noche" />
+      <rect x="21.25" y="37" width="5.5" height="11" rx="2.75" className="fill-noche" />
     </svg>
   )
 }
@@ -82,8 +83,8 @@ export function SelloCerradura({ usuario, largoClave, estado }) {
 
         <div className="absolute left-1/2 top-1/2 w-[46%] -translate-x-1/2 -translate-y-1/2 rotate-[9deg] text-center">
           <Candado abierto={estado === 'autorizado'} rojo={rojo} />
-          <p className="mt-[1.5cqw] truncate text-[6cqw] font-medium leading-tight tracking-tight">{usuario || 'Comisión'}</p>
-          <p className={`mt-[1.5cqw] text-[3.8cqw] leading-snug ${rojo ? 'font-medium text-[#ffd0cb]' : 'text-white/85'}`}>{LECTURA[estado]}</p>
+          <p className="mt-[1cqw] truncate text-[5.5cqw] font-medium leading-tight tracking-tight">{usuario || 'Comisión'}</p>
+          <p className={`mt-[0.5cqw] text-[3.6cqw] leading-snug ${rojo ? 'font-medium text-[#ffd0cb]' : 'text-white/85'}`}>{LECTURA[estado]}</p>
         </div>
       </div>
     </div>
