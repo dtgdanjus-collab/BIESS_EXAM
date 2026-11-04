@@ -1,8 +1,8 @@
 import { useEffect, useRef, useState } from 'react'
 import { ASIGNATURA, EVALUACION, INTEGRANTES } from '../../config/integrantes'
-import { useInstalacion } from '../../hooks/useInstalacion'
 import { useAuthStore } from '../../store/authStore'
-import { Button, Icon } from '../ui'
+import { Icon } from '../ui'
+import { InstalarApp } from './InstalarApp'
 
 const inicialesDe = (texto = '') =>
   texto
@@ -16,7 +16,6 @@ const inicialesDe = (texto = '') =>
 /** Ficha del usuario en la barra lateral: al pulsarla despliega su perfil y los integrantes del grupo. */
 export function MenuPerfil() {
   const usuario = useAuthStore((s) => s.usuario)
-  const instalacion = useInstalacion()
   const [abierto, setAbierto] = useState(false)
   const contenedor = useRef(null)
   const boton = useRef(null)
@@ -106,23 +105,7 @@ export function MenuPerfil() {
             )}
           </section>
 
-          {(instalacion.puedeInstalar || instalacion.pasosIos) && (
-            <section aria-labelledby="titulo-instalar" className="border-t border-regla px-4 py-4">
-              <h2 id="titulo-instalar" className="text-sm font-medium">
-                Instalar app
-              </h2>
-              {instalacion.puedeInstalar ? (
-                <>
-                  <p className="mt-0.5 text-xs text-tenue">Ábrala desde su pantalla de inicio, como cualquier otra app.</p>
-                  <Button variant="secondary" onClick={instalacion.instalar} className="mt-3 w-full">
-                    Instalar app
-                  </Button>
-                </>
-              ) : (
-                <p className="mt-0.5 text-xs text-tenue">En Safari, pulse Compartir y luego «Agregar a inicio».</p>
-              )}
-            </section>
-          )}
+          <InstalarApp compacta />
         </div>
       )}
     </div>

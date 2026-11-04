@@ -24,6 +24,7 @@ describe('InstalarApp', () => {
     const evento = ofrecerInstalacion()
     await userEvent.click(screen.getByRole('button', { name: 'Descargar la app' }))
     expect(screen.getByRole('heading', { name: /descargar la app del directorio/i })).toBeInTheDocument()
+    expect(screen.getByText(/su expediente no se guarda/i)).toBeInTheDocument()
     await userEvent.click(screen.getByRole('button', { name: 'Ahora no' }))
     expect(evento.prompt).not.toHaveBeenCalled()
     expect(screen.getByRole('button', { name: 'Descargar la app' })).toBeInTheDocument()
@@ -36,6 +37,15 @@ describe('InstalarApp', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Descargar' }))
     expect(evento.prompt).toHaveBeenCalledOnce()
     await waitFor(() => expect(screen.queryByRole('button', { name: 'Descargar la app' })).not.toBeInTheDocument())
+  })
+
+  it('en el menú del perfil aparece como tarjeta con la misma confirmación', async () => {
+    render(<InstalarApp compacta />)
+    const evento = ofrecerInstalacion()
+    await userEvent.click(screen.getByRole('button', { name: /instalar la app/i }))
+    await userEvent.click(screen.getByRole('button', { name: 'Descargar' }))
+    expect(evento.prompt).toHaveBeenCalledOnce()
+    await waitFor(() => expect(screen.queryByRole('button', { name: /instalar la app/i })).not.toBeInTheDocument())
   })
 
   it('en iPhone explica los pasos, porque Safari no permite abrir la instalación', async () => {

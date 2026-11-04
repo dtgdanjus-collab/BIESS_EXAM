@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"log"
 	"net/http"
 	"time"
 
@@ -31,9 +32,13 @@ func NewCorreoBrevo(apiKey, remitente, nombre string) *CorreoBrevo {
 func (c *CorreoBrevo) Configurado() bool { return c.apiKey != "" && c.remitente != "" }
 
 func (c *CorreoBrevo) Enviar(ctx context.Context, m service.Mensaje) error {
+	para := []map[string]string{{"email": m.Para}}
+	for _, copia := range m.Copias {
+		para = append(para, map[string]string{"email": copia})
+	}
 	cuerpo := map[string]any{
 		"sender":      map[string]string{"email": c.remitente, "name": c.nombre},
-		"to":          []map[string]string{{"email": m.Para}},
+		"to":          para,
 		"subject":     m.Asunto,
 		"htmlContent": m.HTML,
 	}
@@ -63,5 +68,11 @@ func (c *CorreoBrevo) Enviar(ctx context.Context, m service.Mensaje) error {
 		detalle, _ := io.ReadAll(io.LimitReader(res.Body, 500))
 		return fmt.Errorf("el servicio de correo respondió %d: %s", res.StatusCode, detalle)
 	}
+	// Aceptar no es entregar: con este identificador se sigue el mensaje en los registros de Brevo.
+	var aceptado struct {
+		MessageID string `json:"messageId"`
+	}
+	_ = json.NewDecoder(io.LimitReader(res.Body, 2000)).Decode(&aceptado)
+	log.Printf("CORREO aceptado por Brevo | %s | %d destinatario(s) | %s", m.Asunto, len(para), aceptado.MessageID)
 	return nil
 }

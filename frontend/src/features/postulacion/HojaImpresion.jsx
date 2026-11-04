@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { createPortal, flushSync } from 'react-dom'
-import { Monograma } from '../../components/layout/Layouts'
+import { Monograma } from '../../components/layout/Monograma'
 import { FormularioVista } from './FormularioVista'
 
 const fechaRecibida = (iso) => new Date(iso).toLocaleString('es-EC', { dateStyle: 'long', timeStyle: 'short' })
