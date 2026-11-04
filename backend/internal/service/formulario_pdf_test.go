@@ -40,15 +40,27 @@ func TestFormularioPDF(t *testing.T) {
 }
 
 func TestMensajeFormularioAdjuntaElPDF(t *testing.T) {
-	m, err := mensajeFormulario(formularioDePrueba(), "ana@correo.com")
+	m, err := mensajeFormulario(formularioDePrueba(), []string{"ana@correo.com", "ana2@correo.com"})
 	if err != nil {
 		t.Fatal(err)
 	}
-	if m.Para != "ana@correo.com" || !strings.Contains(m.HTML, "BIESS-2026-000001") {
+	if m.Para != "ana@correo.com" || len(m.Copias) != 1 || m.Copias[0] != "ana2@correo.com" || !strings.Contains(m.HTML, "BIESS-2026-000001") {
 		t.Fatalf("mensaje: %+v", m.Para)
 	}
 	if len(m.Adjuntos) != 1 || m.Adjuntos[0].Nombre != "Formulario-BIESS-2026-000001.pdf" || !bytes.HasPrefix(m.Adjuntos[0].Contenido, []byte("%PDF")) {
 		t.Fatal("el correo debe llevar el formulario en PDF")
+	}
+}
+
+func TestDestinatariosFormulario(t *testing.T) {
+	segundo := "ANA@correo.com"
+	p := &domain.Postulacion{Contacto: &domain.Contacto{Correo1: "otro@correo.com", Correo2: &segundo}}
+	got := destinatariosFormulario("ana@correo.com", p)
+	if len(got) != 2 || got[0] != "ana@correo.com" || got[1] != "otro@correo.com" {
+		t.Fatalf("destinatarios: %v", got)
+	}
+	if got := destinatariosFormulario("ana@correo.com", &domain.Postulacion{}); len(got) != 1 {
+		t.Fatalf("sin contacto: %v", got)
 	}
 }
 

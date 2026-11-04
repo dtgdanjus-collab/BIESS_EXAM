@@ -371,7 +371,7 @@ func (s *PostulacionService) enviarFormularioPorCorreo(ctx context.Context, usua
 		log.Printf("ERROR armando el formulario de %s: %v", p.Codigo, err)
 		return
 	}
-	m, err := mensajeFormulario(f, u.Email)
+	m, err := mensajeFormulario(f, destinatariosFormulario(u.Email, p))
 	if err != nil {
 		log.Printf("ERROR armando el correo de %s: %v", p.Codigo, err)
 		return
@@ -380,7 +380,7 @@ func (s *PostulacionService) enviarFormularioPorCorreo(ctx context.Context, usua
 }
 
 // mensajeFormulario lleva el formulario en el cuerpo y en PDF, para imprimirlo y firmarlo.
-func mensajeFormulario(f *domain.FormularioFinal, para string) (Mensaje, error) {
+func mensajeFormulario(f *domain.FormularioFinal, destinos []string) (Mensaje, error) {
 	cuerpo, err := formularioHTML(f)
 	if err != nil {
 		return Mensaje{}, err
@@ -390,11 +390,34 @@ func mensajeFormulario(f *domain.FormularioFinal, para string) (Mensaje, error) 
 		return Mensaje{}, err
 	}
 	return Mensaje{
-		Para:     para,
+		Para:     destinos[0],
+		Copias:   destinos[1:],
 		Asunto:   "Formulario de postulación " + f.Codigo,
 		HTML:     cuerpo,
 		Adjuntos: []Adjunto{{Nombre: nombreFormularioPDF(f.Codigo), Contenido: pdf}},
 	}, nil
+}
+
+// destinatariosFormulario son el correo de la cuenta y los dos que la persona escribió en 1.2,
+// que son donde espera recibirlo.
+func destinatariosFormulario(cuenta string, p *domain.Postulacion) []string {
+	candidatos := []string{cuenta}
+	if p.Contacto != nil {
+		candidatos = append(candidatos, p.Contacto.Correo1)
+		if p.Contacto.Correo2 != nil {
+			candidatos = append(candidatos, *p.Contacto.Correo2)
+		}
+	}
+	vistos := map[string]bool{}
+	destinos := []string{}
+	for _, c := range candidatos {
+		c = strings.TrimSpace(c)
+		if clave := strings.ToLower(c); c != "" && !vistos[clave] {
+			vistos[clave] = true
+			destinos = append(destinos, c)
+		}
+	}
+	return destinos
 }
 
 // DescargarFormulario devuelve el formulario del postulante en PDF.
@@ -420,10 +443,14 @@ func (s *PostulacionService) reservarReenvio(usuarioID int64, ahora time.Time) b
 	return true
 }
 
-// ReenviarFormulario manda otra vez el formulario de una postulación ya enviada y devuelve el
-// correo enmascarado. A diferencia del envío inicial espera la respuesta, para poder avisar si falla.
+// ReenviarFormulario manda otra vez el formulario de una postulación ya enviada y devuelve los
+// correos enmascarados. A diferencia del envío inicial espera la respuesta, para poder avisar si falla.
 func (s *PostulacionService) ReenviarFormulario(ctx context.Context, usuarioID int64) (string, error) {
-	f, err := s.Formulario(ctx, usuarioID)
+	p, err := s.Obtener(ctx, usuarioID)
+	if err != nil {
+		return "", err
+	}
+	f, err := s.armarFormulario(ctx, p)
 	if err != nil {
 		return "", err
 	}
@@ -440,7 +467,8 @@ func (s *PostulacionService) ReenviarFormulario(ctx context.Context, usuarioID i
 	if err != nil {
 		return "", err
 	}
-	m, err := mensajeFormulario(f, u.Email)
+	destinos := destinatariosFormulario(u.Email, p)
+	m, err := mensajeFormulario(f, destinos)
 	if err != nil {
 		return "", err
 	}
@@ -448,7 +476,11 @@ func (s *PostulacionService) ReenviarFormulario(ctx context.Context, usuarioID i
 		log.Printf("ERROR reenviando el formulario de %s: %v", f.Codigo, err)
 		return "", domain.NewError(domain.ErrReglaNegocio, "No se pudo enviar el correo. Inténtelo más tarde o descargue el PDF.")
 	}
-	return enmascararEmail(u.Email), nil
+	ocultos := make([]string, len(destinos))
+	for i, d := range destinos {
+		ocultos[i] = enmascararEmail(d)
+	}
+	return strings.Join(ocultos, ", "), nil
 }
 
 func seccionesFaltantes(p *domain.Postulacion) []string {
