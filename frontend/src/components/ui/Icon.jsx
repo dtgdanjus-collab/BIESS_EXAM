@@ -125,6 +125,7 @@ const PATHS = {
       <path d="M6 14h12v7H6z" />
     </>
   ),
+  download: <path d="M12 4v11M7 11l5 5 5-5M5 20h14" />,
   plus: <path d="M12 5v14M5 12h14" />,
   trash: (
     <>
