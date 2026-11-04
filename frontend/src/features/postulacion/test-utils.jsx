@@ -51,7 +51,7 @@ export const SECTORES = [
     etiquetaCumple: 'Postulante afiliado al IESS',
     etiquetaNoCumple: 'Postulante No Afiliado al IESS',
     mensajeRechazo: 'NO puede continuar, no es afiliado',
-    preguntaRespaldo: '¿Se encuentra respaldado por una organización de trabajadores?',
+    preguntaRespaldo: '¿Se encuentra respaldadas por una organización de trabajadores?',
   },
   {
     codigo: 'JUBILADOS',
@@ -60,7 +60,7 @@ export const SECTORES = [
     etiquetaCumple: 'Postulante acredita jubilación',
     etiquetaNoCumple: 'Postulante no acredita jubilación',
     mensajeRechazo: 'NO puede continuar, no acredita jubilación',
-    preguntaRespaldo: '¿Se encuentra respaldado por una organización de jubilados?',
+    preguntaRespaldo: '¿Se encuentra respaldadas por una organización de jubilados?',
   },
 ]
 

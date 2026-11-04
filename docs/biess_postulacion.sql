@@ -785,17 +785,17 @@ INSERT INTO sectores (codigo, cargo, tipo_requerido, etiqueta_cumple, etiqueta_n
  'Miembro Principal y Alterno en Representación del Sector de Afiliados ante el Directorio del BIESS',
  'AFILIADO', 'Postulante afiliado al IESS', 'Postulante No Afiliado al IESS',
  'Su postulación para el cargo de Miembro Principal y Alterno en Representación del Sector de Afiliados ante el Directorio del BIESS, NO puede continuar, por cuanto no mantiene la calidad de afiliado al IESS',
- '¿Se encuentra respaldado por una organización de trabajadores de representación nacional legalmente constituida ante autoridad competente?'),
+ '¿Se encuentra respaldadas por una organización de trabajadores de representación nacional legalmente constituida ante autoridad competente?'),
 ('JUBILADOS',
  'Miembro Principal y Alterno en Representación del Sector de los Jubilados ante el Directorio del BIESS',
  'JUBILADO', 'Postulante acredita jubilación', 'Postulante no acredita jubilación',
  'Su postulación para el cargo de Miembro Principal y Alterno en Representación del Sector de los Jubilados ante el Directorio del BIESS, NO puede continuar, por cuanto no acredita jubilación',
- '¿Se encuentra respaldado por una organización de jubilados de representación nacional legalmente constituida ante autoridad competente?'),
+ '¿Se encuentra respaldadas por una organización de jubilados de representación nacional legalmente constituida ante autoridad competente?'),
 ('EMPLEADORES',
  'Miembro Principal y Alterno en Representación del Sector Empleador ante el Directorio del BIESS',
  'EMPLEADOR', 'Postulante es empleador', 'Postulante no es empleador',
  'Su postulación para el cargo de Miembro Principal y Alterno en Representación del Sector Empleador ante el Directorio del BIESS, NO puede continuar, por cuanto no es empleador',
- '¿Se encuentra respaldado por una federación de cámara de representación nacional legalmente constituida ante autoridad competente?');
+ '¿Se encuentra respaldadas por una federación de cámara de representación nacional legalmente constituida ante autoridad competente?');
 
 -- Inhabilidades (1.9). respuesta_esperada = respuesta que NO genera inhabilidad
 INSERT INTO preguntas_inhabilidad (numeral, texto, respuesta_esperada, requiere_detalle, orden) VALUES
